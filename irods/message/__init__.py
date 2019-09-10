@@ -4,7 +4,7 @@ import struct
 import logging
 import socket
 import json
-import xml.etree.ElementTree as ET
+from irods.message import quasixml as ET
 from irods.message.message import Message
 from irods.message.property import (BinaryProperty, StringProperty,
                                     IntegerProperty, LongProperty, ArrayProperty,
