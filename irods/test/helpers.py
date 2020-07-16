@@ -7,6 +7,7 @@ import shutil
 import hashlib
 import base64
 import math
+import tarfile
 from pwd import getpwnam
 from irods.session import iRODSSession
 from irods.message import iRODSMessage
@@ -143,3 +144,26 @@ def file_backed_up(filename):
             yield filename
         finally:
             shutil.copyfile(f.name, filename)
+
+
+class TarPathValueError( ValueError ): pass
+
+@contextlib.contextmanager
+def dir_backed_up (directory_name, clean_restore = False):
+    def sane_abspath( d ):
+        r = os.path.abspath (d)
+        if os.path.normpath(r) == os.path.sep:
+            raise TarPathValueError('Path must have at least one non-empty leading element')
+        return r
+    with tempfile.NamedTemporaryFile(suffix='.tar',mode='wb') as f:
+        archive = tarfile.TarFile (fileobj = f, mode = 'w')
+        full_backup_path = sane_abspath( directory_name )
+        archive.add (full_backup_path)
+        f.flush()
+        try:
+            yield full_backup_path
+        finally:
+            if clean_restore:
+                shutil.rmtree(full_backup_path, ignore_errors = True)
+            archive = tarfile.TarFile(f.name,"r")
+            archive.extractall (path='/')
