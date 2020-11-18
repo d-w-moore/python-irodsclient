@@ -176,4 +176,5 @@ api_number = {
     # 1100 - 1200 - SSL API calls
     "SSL_START_AN": 1100,
     "SSL_END_AN": 1101,
+    "GET_FILE_DESCRIPTOR_INFO_APN": 20000
 }

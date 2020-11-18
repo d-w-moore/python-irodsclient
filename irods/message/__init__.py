@@ -237,6 +237,13 @@ class BinBytesBuf(Message):
     buflen = IntegerProperty()
     buf = BinaryProperty()
 
+class BytesBuf(Message):
+    _name = 'BytesBuf_PI'
+    buflen = IntegerProperty()
+    buf = StringProperty()
+
+class GetFileDescriptorInfo(BytesBuf):
+    pass
 
 class PluginAuthMessage(Message):
     _name = 'authPlugReqInp_PI'

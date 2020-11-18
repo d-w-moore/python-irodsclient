@@ -158,6 +158,8 @@ class DataObjectManager(Manager):
         conn.send(message)
         desc = conn.recv().int_info
 
+        #print ('desc for data obj OPEN = {} {} '.format( type(desc),str(desc)))
+
         return io.BufferedRandom(iRODSDataObjectFileRaw(conn, desc, **options))
 
 
