@@ -16,9 +16,11 @@ from irods.column import Criterion
 from irods.data_object import chunks
 import irods.test.helpers as helpers
 import irods.keywords as kw
+from irods.manager import data_object_manager
 from datetime import datetime
 from tempfile import NamedTemporaryFile, mkdtemp
 import shutil
+import contextlib
 
 class TestDataObjOps(unittest.TestCase):
 
@@ -29,53 +31,84 @@ class TestDataObjOps(unittest.TestCase):
         self.coll_path = '/{}/home/{}/test_dir'.format(self.sess.zone, self.sess.username)
         self.coll = helpers.make_collection(self.sess, self.coll_path)
 
-
     def tearDown(self):
         '''Remove test data and close connections
         '''
         self.coll.remove(recurse=True, force=True)
         self.sess.cleanup()
 
-    def test_open_on_dataobj_in_hier__232(self):
-        d = None
-        obj = None
+    @contextlib.contextmanager
+    def create_resc_hierarchy (self, Root, Leaf):
+        d = mkdtemp()
+        self.sess.resources.create(Leaf,'unixfilesystem',
+                               host = self.sess.host,
+                               path=d)
+        self.sess.resources.create(Root,'passthru')
+        self.sess.resources.add_child(Root,Leaf)
         try:
-            datafile = NamedTemporaryFile (prefix='getfromhier_232_',delete=True)
-            datafile.write('abc\n')
-            datafile.flush()
-            Root  = 'pt1'
-            Leaf  = 'resc1'
-            fname = datafile.name
-            bname = os.path.basename(fname)
-            d = mkdtemp()
-
-            self.sess.resources.create(Leaf,'unixfilesystem',
-                                   host = self.sess.host,
-                                   path=d)
-            self.sess.resources.create(Root,'passthru')
-            self.sess.resources.add_child(Root,Leaf)
-
-            LOGICAL = self.coll_path + '/' + bname
-            self.sess.data_objects.put(fname,LOGICAL, **{kw.DEST_RESC_NAME_KW:Root})
-            self.assertEqual([bname], [res[DataObject.name] for res in
-                                       self.sess.query(DataObject.name).filter(DataObject.resc_hier == ';'.join([Root,Leaf]))])
-            obj = self.sess.data_objects.get(LOGICAL)
-            exc = None
-            try:
-                raw = obj.open('a')
-            except KeyError as exc:
-                # Direct child access causes failure as of this 4-2-stable commit:
-                #   https://github.com/irods/irods/commit/a4009e673c0d81f3a68d9e99dadeed7fa83dd022
-                # but this test passes on the previous iRODS server release (tag <4.2.8>)
-                if exc.args[0] != -1816000: # DIRECT_CHILD_ACCESS
-                    raise
-            self.assertIsNone(exc)
+            yield ';'.join([Root,Leaf])
         finally:
-            if obj: obj.unlink(force=True)
             self.sess.resources.remove_child(Root,Leaf)
             self.sess.resources.remove(Leaf)
             self.sess.resources.remove(Root)
             shutil.rmtree(d)
+
+    def test_put_get_parallel_autoswitch_A__235(self):
+        if not data_object_manager.AUTO_SWITCH_PARALLEL:
+            self.skipTest('data object put and get not configured for parallel mode')
+        Root  = 'pt235'
+        Leaf  = 'resc235'
+        files_to_delete = []
+        with self.create_resc_hierarchy(Root,Leaf) as hier_str:
+            datafile = NamedTemporaryFile (prefix='getfromhier_235_',delete=True)
+            datafile.write(os.urandom(data_object_manager.PARALLEL_THRESHOLD+1024))
+            datafile.flush()
+            base_name = os.path.basename(datafile.name)
+            data_obj_name = '/{0.zone}/home/{0.username}/{1}'.format(self.sess, base_name)
+            options = { kw.DEST_RESC_NAME_KW:Root,
+                        kw.RESC_NAME_KW:Root }
+            try:
+                self.sess.data_objects.put(datafile.name, data_obj_name, **options)
+                self.sess.data_objects.get(data_obj_name, datafile.name+".get", **options)
+                files_to_delete += [datafile.name + ".get"]
+                self.assertTrue(open(datafile.name, "rb").read() == open(datafile.name + ".get", "rb").read())
+                q = self.sess.query (DataObject.name,DataObject.resc_hier).filter( DataObject.name == base_name,
+                                                                                   DataObject.resource_name == Leaf)
+                replicas = list(q)
+                self.assertEqual( replicas[0][DataObject.resc_hier] , hier_str )
+                self.assertEqual( len(replicas), 1 )
+            finally:
+                self.sess.data_objects.unlink( data_obj_name, force = True)
+                for n in files_to_delete: os.unlink(n)
+
+    def test_open_on_dataobj_in_hier__232(self):
+        Root  = 'pt1'
+        Leaf  = 'resc1'
+        with self.create_resc_hierarchy(Root,Leaf) as hier_str:
+            obj = None
+            try:
+                datafile = NamedTemporaryFile (prefix='getfromhier_232_',delete=True)
+                datafile.write(b'abc\n')
+                datafile.flush()
+                fname = datafile.name
+                bname = os.path.basename(fname)
+                LOGICAL = self.coll_path + '/' + bname
+                self.sess.data_objects.put(fname,LOGICAL, **{kw.DEST_RESC_NAME_KW:Root})
+                self.assertEqual([bname], [res[DataObject.name] for res in
+                                           self.sess.query(DataObject.name).filter(DataObject.resc_hier == hier_str)])
+                obj = self.sess.data_objects.get(LOGICAL)
+                exc = None
+                try:
+                    obj.open('a')
+                except KeyError as exc:
+                    # Direct child access causes failure as of this 4-2-stable commit:
+                    #   https://github.com/irods/irods/commit/a4009e673c0d81f3a68d9e99dadeed7fa83dd022
+                    # but this test passes on the previous iRODS server release (tag <4.2.8>)
+                    if exc.args[0] != -1816000: # DIRECT_CHILD_ACCESS
+                        raise
+                self.assertIsNone(exc)
+            finally:
+                if obj: obj.unlink(force=True)
 
     def make_new_server_config_json(self, server_config_filename):
         # load server_config.json to inject a new rule base

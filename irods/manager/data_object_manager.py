@@ -10,6 +10,13 @@ from irods.api_number import api_number
 from irods.data_object import (
     iRODSDataObject, iRODSDataObjectFileRaw, chunks, irods_dirname, irods_basename)
 import irods.keywords as kw
+from irods.parallel import ( io_main as Parallel_io_main,
+                             Oper as Parallel_Oper,
+                             WrongServerVersion )
+
+
+AUTO_SWITCH_PARALLEL = True
+PARALLEL_THRESHOLD = 32 * ( 1024 ** 2)
 
 
 class DataObjectManager(Manager):
@@ -26,27 +33,41 @@ class DataObjectManager(Manager):
     O_EXCL = 128
     O_TRUNC = 512
 
-    def _download(self, obj, local_path, **options):
-        if os.path.isdir(local_path):
-            file = os.path.join(local_path, irods_basename(obj))
-        else:
-            file = local_path
+    def _download(self, obj, local_path, auto_parallel = AUTO_SWITCH_PARALLEL, **options):
 
-        # Check for force flag if file exists
-        if os.path.exists(file) and kw.FORCE_FLAG_KW not in options:
+        if os.path.isdir(local_path):
+            local_file = os.path.join(local_path, irods_basename(obj))
+        else:
+            local_file = local_path
+
+        # Check for force flag if local_file exists
+        if os.path.exists(local_file) and kw.FORCE_FLAG_KW not in options:
             raise ex.OVERWRITE_WITHOUT_FORCE_FLAG
 
-        with open(file, 'wb') as f, self.open(obj, 'r', **options) as o:
-            for chunk in chunks(o, self.READ_BUFFER_SIZE):
-                f.write(chunk)
+        with open(local_file, 'wb') as f, self.open(obj, 'r', **options) as o:
+            parallel_xfer = False
+            if auto_parallel and self.server_version >= [4,2,8]:
+                dobj_size = o.seek(0, os.SEEK_END)
+                if dobj_size > PARALLEL_THRESHOLD:
+                    o.close();f.close()
+                    try:
+                        if not self.parallel_get( obj, local_path,
+                                                  target_resource_name = options.get(kw.RESC_NAME_KW,'')):
+                            raise RuntimeError("parallel get failed")
+                    except WrongServerVersion: pass
+                    else:
+                        parallel_xfer = True
+            if not parallel_xfer:
+                o.seek(0, os.SEEK_SET)
+                for chunk in chunks(o, self.READ_BUFFER_SIZE):
+                    f.write(chunk)
 
-
-    def get(self, path, file=None, **options):
+    def get(self, path, local_path = None, auto_parallel = AUTO_SWITCH_PARALLEL, **options):
         parent = self.sess.collections.get(irods_dirname(path))
 
         # TODO: optimize
-        if file:
-            self._download(path, file, **options)
+        if local_path:
+            self._download(path, local_path, auto_parallel = auto_parallel, **options)
 
         query = self.sess.query(DataObject)\
             .filter(DataObject.name == irods_basename(path))\
@@ -59,9 +80,10 @@ class DataObjectManager(Manager):
         return iRODSDataObject(self, parent, results)
 
 
-    def put(self, file, irods_path, return_data_object=False, **options):
+    def put(self, local_path, irods_path, return_data_object = False, auto_parallel = AUTO_SWITCH_PARALLEL, **options):
+
         if irods_path.endswith('/'):
-            obj = irods_path + os.path.basename(file)
+            obj = irods_path + os.path.basename( local_path )
         else:
             obj = irods_path
 
@@ -69,9 +91,24 @@ class DataObjectManager(Manager):
         if kw.OPR_TYPE_KW not in options:
             options[kw.OPR_TYPE_KW] = 1 # PUT_OPR
 
-        with open(file, 'rb') as f, self.open(obj, 'w', **options) as o:
-            for chunk in chunks(f, self.WRITE_BUFFER_SIZE):
-                o.write(chunk)
+        with open(local_path, 'rb') as f, self.open(obj, 'w', **options) as o:
+            parallel_xfer = False
+            if auto_parallel and self.server_version >= [4,2,8]:
+                f.seek(0,os.SEEK_END)
+                file_size = f.tell()
+                if file_size > PARALLEL_THRESHOLD:
+                    o.close();f.close()
+                    try:
+                        if not self.parallel_put( local_path, obj,
+                                                  target_resource_name = options.get(kw.RESC_NAME_KW,'') or
+                                                                         options.get(kw.DEST_RESC_NAME_KW,'')):
+                            raise RuntimeError("parallel put failed")
+                    except WrongServerVersion: pass
+                    else:  parallel_xfer = True
+            if not parallel_xfer:
+                file_size = f.seek(0,os.SEEK_SET)
+                for chunk in chunks(f, self.WRITE_BUFFER_SIZE):
+                    o.write(chunk)
 
         if kw.ALL_KW in options:
             options[kw.UPDATE_REPL_KW] = ''
@@ -79,6 +116,31 @@ class DataObjectManager(Manager):
 
         if return_data_object:
             return self.get(obj)
+
+
+    def parallel_get(self,
+                     path_ ,
+                     file_ ,
+                     async_ = False,
+                     num_threads = 0,
+                     target_resource_name = '',
+                     progressQueue = False):
+
+        return Parallel_io_main( self.sess, path_, Parallel_Oper.GET | (Parallel_Oper.NONBLOCKING if async_ else 0), file_,
+                                 num_threads = num_threads, target_resource_name = target_resource_name,
+                                 queueLength = (32 if progressQueue else 0))
+
+    def parallel_put(self,
+                     file_ ,
+                     path_ ,
+                     async_ = False,
+                     num_threads = 0,
+                     target_resource_name = '',
+                     progressQueue = False):
+
+        return Parallel_io_main( self.sess, path_, Parallel_Oper.PUT | (Parallel_Oper.NONBLOCKING if async_ else 0), file_,
+                                 num_threads = num_threads, target_resource_name = target_resource_name,
+                                 queueLength = (32 if progressQueue else 0))
 
 
     def create(self, path, resource=None, force=False, **options):
@@ -157,8 +219,6 @@ class DataObjectManager(Manager):
         conn = self.sess.pool.get_connection()
         conn.send(message)
         desc = conn.recv().int_info
-
-        #print ('desc for data obj OPEN = {} {} '.format( type(desc),str(desc)))
 
         return io.BufferedRandom(iRODSDataObjectFileRaw(conn, desc, **options))
 
