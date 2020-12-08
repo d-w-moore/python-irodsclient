@@ -15,8 +15,10 @@ from irods.parallel import ( io_main as Parallel_io_main,
                              WrongServerVersion )
 
 
-AUTO_SWITCH_PARALLEL = True
-PARALLEL_THRESHOLD = 32 * ( 1024 ** 2)
+MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE = 32 * ( 1024 ** 2)
+
+DEFAULT_NUMBER_OF_THREADS = 0   # Defaults for reasonable number of threads -- optimized to be
+                                # performant but allow no more worker threads than available CPUs.
 
 
 class DataObjectManager(Manager):
@@ -33,7 +35,7 @@ class DataObjectManager(Manager):
     O_EXCL = 128
     O_TRUNC = 512
 
-    def _download(self, obj, local_path, auto_parallel = AUTO_SWITCH_PARALLEL, **options):
+    def _download(self, obj, local_path, num_threads, **options):
 
         if os.path.isdir(local_path):
             local_file = os.path.join(local_path, irods_basename(obj))
@@ -46,12 +48,12 @@ class DataObjectManager(Manager):
 
         with open(local_file, 'wb') as f, self.open(obj, 'r', **options) as o:
             parallel_xfer = False
-            if auto_parallel and self.server_version >= [4,2,8]:
+            if num_threads != 1 and self.server_version >= [4,2,8]:
                 dobj_size = o.seek(0, os.SEEK_END)
-                if dobj_size > PARALLEL_THRESHOLD:
+                if dobj_size > MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE:
                     o.close();f.close()
                     try:
-                        if not self.parallel_get( obj, local_path,
+                        if not self.parallel_get( obj, local_path, num_threads = num_threads,
                                                   target_resource_name = options.get(kw.RESC_NAME_KW,'')):
                             raise RuntimeError("parallel get failed")
                     except WrongServerVersion: pass
@@ -62,12 +64,12 @@ class DataObjectManager(Manager):
                 for chunk in chunks(o, self.READ_BUFFER_SIZE):
                     f.write(chunk)
 
-    def get(self, path, local_path = None, auto_parallel = AUTO_SWITCH_PARALLEL, **options):
+    def get(self, path, local_path = None, num_threads = DEFAULT_NUMBER_OF_THREADS, **options):
         parent = self.sess.collections.get(irods_dirname(path))
 
         # TODO: optimize
         if local_path:
-            self._download(path, local_path, auto_parallel = auto_parallel, **options)
+            self._download(path, local_path, num_threads = num_threads, **options)
 
         query = self.sess.query(DataObject)\
             .filter(DataObject.name == irods_basename(path))\
@@ -80,7 +82,7 @@ class DataObjectManager(Manager):
         return iRODSDataObject(self, parent, results)
 
 
-    def put(self, local_path, irods_path, return_data_object = False, auto_parallel = AUTO_SWITCH_PARALLEL, **options):
+    def put(self, local_path, irods_path, return_data_object = False, num_threads = DEFAULT_NUMBER_OF_THREADS, **options):
 
         if irods_path.endswith('/'):
             obj = irods_path + os.path.basename( local_path )
@@ -93,13 +95,13 @@ class DataObjectManager(Manager):
 
         with open(local_path, 'rb') as f, self.open(obj, 'w', **options) as o:
             parallel_xfer = False
-            if auto_parallel and self.server_version >= [4,2,8]:
+            if num_threads != 1 and self.server_version >= [4,2,8]:
                 f.seek(0,os.SEEK_END)
                 file_size = f.tell()
-                if file_size > PARALLEL_THRESHOLD:
+                if file_size > MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE:
                     o.close();f.close()
                     try:
-                        if not self.parallel_put( local_path, obj,
+                        if not self.parallel_put( local_path, obj, num_threads = num_threads,
                                                   target_resource_name = options.get(kw.RESC_NAME_KW,'') or
                                                                          options.get(kw.DEST_RESC_NAME_KW,'')):
                             raise RuntimeError("parallel put failed")
