@@ -22,12 +22,35 @@ from collections import OrderedDict
 import six
 from six.moves.queue import Queue,Full,Empty
 import logging
+import contextlib
+
 
 logger = logging.getLogger( __name__ )
-nullh  = logging.NullHandler()
-logger.addHandler( nullh )
+_nullh  = logging.NullHandler()
+logger.addHandler( _nullh )
 
-DEFAULT_NUMBER_OF_THREADS = 3
+@contextlib.contextmanager
+def enableLogging(handlerType,args,level_ = logging.INFO):
+    """Context manager for temporarily enabling a logger. For debug or test.
+    Usage Example -
+    with irods.parallel.enableLogging(logging.FileHandler,('/tmp/logfile.txt',)):
+        # parallel put/get code here
+    """
+    h = None
+    saveLevel = logger.level
+    try:
+        logger.setLevel(level_)
+        h = handlerType(*args)
+        h.setLevel( level_ )
+        logger.addHandler(h)
+        yield
+    finally:
+        logger.setLevel(saveLevel)
+        if h in logger.handlers:
+            logger.removeHandler(h)
+
+
+RECOMMENDED_NUM_THREADS_PER_TRANSFER = 3
 
 SYNC_ON_FD_OPEN = True
 
@@ -119,7 +142,6 @@ class AsyncNotify (object):
             self._progress_fn = _progress
             self._progress_thread = threading.Thread( target = self._progress_fn, args = (progress_Queue, self))
             self._progress_thread.start()
-            logger.info('got here to start thread')
 
     @staticmethod
     def asciiBar( lst, memo = [1] ):
@@ -214,8 +236,9 @@ def _data_obj_get_filedesc_info (conn, data_object, opr_, target_resc = '', memo
     conn.send(message)
     try:
         result_message = conn.recv()
-    except Exception:
-        print ("Couldn't receive or process response to GET_FILE_DESCRIPTOR_INFO_APN")
+    except Exception as e:
+        logger.warning('''Couldn't receive or process response to GET_FILE_DESCRIPTOR_INFO_APN -- '''
+                       '''caught: {0!r}'''.format(e))
         raise
     if memo is not None: memo.append( io_obj )
     return result_message
@@ -243,6 +266,8 @@ def _copy_part( src, dst, length, queueObject, debug_info):
         if queueObject and accum and _io_send_bytes_progress(queueObject,accum): accum = 0
         if verboseConnection:
             print ("("+debug_info+")",end='',file=sys.stderr); sys.stderr.flush()
+    src.close()
+    dst.close()
     return bytecount
 
 
@@ -279,12 +304,12 @@ def _io_part (session_, d_path, range_ , file_ , opr_, hierarchy_str, token = ''
 
 
 def _io_multipart_threaded(operation_ , dataObj, replica_token, hier_str, session,  fname,
-                           nthr = 0,
+                           num_threads = 0,
                            range_for_io = None,
                            orig_conn = None,
                            **extra_options):
     """Called by _io_main.
-    Carves up (0,total_bytes) range into `nthr` pieces and manage the parts of the async transfer"""
+    Carves up (0,total_bytes) range into `num_threads` pieces and manage the parts of the async transfer"""
 
     Operation = Oper( operation_ )
 
@@ -292,11 +317,12 @@ def _io_multipart_threaded(operation_ , dataObj, replica_token, hier_str, sessio
         f.seek(0, os.SEEK_END)
         total_size = f.tell () if Operation.isPut() else \
                      dataObj.open(Operation.data_object_mode()).seek(0,os.SEEK_END)
-    if nthr < 1:
-        nthr = max(1, min(multiprocessing.cpu_count(), DEFAULT_NUMBER_OF_THREADS))
-    P = 1 + (total_size // nthr)
-    logger.info( "nthr = %s ; (P)artitionSize = %s" % (nthr,P))
-    ranges = [six.moves.range(i*P,min(i*P+P,total_size)) for i in range(nthr) if i*P < total_size]
+    if num_threads < 1:
+        num_threads = RECOMMENDED_NUM_THREADS_PER_TRANSFER
+    num_threads = max(1, min(multiprocessing.cpu_count(), num_threads))
+    P = 1 + (total_size // num_threads)
+    logger.info("num_threads = %s ; (P)artitionSize = %s", num_threads, P)
+    ranges = [six.moves.range(i*P,min(i*P+P,total_size)) for i in range(num_threads) if i*P < total_size]
     bytecounts = []
 
     _queueLength = extra_options.get('_queueLength',0)
@@ -306,7 +332,7 @@ def _io_multipart_threaded(operation_ , dataObj, replica_token, hier_str, sessio
         queueObject = None
 
     futures = []
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers = nthr)
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers = num_threads)
     if orig_conn is None:
         barrier = None
     else:
@@ -367,12 +393,12 @@ def io_main( session, d_path, opr_, fname, R='', **kwopt):
     logger.debug(json.dumps(dobj_info,indent=4))
 
     num_threads = kwopt.pop( 'num_threads', None)
-    if num_threads is None: num_threads = int(kwopt.get('N','1'))
+    if num_threads is None: num_threads = int(kwopt.get('N','0'))
 
     # TODO: allow part of file or data object to be transferred (`range_for_io' param)
 
     queueLength = kwopt.get('queueLength',0)
-    retval = _io_multipart_threaded (Operation, d, replica_token, resc_hier, session, fname, nthr = num_threads, range_for_io = None,
+    retval = _io_multipart_threaded (Operation, d, replica_token, resc_hier, session, fname, num_threads = num_threads, range_for_io = None,
                                      _queueLength = queueLength, orig_conn = (persist if (SYNC_ON_FD_OPEN and persist) else None))
     if queueLength > 0:
         (futures, chunk_notify_queue, total_bytes) = retval
@@ -395,9 +421,9 @@ if __name__ == '__main__':
     import atexit
     from irods.session import iRODSSession
 
-    def setupLogging(name,level = logging.DEBUG):
-        if nullh in logger.handlers:
-            logger.removeHandler(nullh)
+    def setupLoggingWithDateTimeHeader(name,level = logging.DEBUG):
+        if _nullh in logger.handlers:
+            logger.removeHandler(_nullh)
             if name:
                 handler = logging.FileHandler(name)
             else:
@@ -422,7 +448,9 @@ if __name__ == '__main__':
     logFilename = opts.pop('-L',None)  # '' for console, non-empty for filesystem destination
     logLevel = (logging.INFO if logFilename is None else logging.DEBUG)
     logFilename = logFilename or opts.pop('-l',None)
-    if logFilename is not None: setupLogging(logFilename, logLevel)
+
+    if logFilename is not None:
+        setupLoggingWithDateTimeHeader(logFilename, logLevel)
 
     verboseConnection = (opts.pop('-v',None) is not None)
 

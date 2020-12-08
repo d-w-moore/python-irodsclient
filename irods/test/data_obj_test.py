@@ -9,6 +9,10 @@ import base64
 import random
 import string
 import unittest
+import contextlib
+import logging
+import io
+import re
 from irods.models import Collection, DataObject
 from irods.session import iRODSSession
 import irods.exception as ex
@@ -20,7 +24,7 @@ from irods.manager import data_object_manager
 from datetime import datetime
 from tempfile import NamedTemporaryFile, mkdtemp
 import shutil
-import contextlib
+import irods.parallel
 
 class TestDataObjOps(unittest.TestCase):
 
@@ -36,6 +40,10 @@ class TestDataObjOps(unittest.TestCase):
         '''
         self.coll.remove(recurse=True, force=True)
         self.sess.cleanup()
+
+    @staticmethod
+    def In_Memory_Stream():
+        return  io.BytesIO() if sys.version_info < (3,) else io.StringIO()
 
     @contextlib.contextmanager
     def create_resc_hierarchy (self, Root, Leaf):
@@ -54,29 +62,52 @@ class TestDataObjOps(unittest.TestCase):
             shutil.rmtree(d)
 
     def test_put_get_parallel_autoswitch_A__235(self):
-        if not data_object_manager.AUTO_SWITCH_PARALLEL:
+        if getattr(data_object_manager,'DEFAULT_NUMBER_OF_THREADS',None) is None:
             self.skipTest('data object put and get not configured for parallel mode')
         Root  = 'pt235'
         Leaf  = 'resc235'
         files_to_delete = []
+        # This test does the following:
+        #  - set up a small resource hierarchy and generate a file large enough to trigger parallel transfer
+        #  - `put' the file to iRODS, then `get' it back, comparing the resulting two disk files and making
+        #    sure that the parallel routines were invoked to do both transfers
+
         with self.create_resc_hierarchy(Root,Leaf) as hier_str:
+
             datafile = NamedTemporaryFile (prefix='getfromhier_235_',delete=True)
-            datafile.write(os.urandom(data_object_manager.PARALLEL_THRESHOLD+1024))
+            datafile.write( os.urandom( data_object_manager.MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE + 1 ))
             datafile.flush()
             base_name = os.path.basename(datafile.name)
             data_obj_name = '/{0.zone}/home/{0.username}/{1}'.format(self.sess, base_name)
             options = { kw.DEST_RESC_NAME_KW:Root,
                         kw.RESC_NAME_KW:Root }
+
+            PUT_LOG = self.In_Memory_Stream()
+            GET_LOG = self.In_Memory_Stream()
+            NumThreadsRegex = re.compile('^num_threads\s*=\s*(\d+)',re.MULTILINE)
+
             try:
-                self.sess.data_objects.put(datafile.name, data_obj_name, **options)
-                self.sess.data_objects.get(data_obj_name, datafile.name+".get", **options)
+                with irods.parallel.enableLogging( logging.StreamHandler, (PUT_LOG,), level_=logging.INFO):
+                    self.sess.data_objects.put(datafile.name, data_obj_name, num_threads = 0, **options)  # - PUT
+                    match = NumThreadsRegex.search (PUT_LOG.getvalue())
+                    self.assertTrue (match is not None and int(match.group(1)) >= 1) # - PARALLEL code path taken?
+
+                with irods.parallel.enableLogging( logging.StreamHandler, (GET_LOG,), level_=logging.INFO):
+                    self.sess.data_objects.get(data_obj_name, datafile.name+".get", num_threads = 0, **options) # - GET
+                    match = NumThreadsRegex.search (GET_LOG.getvalue())
+                    self.assertTrue (match is not None and int(match.group(1)) >= 1) # - PARALLEL code path taken?
+
                 files_to_delete += [datafile.name + ".get"]
-                self.assertTrue(open(datafile.name, "rb").read() == open(datafile.name + ".get", "rb").read())
+
+                with open(datafile.name, "rb") as f1, open(datafile.name + ".get", "rb") as f2:
+                    self.assertEqual ( f1.read(), f2.read() )
+
                 q = self.sess.query (DataObject.name,DataObject.resc_hier).filter( DataObject.name == base_name,
                                                                                    DataObject.resource_name == Leaf)
                 replicas = list(q)
-                self.assertEqual( replicas[0][DataObject.resc_hier] , hier_str )
                 self.assertEqual( len(replicas), 1 )
+                self.assertEqual( replicas[0][DataObject.resc_hier] , hier_str )
+
             finally:
                 self.sess.data_objects.unlink( data_obj_name, force = True)
                 for n in files_to_delete: os.unlink(n)
