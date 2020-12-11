@@ -237,8 +237,8 @@ def _data_obj_get_filedesc_info (conn, data_object, opr_, target_resc = '', memo
     try:
         result_message = conn.recv()
     except Exception as e:
-        logger.warn('''Couldn't receive or process response to GET_FILE_DESCRIPTOR_INFO_APN -- '''
-                    '''caught: {0!r}'''.format(e))
+        logger.warning('''Couldn't receive or process response to GET_FILE_DESCRIPTOR_INFO_APN -- '''
+                       '''caught: {0!r}'''.format(e))
         raise
     if memo is not None: memo.append( io_obj )
     return result_message
@@ -321,7 +321,7 @@ def _io_multipart_threaded(operation_ , dataObj, replica_token, hier_str, sessio
         num_threads = RECOMMENDED_NUM_THREADS_PER_TRANSFER
     num_threads = max(1, min(multiprocessing.cpu_count(), num_threads))
     P = 1 + (total_size // num_threads)
-    logger.info( "num_threads = %s ; (P)artitionSize = %s" % (num_threads,P))
+    logger.info("num_threads = %s ; (P)artitionSize = %s", num_threads, P)
     ranges = [six.moves.range(i*P,min(i*P+P,total_size)) for i in range(num_threads) if i*P < total_size]
     bytecounts = []
 
