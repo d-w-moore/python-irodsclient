@@ -22,10 +22,33 @@ from collections import OrderedDict
 import six
 from six.moves.queue import Queue,Full,Empty
 import logging
+import contextlib
+
 
 logger = logging.getLogger( __name__ )
-nullh  = logging.NullHandler()
-logger.addHandler( nullh )
+_nullh  = logging.NullHandler()
+logger.addHandler( _nullh )
+
+@contextlib.contextmanager
+def enableLogging(handlerType,args,level_ = logging.INFO):
+    """Context manager for temporarily enabling a logger. For debug or test.
+    Usage Example -
+    with irods.parallel.enableLogging(logging.FileHandler,('/tmp/logfile.txt',)):
+        # parallel put/get code here
+    """
+    h = None
+    saveLevel = logger.level
+    try:
+        logger.setLevel(level_)
+        h = handlerType(*args)
+        h.setLevel( level_ )
+        logger.addHandler(h)
+        yield
+    finally:
+        logger.setLevel(saveLevel)
+        if h in logger.handlers:
+            logger.removeHandler(h)
+
 
 RECOMMENDED_NUM_THREADS_PER_TRANSFER = 3
 
@@ -213,8 +236,9 @@ def _data_obj_get_filedesc_info (conn, data_object, opr_, target_resc = '', memo
     conn.send(message)
     try:
         result_message = conn.recv()
-    except Exception:
-        print ("Couldn't receive or process response to GET_FILE_DESCRIPTOR_INFO_APN")
+    except Exception as e:
+        logger.warn('''Couldn't receive or process response to GET_FILE_DESCRIPTOR_INFO_APN -- '''
+                    '''caught: {0!r}'''.format(e))
         raise
     if memo is not None: memo.append( io_obj )
     return result_message
@@ -397,9 +421,9 @@ if __name__ == '__main__':
     import atexit
     from irods.session import iRODSSession
 
-    def setupLogging(name,level = logging.DEBUG):
-        if nullh in logger.handlers:
-            logger.removeHandler(nullh)
+    def setupLoggingWithDateTimeHeader(name,level = logging.DEBUG):
+        if _nullh in logger.handlers:
+            logger.removeHandler(_nullh)
             if name:
                 handler = logging.FileHandler(name)
             else:
@@ -424,7 +448,9 @@ if __name__ == '__main__':
     logFilename = opts.pop('-L',None)  # '' for console, non-empty for filesystem destination
     logLevel = (logging.INFO if logFilename is None else logging.DEBUG)
     logFilename = logFilename or opts.pop('-l',None)
-    if logFilename is not None: setupLogging(logFilename, logLevel)
+
+    if logFilename is not None:
+        setupLoggingWithDateTimeHeader(logFilename, logLevel)
 
     verboseConnection = (opts.pop('-v',None) is not None)
 
