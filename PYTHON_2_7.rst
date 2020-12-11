@@ -16,6 +16,7 @@ meaning that the ~/.local directory will be used as the
 install prefix:
 
   $ pip install --user --upgrade pip==20.3.1
+  
   $ ~/.local/bin/pip install python-irodsclient 
 
 Optionally, using a local git repository, the PRC can also be
