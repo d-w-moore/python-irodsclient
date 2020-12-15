@@ -119,7 +119,7 @@ Parallel Transfer
 -----------------
 
 Starting with release 0.9.0, data object transfers using put() and get() will spawn a number
-of threads in order to optimize performance for iRODS server versions 4.2.8+ and file sizes
+of threads in order to optimize performance for iRODS server versions 4.2.9+ and file sizes
 larger than a default threshold value of 32 Megabytes.
 
 

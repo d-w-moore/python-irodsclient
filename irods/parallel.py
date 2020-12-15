@@ -4,30 +4,55 @@ from __future__ import print_function
 import os
 import ssl
 import json
-import xml.etree.ElementTree as ET
-
-import io
 import time
 import sys
+import logging
+import contextlib
+import concurrent.futures
+import threading
+import multiprocessing
+import six
 
-from irods.data_object import iRODSDataObjectFileRaw
+from irods.data_object import iRODSDataObjectFileRaw, iRODSDataObject
+from irods.exception import DataObjectDoesNotExist
 from irods.message import ( StringStringMap, FileOpenRequest,
                             GetFileDescriptorInfo, iRODSMessage )
 from irods.api_number import api_number
 import irods.keywords as kw
-import concurrent.futures
-import threading
-import multiprocessing
 from collections import OrderedDict
-import six
 from six.moves.queue import Queue,Full,Empty
-import logging
-import contextlib
 
 
 logger = logging.getLogger( __name__ )
 _nullh  = logging.NullHandler()
 logger.addHandler( _nullh )
+
+
+MINIMUM_SERVER_VERSION = (4,2,9)
+
+
+try:
+    from threading import Barrier   # Use 'Barrier' class if included (as in Python >= 3.2) ...
+except ImportError:                 # ... but otherwise, use this ad hoc:
+    class Barrier(object):          
+        def __init__(self, n):
+            """Initialize a Barrier to wait on n threads."""
+            self.n = n
+            self.count = 0
+            self.mutex = threading.Semaphore(1)
+            self.barrier = threading.Semaphore(0)
+        def wait(self):
+            """Per-thread wait function.
+            As in Python3.2 threading, returns 0 <= wait_serial_int < n
+            """
+            self.mutex.acquire()
+            self.count += 1
+            count = self.count
+            self.mutex.release()
+            if count == self.n: self.barrier.release()
+            self.barrier.acquire()
+            self.barrier.release()
+            return count - 1
 
 @contextlib.contextmanager
 def enableLogging(handlerType,args,level_ = logging.INFO):
@@ -52,52 +77,9 @@ def enableLogging(handlerType,args,level_ = logging.INFO):
 
 RECOMMENDED_NUM_THREADS_PER_TRANSFER = 3
 
-SYNC_ON_FD_OPEN = True
-
 verboseConnection = False
 
-
-try:
-    from threading import Barrier   #    with Python versions >= 3.2 
-except ImportError:
-    class Barrier(object):
-        def __init__(self, n):
-            """Initialize a Barrier to wait on n threads."""
-            self.n = n
-            self.count = 0
-            self.mutex = threading.Semaphore(1)
-            self.barrier = threading.Semaphore(0)
-        def wait(self):
-            """Per-thread wait function.
-            As in Python3.2 threading, returns 0 <= wait_serial_int < n
-            """
-            self.mutex.acquire()
-            self.count += 1
-            count = self.count
-            self.mutex.release()
-            if count == self.n: self.barrier.release()
-            self.barrier.acquire()
-            self.barrier.release()
-            return count - 1
-
-class _db_Barrier(Barrier):
-    """Slight modification of the Barrier construct. The aim is
-    to return 0 from wait() for the thread that creates the Barrier.
-    """
-    def __init__(self,*a,**k):
-        self.__tids = OrderedDict([(threading.currentThread(),0)])
-        self.__lock = threading.Lock()
-        super(_db_Barrier,self).__init__(*a,**k)
-    def wait(self,*a,**k):
-        serial = super(_db_Barrier,self).wait(*a,**k)
-        with self.__lock:
-            tid = threading.currentThread()
-            next_i = len(self.__tids)
-            return self.__tids.setdefault(tid,next_i)
-
-
 class BadCallbackTarget(TypeError): pass
-
 
 class AsyncNotify (object):
 
@@ -178,7 +160,7 @@ class AsyncNotify (object):
         try:
             if callable(self.done_callback): self.done_callback(self)
         finally:
-            self.keep.pop('data_raw',None)
+            self.keep.pop('mgr',None)
             self.__done = True
         self.set_transfer_done_callback(None)
 
@@ -203,9 +185,9 @@ class Oper(object):
     def isGet(self): return not self.isPut()
     def isNonBlocking(self): return 0 != (self._opr & self.NONBLOCKING)
 
-    def data_object_mode(self):
+    def data_object_mode(self, initial_open = False):
         if self.isPut():
-            return 'w'
+            return 'w' if initial_open else 'a'
         else:
             return 'r'
 
@@ -217,33 +199,6 @@ class Oper(object):
         return ((mode + 'b') if binary else mode)
 
 
-# -- Helper functions --
-
-def _data_obj_get_filedesc_info (conn, data_object, opr_, target_resc = '', memo = None  ):
-    OPEN_options = {}
-    if target_resc:
-        OPEN_options[ kw.RESC_NAME_KW ] = target_resc
-        OPEN_options[ kw.DEST_RESC_NAME_KW ] = target_resc
-    Operation = Oper(opr_)
-
-    io_obj = data_object.open( Operation.data_object_mode(), **OPEN_options )
-    FD = io_obj.raw.desc
-    buf_ = json.dumps({'fd': FD})
-    buf_len_ = len(buf_)
-    message_body = GetFileDescriptorInfo (buf = buf_ , buflen = buf_len_)
-    message = iRODSMessage('RODS_API_REQ', msg=message_body,
-                           int_info=api_number['GET_FILE_DESCRIPTOR_INFO_APN'])
-    conn.send(message)
-    try:
-        result_message = conn.recv()
-    except Exception as e:
-        logger.warning('''Couldn't receive or process response to GET_FILE_DESCRIPTOR_INFO_APN -- '''
-                       '''caught: {0!r}'''.format(e))
-        raise
-    if memo is not None: memo.append( io_obj )
-    return result_message
-
-
 def _io_send_bytes_progress (queueObject, item):
     try:
         queueObject.put(item)
@@ -253,7 +208,8 @@ def _io_send_bytes_progress (queueObject, item):
 
 COPY_BUF_SIZE = (1024 ** 2) * 4
 
-def _copy_part( src, dst, length, queueObject, debug_info):
+def _copy_part( src, dst, length, queueObject, debug_info, mgr):
+
     bytecount = 0
     accum = 0
     while True and bytecount < length:
@@ -266,64 +222,78 @@ def _copy_part( src, dst, length, queueObject, debug_info):
         if queueObject and accum and _io_send_bytes_progress(queueObject,accum): accum = 0
         if verboseConnection:
             print ("("+debug_info+")",end='',file=sys.stderr); sys.stderr.flush()
-    src.close()
-    dst.close()
+
+    # At most one of (src,dst) is a file.  Close that one first.
+    (file_,obj_) = (src,dst) if isinstance(src,file) else (dst,src)
+    file_.close()
+    mgr.remove_io( obj_ ) # 1. closes obj if it is not the mgr's initial descriptor 
+                          # 2. blocks at barrier until all transfer threads are done copying
+                          # 3. closes with finalize if obj is mgr's initial descriptor
     return bytecount
 
 
-def _io_part (session_, d_path, range_ , file_ , opr_, hierarchy_str, token = '', 
-              queueObject = None, _barrier = None):
+class _Multipart_close_manager:
+
+    def __init__(self, initial_io_, exit_barrier_):
+        self.exit_barrier = exit_barrier_
+        self.initial_io = initial_io_
+        self.__lock = threading.Lock()
+        self.aux = []
+
+    # `add_io' - add an i/o object to be managed
+    # note: `remove_io' should only be called for managed i/o objects
+
+    def add_io(self,Io):
+        with self.__lock:
+            if Io is not self.initial_io:
+                self.aux.append(Io)
+
+    # `remove_io' is for closing a channel of parallel i/o and allowing the
+    # data object to flush write operations (if any) in a timely fashion.  It also
+    # synchronizes all of the parallel threads just before exit, so that we know
+    # exactly when to perform a finalizing close on the data object
+
+    def remove_io(self,Io):
+        is_initial = True
+        with self.__lock:
+            if Io is not self.initial_io:
+                Io.close()
+                self.aux.remove(Io)
+                is_initial = False
+        self.exit_barrier.wait()
+        if is_initial: self.finalize()
+
+    def finalize(self):
+        self.initial_io.close()
+
+
+def _io_part (objHandle, range_, file_, opr_, mgr_, thread_debug_id = '', queueObject = None ):
     if 0 == len(range_): return 0
-    options = {}
-    if hierarchy_str:
-        options[ kw.RESC_HIER_STR_KW ] = hierarchy_str
-    if token:
-        options[ kw.REPLICA_TOKEN_KW ] = token
-
     Operation = Oper(opr_)
-    conn = session_.pool.get_connection()
-
-    message_body = FileOpenRequest(
-        objPath=d_path,
-        openFlags=(os.O_WRONLY if Operation.isPut() else os.O_RDONLY),
-        KeyValPair_PI=StringStringMap(options)
-    )
-    message = iRODSMessage('RODS_API_REQ', msg=message_body,
-                           int_info=api_number['DATA_OBJ_OPEN_AN'])
-    conn.send(message)
-    desc = conn.recv().int_info
-    objHandle = io.BufferedRandom(iRODSDataObjectFileRaw(conn, desc, **options))
-    (start,length) = (range_[0], len(range_))
-    objHandle.seek(start)
-    file_.seek(start)
-
-    thread_debug_info = str(threading.currentThread().ident)
-    if _barrier: thread_debug_info = str( _barrier.wait() )  # wait() returns 1 .. N for the workers
-    return _copy_part (file_,objHandle,length, queueObject, thread_debug_info) if Operation.isPut() \
-      else _copy_part (objHandle,file_,length, queueObject, thread_debug_info)
+    (offset,length) = (range_[0], len(range_))
+    objHandle.seek(offset)
+    file_.seek(offset)
+    if thread_debug_id == '':
+        thread_debug_id = str(threading.currentThread().ident)
+    return ( _copy_part (file_, objHandle, length, queueObject, thread_debug_id, mgr_) if Operation.isPut()
+        else _copy_part (objHandle, file_, length, queueObject, thread_debug_id, mgr_) )
 
 
-def _io_multipart_threaded(operation_ , dataObj, replica_token, hier_str, session,  fname,
-                           num_threads = 0,
-                           range_for_io = None,
-                           orig_conn = None,
-                           **extra_options):
+def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str, session, fname,
+                           total_size, num_threads = 0, **extra_options):
     """Called by _io_main.
-    Carves up (0,total_bytes) range into `num_threads` pieces and manage the parts of the async transfer"""
+    Carve up (0,total_size) range into `num_threads` parts and initiate a transfer thread for each one."""
 
+    (D, Io) = dataObj_and_IO
     Operation = Oper( operation_ )
 
-    with open(fname, Operation.disk_file_mode(initial_open=True)) as f:
-        f.seek(0, os.SEEK_END)
-        total_size = f.tell () if Operation.isPut() else \
-                     dataObj.open(Operation.data_object_mode()).seek(0,os.SEEK_END)
     if num_threads < 1:
         num_threads = RECOMMENDED_NUM_THREADS_PER_TRANSFER
     num_threads = max(1, min(multiprocessing.cpu_count(), num_threads))
+
     P = 1 + (total_size // num_threads)
     logger.info("num_threads = %s ; (P)artitionSize = %s", num_threads, P)
     ranges = [six.moves.range(i*P,min(i*P+P,total_size)) for i in range(num_threads) if i*P < total_size]
-    bytecounts = []
 
     _queueLength = extra_options.get('_queueLength',0)
     if _queueLength > 0:
@@ -333,19 +303,23 @@ def _io_multipart_threaded(operation_ , dataObj, replica_token, hier_str, sessio
 
     futures = []
     executor = concurrent.futures.ThreadPoolExecutor(max_workers = num_threads)
-    if orig_conn is None:
-        barrier = None
-    else:
-        barrier = _db_Barrier( 1 + len(ranges))
+
+    mgr = _Multipart_close_manager(Io, Barrier(num_threads))
+    threadId = 0
     for r in ranges:
-        File = open( fname, Operation.disk_file_mode())
-        futures.append(executor.submit( _io_part, session, dataObj.path, r, File, Operation, hier_str, replica_token, queueObject, _barrier=barrier))
-    barrier.wait()
-    if orig_conn: del orig_conn[0]
+        threadId += 1
+        File = open(fname, Operation.disk_file_mode())
+        if Io is None:
+            Io = session.data_objects.open( D.path, Operation.data_object_mode(initial_open = False),
+                                            create = False, finalize_on_close = False,
+                                            **{ kw.RESC_HIER_STR_KW: hier_str, kw.REPLICA_TOKEN_KW: replica_token } )
+        mgr.add_io( Io )
+        futures.append(executor.submit( _io_part, Io, r, File, Operation, mgr, str(threadId), queueObject))
+        Io = None
 
     if Operation.isNonBlocking():
         if _queueLength:
-            return futures, queueObject, total_size
+            return futures, queueObject, mgr
         else:
             return futures
     else:
@@ -353,64 +327,74 @@ def _io_multipart_threaded(operation_ , dataObj, replica_token, hier_str, sessio
         return sum(bytecounts), total_size
 
 # - _io_main
-#    * determine replica information by:
-#       - data path
-#       - resc (R != '' if specified)
+#    * determine replica information
+#    * call multithread manager       
+#    * 
 
-class WrongServerVersion (RuntimeError): pass
 
-def io_main( session, d_path, opr_, fname, R='', **kwopt):
+def io_main( session, Data, opr_, fname, R='', **kwopt):
 
     Operation = Oper(opr_)
-    Conn = session.pool._conn or session.pool.get_connection()
-    iRODS_Version = list( Conn.server_version )
+    d_path = None
+    Io = None
+    if isinstance(Data,tuple):
+        (Data, Io) = Data[:2]
+    if isinstance (Data, six.string_types):
+        try:
+            Data = session.data_objects.get( Data )
+            d_path = Data.path
+        except DataObjectDoesNotExist:
+            if Operation.isGet(): raise
+    else :
+        assert ( isinstance (Data, iRODSDataObject) )
 
-    if iRODS_Version < [4,2,8]:
-        raise WrongServerVersion("Need iRODS server version of at least 4.2.8 for parallel transfer")
+    R_via_libcall = kwopt.pop( 'target_resource_name', '')
+    if R_via_libcall:
+        R = R_via_libcall
 
-    R_libcall = kwopt.pop( 'target_resource_name', '')
-    if R_libcall: R = R_libcall
-
-    if Operation.isPut() and not( session.data_objects.exists(d_path) ):
-        resc_options = {}
+    resc_options = {}
+    if Operation.isPut() and d_path is None:
         if R:
             resc_options [kw.RESC_NAME_KW] = R
             resc_options [kw.DEST_RESC_NAME_KW] = R
-            session.data_objects.create(d_path,**resc_options)
 
-    d = session.data_objects.get( d_path )
+    if (not Io):
+        (Io, rawfile) = session.data_objects.open_with_FileRaw( Data.path, Operation.data_object_mode(initial_open = True),
+                                                                finalize_on_close = True, **resc_options )
+    else:
+        rawfile = Io.raw
 
-    persist = []
+    if Operation.isGet():
+        total_bytes = Io.seek(0,os.SEEK_END)
+        Io.seek(0,os.SEEK_SET)
+    else:
+        with open(fname, 'rb') as f:
+            f.seek(0,os.SEEK_END)
+            total_bytes = f.tell()
 
-    api_return = _data_obj_get_filedesc_info (session.pool._conn, d, Operation, target_resc = R, memo = persist)
-    msg = api_return.msg
-    Xml = ET.fromstring(msg.replace(b'\0',b''))
-    dobj_info = json.loads(Xml.find('buf').text)
-
-    replica_token = dobj_info.get("replica_token")
-    resc_hier = ( dobj_info.get("data_object_info") or {} ).get("resource_hierarchy")
-
-    logger.debug(json.dumps(dobj_info,indent=4))
+    (replica_token , resc_hier) = rawfile.replica_access_info()
 
     num_threads = kwopt.pop( 'num_threads', None)
+
     if num_threads is None: num_threads = int(kwopt.get('N','0'))
 
-    # TODO: allow part of file or data object to be transferred (`range_for_io' param)
-
     queueLength = kwopt.get('queueLength',0)
-    retval = _io_multipart_threaded (Operation, d, replica_token, resc_hier, session, fname, num_threads = num_threads, range_for_io = None,
-                                     _queueLength = queueLength, orig_conn = (persist if (SYNC_ON_FD_OPEN and persist) else None))
-    if queueLength > 0:
-        (futures, chunk_notify_queue, total_bytes) = retval
-    else:
-        futures = retval
-        chunk_notify_queue = total_bytes = None
+    retval = _io_multipart_threaded (Operation, (Data, Io), replica_token, resc_hier, session, fname, total_bytes,
+                                     num_threads = num_threads,
+                                     _queueLength = queueLength)
 
     if Operation.isNonBlocking():
+
+        if queueLength > 0:
+            (futures, chunk_notify_queue, mgr) = retval
+        else:
+            futures = retval
+            chunk_notify_queue = total_bytes = None
+
         return AsyncNotify( futures,                              # individual futures, one per transfer thread
                             progress_Queue = chunk_notify_queue,  # for notifying the progress indicator thread
                             total = total_bytes,                  # total number of bytes for parallel transfer
-                            keep_ = {'data_raw': persist[:1]} )   # an open raw i/o object needing to be persisted, if any
+                            keep_ = {'mgr': mgr}  )   # an open raw i/o object needing to be persisted, if any
     else:
         (_bytes_transferred, _bytes_total) = retval
         return (_bytes_transferred == _bytes_total)
@@ -463,13 +447,13 @@ if __name__ == '__main__':
     if async_xfer is not None:
         arg[1] |= Oper.NONBLOCKING
 
-    ret = io_main(sess, *arg, **kwarg) # arg[0] = data object path
+    ret = io_main(sess, *arg, **kwarg) # arg[0] = data object or path
                                        # arg[1] = operation: or'd flags : [PUT|GET] NONBLOCKING
                                        # arg[2] = file path on local filesystem
                                        # kwarg['queueLength'] sets progress-queue length (0 if no progress indication needed)
-                                       # kwarg can have 'N' (num threads) and 'R' (target resource name) via commandline
-                                       # kwarg['num_threads'] (overrides 'N' when called as library)
-                                       # kwarg['target_resource_name'] (overrides 'R' when called as library)
+                                       # kwarg options 'N' (num threads) and 'R' (target resource name) are via command-line
+                                       # kwarg['num_threads'] (overrides 'N' when called as a library)
+                                       # kwarg['target_resource_name'] (overrides 'R' when called as a library)
     if isinstance( ret, AsyncNotify ):
         print('waiting on completion...')
         ret.set_transfer_done_callback(lambda r: print('Async transfer done for:',r))

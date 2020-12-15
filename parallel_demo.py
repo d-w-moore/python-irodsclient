@@ -26,7 +26,7 @@ def get_session():
 def main():
 
     Async = bool(os.environ.get("ASYNC",""))
-    Skip = bool(int(os.environ.get("SKIPWRITE","0")))
+    SkipWrite = bool(int(os.environ.get("SKIPWRITE","0")))
     N = int(os.environ.get("NTHR","1"))
     Resc =  os.environ.get("RESC","demoResc")
     useQueue =  bool(os.environ.get("QUEUE",""))
@@ -41,7 +41,7 @@ def main():
         else:
             op,name = sys.argv[1:]
             if op.lower()[0] != 'g':
-                if not Skip:
+                if not SkipWrite:
                     with open(name,'wb') as f:
                         f.write(os.urandom(512*M if op.lower()[0] == 'p' else int(op)))
                 print ('---',file=sys.stderr); sys.stderr.flush()
