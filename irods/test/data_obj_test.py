@@ -35,6 +35,9 @@ class TestDataObjOps(unittest.TestCase):
         self.coll_path = '/{}/home/{}/test_dir'.format(self.sess.zone, self.sess.username)
         self.coll = helpers.make_collection(self.sess, self.coll_path)
 
+        with self.sess.pool.get_connection() as conn:
+            self.SERVER_VERSION = conn.server_version
+
     def tearDown(self):
         '''Remove test data and close connections
         '''
@@ -43,7 +46,7 @@ class TestDataObjOps(unittest.TestCase):
 
     @staticmethod
     def In_Memory_Stream():
-        return  io.BytesIO() if sys.version_info < (3,) else io.StringIO()
+        return io.BytesIO() if sys.version_info < (3,) else io.StringIO()
 
     @contextlib.contextmanager
     def create_resc_hierarchy (self, Root, Leaf):
@@ -62,8 +65,11 @@ class TestDataObjOps(unittest.TestCase):
             shutil.rmtree(d)
 
     def test_put_get_parallel_autoswitch_A__235(self):
-        if getattr(data_object_manager,'DEFAULT_NUMBER_OF_THREADS',None) is None:
-            self.skipTest('data object put and get not configured for parallel mode')
+        if not self.sess.data_objects.should_parallelize_transfer(server_version_hint = self.SERVER_VERSION):
+            self.skipTest('Skip unless server version is 4.2.9\n'
+                          '(or 4.2.8 and ENABLE_PARALLEL_TRANSFER_FOR_428 != 0 in environment)')
+        if getattr(data_object_manager,'DEFAULT_NUMBER_OF_THREADS',None) in (1, None):
+            self.skipTest('Data object manager not configured for parallel puts and gets')
         Root  = 'pt235'
         Leaf  = 'resc235'
         files_to_delete = []

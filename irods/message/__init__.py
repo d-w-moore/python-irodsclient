@@ -242,6 +242,9 @@ class BytesBuf(Message):
     buflen = IntegerProperty()
     buf = StringProperty()
 
+class ReplicaCloseRequest(BytesBuf):
+    pass
+
 class GetFileDescriptorInfo(BytesBuf):
     pass
 

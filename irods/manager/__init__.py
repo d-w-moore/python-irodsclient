@@ -9,7 +9,7 @@ class Manager(object):
             if p is None : raise RuntimeError ("session not configured")
             conn = getattr(p,"_conn",None) or p.get_connection()
             if conn: self.__server_version = conn.server_version
-        return list( self.__server_version )
+        return tuple( self.__server_version )
 
     def __init__(self, sess):
         self.sess = sess
