@@ -369,7 +369,7 @@ def io_main( session, Data, opr_, fname, R='', **kwopt):
 
     # data object should now exist
     if not isinstance(Data,iRODSDataObject):
-        Data = irods.data_objects.get(d_path)
+        Data = session.data_objects.get(d_path)
 
     if Operation.isGet():
         total_bytes = Io.seek(0,os.SEEK_END)
