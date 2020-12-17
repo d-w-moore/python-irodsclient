@@ -306,16 +306,16 @@ def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str,
     executor = concurrent.futures.ThreadPoolExecutor(max_workers = num_threads)
 
     mgr = _Multipart_close_manager(Io, Barrier(num_threads))
-    threadId = 0
+    counter = 0
     for r in ranges:
-        threadId += 1
-        File = open(fname, Operation.disk_file_mode())
+        counter += 1
+        File = open(fname, Operation.disk_file_mode(initial_open = (counter == 1)))
         if Io is None:
             Io = session.data_objects.open( D.path, Operation.data_object_mode(initial_open = False),
                                             create = False, finalize_on_close = False,
                                             **{ kw.RESC_HIER_STR_KW: hier_str, kw.REPLICA_TOKEN_KW: replica_token } )
         mgr.add_io( Io )
-        futures.append(executor.submit( _io_part, Io, r, File, Operation, mgr, str(threadId), queueObject))
+        futures.append(executor.submit( _io_part, Io, r, File, Operation, mgr, str(counter), queueObject))
         Io = None
 
     if Operation.isNonBlocking():
@@ -341,13 +341,12 @@ def io_main( session, Data, opr_, fname, R='', **kwopt):
     if isinstance(Data,tuple):
         (Data, Io) = Data[:2]
     if isinstance (Data, six.string_types):
+        d_path = Data
         try:
             Data = session.data_objects.get( Data )
             d_path = Data.path
         except DataObjectDoesNotExist:
             if Operation.isGet(): raise
-    else :
-        assert ( isinstance (Data, iRODSDataObject) )
 
     R_via_libcall = kwopt.pop( 'target_resource_name', '')
     if R_via_libcall:
@@ -360,10 +359,15 @@ def io_main( session, Data, opr_, fname, R='', **kwopt):
             resc_options [kw.DEST_RESC_NAME_KW] = R
 
     if (not Io):
-        (Io, rawfile) = session.data_objects.open_with_FileRaw( Data.path, Operation.data_object_mode(initial_open = True),
+        (Io, rawfile) = session.data_objects.open_with_FileRaw( (d_path or Data.path),
+                                                                Operation.data_object_mode(initial_open = True),
                                                                 finalize_on_close = True, **resc_options )
     else:
         rawfile = Io.raw
+
+    # data object should now exist
+    if not isinstance(Data,iRODSDataObject):
+        Data = irods.data_objects.get(d_path)
 
     if Operation.isGet():
         total_bytes = Io.seek(0,os.SEEK_END)
