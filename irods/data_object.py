@@ -152,7 +152,7 @@ class iRODSDataObjectFileRaw(io.RawIOBase):
         try:
             self.conn.recv().int_info
         except Exception as e:
-            print ('*** ERROR on closing replica ***')
+            logger.warning ('** ERROR on closing replica **')
             raise
         return True
 

@@ -195,7 +195,6 @@ class DataObjectManager(Manager):
         return (handle, holder[-1])
 
     def open(self, path, mode, create = True, finalize_on_close = True, **options):
-        #print ('fnlzoncls =',finalize_on_close ) # dwm
         _raw_fd_holder =  options.get('_raw_fd_holder',[])
         if kw.DEST_RESC_NAME_KW not in options:
             # Use client-side default resource if available

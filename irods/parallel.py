@@ -221,7 +221,8 @@ def _copy_part( src, dst, length, queueObject, debug_info, mgr):
         accum += buf_len
         if queueObject and accum and _io_send_bytes_progress(queueObject,accum): accum = 0
         if verboseConnection:
-            print ("("+debug_info+")",end='',file=sys.stderr); sys.stderr.flush()
+            print ("("+debug_info+")",end='',file=sys.stderr)
+            sys.stderr.flush()
 
     # At most one of (src,dst) is a file.  Close that one first.
     (file_,obj_) = (src,dst) if isinstance(src,file) else (dst,src)
@@ -455,16 +456,16 @@ if __name__ == '__main__':
                                        # kwarg['num_threads'] (overrides 'N' when called as a library)
                                        # kwarg['target_resource_name'] (overrides 'R' when called as a library)
     if isinstance( ret, AsyncNotify ):
-        print('waiting on completion...')
-        ret.set_transfer_done_callback(lambda r: print('Async transfer done for:',r))
+        print('waiting on completion...',file=sys.stderr)
+        ret.set_transfer_done_callback(lambda r: print('Async transfer done for:',r,file=sys.stderr))
         done = ret.wait_until_transfer_done (timeout=10.0)  # - or do other useful work here
         if done:
             bytes_transferred = sum(ret.futures_done.values())
-            print ('Asynch transfer complete. Total bytes transferred:', bytes_transferred)
+            print ('Asynch transfer complete. Total bytes transferred:', bytes_transferred,file=sys.stderr)
         else:
-            print ('Asynch transfer was not completed before timeout expired.')
+            print ('Asynch transfer was not completed before timeout expired.',file=sys.stderr)
     else:
-        print('Synchronous transfer {}'.format('succeeded' if ret else 'failed'))
+        print('Synchronous transfer {}'.format('succeeded' if ret else 'failed'),file=sys.stderr)
 
 # Note : This module requires concurrent.futures, included in Python3.x.
 #        On Python2.7, this dependency must be installed using 'pip install futures'.
