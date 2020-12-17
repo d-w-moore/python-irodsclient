@@ -137,8 +137,7 @@ class iRODSDataObjectFileRaw(io.RawIOBase):
         return (replica_token, resc_hier)
 
     def _close_replica(self):
-        server_version = ast.literal_eval(os.environ.get('FORCE_IRODS_VERSION', '()')) or self.conn.server_version
-        if server_version < IRODS_SERVER_WITH_CLOSE_REPLICA_API: return False
+        if self.conn.server_version < IRODS_SERVER_WITH_CLOSE_REPLICA_API: return False
         buf_ = json.dumps({ "fd": self.desc,
                             "send_notification": False,
                             "update_size": False,
