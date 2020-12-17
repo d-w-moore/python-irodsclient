@@ -38,7 +38,9 @@ class DataObjectManager(Manager):
 
     def should_parallelize_transfer (self, num_threads, obj_sz):
 
-        server_version = ast.literal_eval(os.environ.get('FORCE_IRODS_VERSION', '()' )) or self.server_version
+        # Allow an environment variable to override the detection of the server version.
+        # Example: $ export IRODS_VERSION_OVERRIDE="4,2,9" python -m irods.parallel ...
+        server_version = ast.literal_eval(os.environ.get('IRODS_VERSION_OVERRIDE', '()' )) or self.server_version
 
         if num_threads == 1 or server_version < parallel.MINIMUM_SERVER_VERSION:
             return False
