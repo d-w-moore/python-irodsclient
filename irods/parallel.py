@@ -13,6 +13,8 @@ import threading
 import multiprocessing
 import six
 
+import irods
+import irods.data_object
 from irods.data_object import iRODSDataObjectFileRaw, iRODSDataObject
 from irods.exception import DataObjectDoesNotExist
 from irods.message import ( StringStringMap, FileOpenRequest,
