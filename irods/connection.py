@@ -29,12 +29,16 @@ from irods.client_server_negotiation import (
     USE_SSL,
     CS_NEG_RESULT_KW)
 from irods.api_number import api_number
+import threading
 
 logger = logging.getLogger(__name__)
 
 class PlainTextPAMPasswordError(Exception): pass
 
 class Connection(object):
+
+    mutex = threading.Lock()
+    ordnum = ord('A')
 
     DISALLOWING_PAM_PLAINTEXT = True
 
@@ -60,6 +64,13 @@ class Connection(object):
             raise ValueError("Unknown authentication scheme %s" % scheme)
         self.create_time = datetime.datetime.now()
         self.last_used_time = self.create_time
+
+        with self.mutex:
+            self.debug_name = chr(self.ordnum)
+            self.__class__.ordnum+= 1
+
+    def __repr__(self) :
+        return '<Conn {}>'.format(self.debug_name)
 
     @property
     def server_version(self):

@@ -1,3 +1,4 @@
+from __future__ import print_function
 from __future__ import absolute_import
 import io
 import sys
@@ -14,6 +15,8 @@ import irods.keywords as kw
 from irods.api_number import api_number
 from irods.message import ( StringStringMap, FileOpenRequest, ReplicaCloseRequest,
                             GetFileDescriptorInfo, iRODSMessage )
+
+CONN_DEBUG = bool(int(os.environ.get('CONN_DEBUG','0')))
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +142,7 @@ class iRODSDataObjectFileRaw(io.RawIOBase):
     def _close_replica(self):
         server_version = ast.literal_eval(os.environ.get('IRODS_VERSION_OVERRIDE', '()' ))
         if (server_version or self.conn.server_version) < IRODS_SERVER_WITH_CLOSE_REPLICA_API: return False
+        if CONN_DEBUG: print('on _replica_close',self.conn,file=sys.stderr)
         buf_ = json.dumps({ "fd": self.desc,
                             "send_notification": False,
                             "update_size": False,
@@ -158,13 +162,16 @@ class iRODSDataObjectFileRaw(io.RawIOBase):
 
     def close(self):
         if self.finalize_on_close or not self._close_replica():
+            if CONN_DEBUG: print('on close',self.conn,file=sys.stderr)
             self.conn.close_file(self.desc, **self.options)
         self.conn.release()
         super(iRODSDataObjectFileRaw, self).close()
         return None
 
     def seek(self, offset, whence=0):
-        return self.conn.seek_file(self.desc, offset, whence)
+        result = self.conn.seek_file(self.desc, offset, whence)
+        if CONN_DEBUG: print ('on seek ', self.conn, 'offset =',offset, 'whence =',('SET','CUR','END')[whence] , '->', result, file=sys.stderr)
+        return result
 
     def readinto(self, b):
         contents = self.conn.read_file(self.desc, buffer=b)
@@ -174,6 +181,7 @@ class iRODSDataObjectFileRaw(io.RawIOBase):
         return len(contents)
 
     def write(self, b):
+        if CONN_DEBUG: print('on write', self.conn)
         if isinstance(b, memoryview):
             return self.conn.write_file(self.desc, b.tobytes())
 

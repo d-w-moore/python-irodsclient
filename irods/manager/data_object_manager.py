@@ -1,3 +1,4 @@
+from __future__ import print_function
 from __future__ import absolute_import
 import os
 import io
@@ -8,11 +9,12 @@ from irods.message import (
 import irods.exception as ex
 from irods.api_number import api_number
 from irods.data_object import (
-    iRODSDataObject, iRODSDataObjectFileRaw, chunks, irods_dirname, irods_basename)
+    iRODSDataObject, iRODSDataObjectFileRaw, chunks, irods_dirname, irods_basename, CONN_DEBUG)
 import irods.keywords as kw
 import irods.parallel as parallel
 import six
 import ast
+import sys
 
 
 MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE = 32 * ( 1024 ** 2)
@@ -241,6 +243,7 @@ class DataObjectManager(Manager):
         desc = conn.recv().int_info
 
         raw = iRODSDataObjectFileRaw(conn, desc, finalize_on_close = finalize_on_close, **options)
+        if CONN_DEBUG: print ('on open', raw.conn, file=sys.stderr)
         (_raw_fd_holder).append(raw)
         return io.BufferedRandom(raw)
 
