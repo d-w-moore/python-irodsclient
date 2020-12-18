@@ -355,7 +355,7 @@ def io_main( session, Data, opr_, fname, R='', **kwopt):
         R = R_via_libcall
 
     resc_options = {}
-    if Operation.isPut() and d_path is None:
+    if Operation.isPut():
         if R:
             resc_options [kw.RESC_NAME_KW] = R
             resc_options [kw.DEST_RESC_NAME_KW] = R
