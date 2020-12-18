@@ -343,7 +343,7 @@ def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str,
 #    * call multithread manager
 
 def io_main( session, Data, opr_, fname, R='', **kwopt):
-
+    print('** Taking Parallel put/get code path\n',file=sys.stderr)
     Operation = Oper(opr_)
     d_path = None
     Io = None
