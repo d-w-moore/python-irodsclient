@@ -42,7 +42,10 @@ class DataObjectManager(Manager):
         # Example: $ export IRODS_VERSION_OVERRIDE="4,2,9" python -m irods.parallel ...
         server_version = ast.literal_eval(os.environ.get('IRODS_VERSION_OVERRIDE', '()' )) or self.server_version
 
-        if num_threads == 1 or server_version < parallel.MINIMUM_SERVER_VERSION:
+        # disable parallel option if a) num_threads = 1
+        #                         or b) ENABLE_PARALLEL_CODEPATH env var in (0,undefined) and irodsvn < MIN
+        if num_threads == 1 or ( 0 == int(os.environ.get('ENABLE_PARALLEL_CODEPATH','0')) and \
+                                 server_version < parallel.MINIMUM_SERVER_VERSION ):
             return False
 
         if getattr(obj_sz,'seek',None) :
