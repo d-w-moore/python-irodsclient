@@ -131,6 +131,8 @@ class iRODSDataObjectFileRaw(io.RawIOBase):
         Xml = ET.fromstring(result.msg.replace(b'\0',b''))
         dobj_info = json.loads(Xml.find('buf').text)
 
+        open ('/tmp/info','wb').write(Xml.find('buf').text)
+
         replica_token = dobj_info.get("replica_token","")
         resc_hier = ( dobj_info.get("data_object_info") or {} ).get("resource_hierarchy","")
 

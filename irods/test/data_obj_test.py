@@ -64,6 +64,51 @@ class TestDataObjOps(unittest.TestCase):
             self.sess.resources.remove(Root)
             shutil.rmtree(d)
 
+#--dwm
+    def test_put_get_parallel_autoswitch_B__235(self):
+        if not self.sess.data_objects.should_parallelize_transfer(server_version_hint = self.SERVER_VERSION):
+            self.skipTest('Skip unless server version is 4.2.9\n'
+                          '(or 4.2.8 and ENABLE_PARALLEL_TRANSFER_FOR_428 != 0 in environment)')
+        if getattr(data_object_manager,'DEFAULT_NUMBER_OF_THREADS',None) in (1, None):
+            self.skipTest('Data object manager not configured for parallel puts and gets')
+        Root  = 'pt235'
+        Leaf  = 'resc235'
+        files_to_delete = []
+        #if 1:
+        with self.create_resc_hierarchy(Root,Leaf) as hier_str:
+            datafile = NamedTemporaryFile (prefix='file_to_put_235_testB',delete=True)
+            datafile.write( os.urandom( data_object_manager.MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE + 1 ))
+            datafile.flush()
+            base_name = os.path.basename(datafile.name)
+            data_obj_name = '/{0.zone}/home/{0.username}/{1}'.format(self.sess, base_name)
+            PUT_LOG = self.In_Memory_Stream()
+            GET_LOG = self.In_Memory_Stream()
+            NumThreadsRegex = re.compile('^num_threads\s*=\s*(\d+)',re.MULTILINE)
+            options={}
+            try:
+                with irods.parallel.enableLogging( logging.StreamHandler, (PUT_LOG,), level_=logging.INFO):
+                    self.sess.data_objects.put(datafile.name, data_obj_name, num_threads = 0, **options)  # - PUT
+                    match = NumThreadsRegex.search (PUT_LOG.getvalue())
+                    self.assertTrue (match is not None and int(match.group(1)) >= 1) # - PARALLEL code path taken?
+                with irods.parallel.enableLogging( logging.StreamHandler, (GET_LOG,), level_=logging.INFO):
+                    self.sess.data_objects.get(data_obj_name, datafile.name+".get", num_threads = 0, **options) # - GET
+                    match = NumThreadsRegex.search (GET_LOG.getvalue())
+                    self.assertTrue (match is not None and int(match.group(1)) >= 1) # - PARALLEL code path taken?
+                files_to_delete += [datafile.name + ".get"]
+                with open(datafile.name, "rb") as f1, open(datafile.name + ".get", "rb") as f2:
+                    self.assertEqual ( f1.read(), f2.read() )
+                q = self.sess.query (DataObject.name,DataObject.resc_hier).filter( DataObject.name == base_name,
+                                                                                   DataObject.resource_name ==\
+                                                                                   self.sess.pool.account.default_resource # "demoResc"
+                                                                                 )
+                replicas = list(q)
+#               self.assertEqual( len(replicas), 1 )
+#               self.assertEqual( replicas[0][DataObject.resc_hier] , hier_str )
+            finally:
+                self.sess.data_objects.unlink( data_obj_name, force = True)
+                for n in files_to_delete: os.unlink(n)
+# -- dwm
+
     def test_put_get_parallel_autoswitch_A__235(self):
         if not self.sess.data_objects.should_parallelize_transfer(server_version_hint = self.SERVER_VERSION):
             self.skipTest('Skip unless server version is 4.2.9\n'
@@ -77,6 +122,7 @@ class TestDataObjOps(unittest.TestCase):
         #  - set up a small resource hierarchy and generate a file large enough to trigger parallel transfer
         #  - `put' the file to iRODS, then `get' it back, comparing the resulting two disk files and making
         #    sure that the parallel routines were invoked to do both transfers
+
 
         with self.create_resc_hierarchy(Root,Leaf) as hier_str:
 

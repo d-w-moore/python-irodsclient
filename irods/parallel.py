@@ -316,8 +316,13 @@ def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str,
     counter = 1
     gen_file_handle = lambda: open(fname, Operation.disk_file_mode(initial_open = (counter == 1)))
     File = gen_file_handle()
+    #import pdb
+    #pdb.set_trace()
     for r in ranges:
-        if Io is None:
+        if Io is None:  # -- dwm:
+            print ('logical_path =',D.path,'; dobj_mode =',Operation.data_object_mode(initial_open = False),
+                   '; options =', {kw.RESC_HIER_STR_KW: hier_str, kw.REPLICA_TOKEN_KW: replica_token} ,
+                   file=open('/tmp/opendobj','w'))
             Io = session.data_objects.open( D.path, Operation.data_object_mode(initial_open = False),
                                             create = False, finalize_on_close = False,
                                             **{kw.RESC_HIER_STR_KW: hier_str, kw.REPLICA_TOKEN_KW: replica_token} )
