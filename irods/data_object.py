@@ -187,3 +187,27 @@ class iRODSDataObjectFileRaw(io.RawIOBase):
 
     def seekable(self):
         return True
+
+if __name__ == '__main__':
+    import os,ssl
+    from irods.session import iRODSSession
+    try:
+        env_file = os.environ['IRODS_ENVIRONMENT_FILE']
+    except KeyError:
+        env_file = os.path.expanduser('~/.irods/irods_environment.json')
+    ssl_context = ssl.create_default_context( purpose=ssl.Purpose.SERVER_AUTH,
+                                              cafile=None, capath=None, cadata=None)
+    ssl_settings = {'ssl_context': ssl_context}
+    with iRODSSession(irods_env_file=env_file, **ssl_settings) as session:
+        myPath = (sys.argv[1:] and sys.argv[1]) or '/tempZone/home/rods/open.test'
+        o,raw = session.data_objects.open_with_FileRaw(myPath ,'w', finalize_on_close = True)
+        replica_token , resc_hier = (raw.get_replica_access_info())
+        o2 = session.data_objects.open( myPath, 'a', finalize_on_close = False,
+                                        **{ kw.REPLICA_TOKEN_KW: replica_token, kw.RESC_HIER_STR_KW: resc_hier } )
+        b_bytes = bytearray(range(256))*64
+        l_bytes = len(b_bytes)
+        o2.seek( l_bytes, 0)
+        o.write ( b_bytes)
+        o2.write( b_bytes)
+        o2.close()
+        o.close()
