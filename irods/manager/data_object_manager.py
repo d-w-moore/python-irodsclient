@@ -22,6 +22,20 @@ DEFAULT_NUMBER_OF_THREADS = 0   # Defaults for reasonable number of threads -- o
                                 # Setting this to 1 disables automatic use of parallel transfer.
 DEFAULT_QUEUE_DEPTH = 32
 
+# Setting ENABLE_PARALLEL_TRANSFER_FOR_428=1 in the environment will
+# allow iRODS version 4.2.8 to leverage the irods.parallel module
+# for data object `put's and `get's.  Caveat: with the 4.2.8 server, a
+# parallel put will cause acPostProcForPut() to be invoked N times for
+# each N-thread transfer. With iRODS version 4.2.9+, the REPLICA_CLOSE
+# api is introduced, which ensures only one invocation of the static PEP.
+
+_ABSOLUTE_MINIMUM_SERVER_FOR_PARALLEL_TRANSFER = (4,2,8)
+
+def Enable_Parallel_Codepath (server_version):
+    return  server_version >= _ABSOLUTE_MINIMUM_SERVER_FOR_PARALLEL_TRANSFER and \
+            0 != int(os.environ.get('ENABLE_PARALLEL_TRANSFER_FOR_428','0'))
+
+
 class DataObjectManager(Manager):
 
     READ_BUFFER_SIZE = 1024 * io.DEFAULT_BUFFER_SIZE
@@ -41,12 +55,17 @@ class DataObjectManager(Manager):
                                      num_threads = 0,
                                      obj_sz = 1+MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE,
                                      server_version_hint = ()):
+
         # Allow an environment variable to override the detection of the server version.
         # Example: $ export IRODS_VERSION_OVERRIDE="4,2,9" ;  python -m irods.parallel ...
         server_version = ( ast.literal_eval(os.environ.get('IRODS_VERSION_OVERRIDE', '()' )) or server_version_hint or 
                            self.server_version )
-        if num_threads == 1 or ( server_version < parallel.MINIMUM_SERVER_VERSION ):
+        # disable parallel option if a) num_threads = 1
+        #                         or b) env var ENABLE_PARALLEL_TRANSFER_FOR_428 is zero or undefined for 4.2.9 > server >= 4.2.8
+        if num_threads == 1 or ( server_version < parallel.MINIMUM_SERVER_VERSION and
+                                 not Enable_Parallel_Codepath(server_version) ):
             return False
+
         if getattr(obj_sz,'seek',None) :
             pos = obj_sz.tell()
             size = obj_sz.seek(0,os.SEEK_END)
@@ -56,6 +75,7 @@ class DataObjectManager(Manager):
         else:
             size = obj_sz
             assert (size > -1)
+
         return size > MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE
 
 

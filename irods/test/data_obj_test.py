@@ -66,7 +66,8 @@ class TestDataObjOps(unittest.TestCase):
 
     def test_put_get_parallel_autoswitch_A__235(self):
         if not self.sess.data_objects.should_parallelize_transfer(server_version_hint = self.SERVER_VERSION):
-            self.skipTest('Skip unless detected server version is 4.2.9')
+            self.skipTest('Skip unless server version is 4.2.9\n'
+                          '(or 4.2.8 and ENABLE_PARALLEL_TRANSFER_FOR_428 != 0 in environment)')
         if getattr(data_object_manager,'DEFAULT_NUMBER_OF_THREADS',None) in (1, None):
             self.skipTest('Data object manager not configured for parallel puts and gets')
         Root  = 'pt235'

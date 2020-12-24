@@ -17,6 +17,7 @@ import irods
 import irods.data_object
 from irods.data_object import iRODSDataObjectFileRaw, iRODSDataObject
 from irods.exception import DataObjectDoesNotExist
+from irods.models import ( DataObject )
 from irods.message import ( StringStringMap, FileOpenRequest,
                             GetFileDescriptorInfo, iRODSMessage )
 from irods.api_number import api_number
@@ -316,11 +317,20 @@ def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str,
     counter = 1
     gen_file_handle = lambda: open(fname, Operation.disk_file_mode(initial_open = (counter == 1)))
     File = gen_file_handle()
+
+    myOptions = { kw.DEST_RESC_HIER_STR_KW: hier_str } if Operation.isPut() \
+                else { kw.RESC_HIER_STR_KW: hier_str }
+    if replica_token:
+        myOptions[kw.REPLICA_TOKEN_KW] = replica_token
+    else:
+        if Operation.isPut():
+            dobjs = list(session.query(DataObject.replica_number).filter(DataObject.id == D.id, DataObject.resc_hier == hier_str))
+            if dobjs[:1]: myOptions[kw.REPL_NUM_KW] = dobjs[0][DataObject.replica_number]
     for r in ranges:
         if Io is None:
             Io = session.data_objects.open( D.path, Operation.data_object_mode(initial_open = False),
                                             create = False, finalize_on_close = False,
-                                            **{kw.RESC_HIER_STR_KW: hier_str, kw.REPLICA_TOKEN_KW: replica_token} )
+                                            **myOptions)
         mgr.add_io( Io )
         if File is None: File = gen_file_handle()
         futures.append(executor.submit( _io_part, Io, r, File, Operation, mgr, str(counter), queueObject))
