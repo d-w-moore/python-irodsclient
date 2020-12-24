@@ -9,7 +9,6 @@ from irods.session import iRODSSession
 from irods.resource import iRODSResource
 import irods.keywords as kw
 import irods.test.helpers as helpers
-import irods.keywords as kw
 
 
 class TestAdmin(unittest.TestCase):
