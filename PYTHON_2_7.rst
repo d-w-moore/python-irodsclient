@@ -38,7 +38,9 @@ We proceed to the creation of the virtual environment and
 the installation of the PRC module into that environment:
 
   $ python -m virtualenv ~/venv
+  
   $ source ~/venv/bin/activate
+  
   (venv) $ python -m pip install <PyPI_name_or_path>
 
 For the last line, the final argument can be either the
