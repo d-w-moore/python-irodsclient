@@ -8,6 +8,8 @@ import string
 import six
 from irods import MAX_PASSWORD_LENGTH
 
+get_uid = getattr(os, 'getuid', lambda:0)
+
 seq_list = [
         0xd768b678,
         0xedfdaf56,
@@ -56,7 +58,7 @@ def decode(s, uid=None):
 
     #The uid is used as a salt.
     if uid is None:
-        uid = os.getuid()
+        uid = get_uid()
 
     #The first byte is a dot, the next five are literally irrelevant
     #garbage, and we already used the seventh one. The string to decode
@@ -101,7 +103,7 @@ def encode(s, uid=None, mtime=None):
 
     #The uid is used as a salt.
     if uid is None:
-        uid = os.getuid()
+        uid = get_uid()
 
     #This value lets us know which seq value to use
     #Referred to as "rval" in the C code
