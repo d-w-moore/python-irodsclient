@@ -23,6 +23,7 @@ class iRODSSession(object):
     def __init__(self, configure=True, **kwargs):
         self.pool = None
         self.numThreads = 0
+        self.__finalized = False
 
         if configure:
             self.configure(**kwargs)
@@ -35,7 +36,6 @@ class iRODSSession(object):
         self.user_groups = UserGroupManager(self)
         self.resources = ResourceManager(self)
         self.zones = ZoneManager(self)
-        self.__cleanup = False
 
     def __enter__(self):
         return self
@@ -47,8 +47,9 @@ class iRODSSession(object):
         self.cleanup()
 
     def cleanup(self):
-        if self.__cleanup: return
-        self.__cleanup = True
+        if self.__finalized: return
+        self.__finalized = True
+        if not getattr(self,'pool',None): return
         for conn in self.pool.active | self.pool.idle:
             try:
                 conn.disconnect()
