@@ -35,6 +35,7 @@ class iRODSSession(object):
         self.user_groups = UserGroupManager(self)
         self.resources = ResourceManager(self)
         self.zones = ZoneManager(self)
+        self.__cleanup = False
 
     def __enter__(self):
         return self
@@ -42,7 +43,12 @@ class iRODSSession(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self.cleanup()
 
+    def __del__(self):
+        self.cleanup()
+
     def cleanup(self):
+        if self.__cleanup: return
+        self.__cleanup = True
         for conn in self.pool.active | self.pool.idle:
             try:
                 conn.disconnect()
