@@ -3,8 +3,8 @@ Python, pip, virtualenv - caveats for use with PRC
 ==================================================
 
 The Python iRODS Client (PRC) can be installed by a
-non-administrative user, either as a locally for
-the user (using ~/.local) or in a virtual environment.
+non-administrative user, either locally for the user
+(under ~/.local) or in a virtual environment.
 
 If the system administrator has installed system packages
 for Python and pip, and we are working on a recent
@@ -72,5 +72,5 @@ while the current working directory is set to the location
 of "setup.py".  An example would be the git repository
 resulting from:
 
-  $ git clone http://github.com/irods/python-irodsclient 
+  $ git clone http://github.com/irods/python-irodsclient
 
