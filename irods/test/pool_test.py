@@ -6,13 +6,31 @@ import sys
 import time
 import unittest
 import irods.test.helpers as helpers
+import shutil
+import tempfile
+import json
+from os.path import join as path_join
 
 
+try:
+    JSONDecodeError = json.decoder.JSONDecodeError  # Python 3
+except AttributeError:
+    JSONDecodeError = ValueError                    # Python 2
 
-class TestPool(unittest.TestCase):
+
+class BasicTestPool(unittest.TestCase):
+
+    with helpers.make_session() as _sess:
+        IRODS_HOST = _sess.host
+
+    @classmethod
+    def setUpClass(cls):
+        cls.configs_dir = path_join(os.path.dirname(__file__) , "test-data")
 
     def setUp(self):
-        self.sess = helpers.make_session(irods_env_file="./test-data/irods_environment.json")
+        if self.IRODS_HOST != '127.0.0.1':
+            self.skipTest('irods server host not named "127.0.0.1"')
+        self.sess = helpers.make_session(irods_env_file = path_join(self.configs_dir, "irods_environment.json"))
 
     def tearDown(self):
         '''Close connections
@@ -209,20 +227,57 @@ class TestPool(unittest.TestCase):
         self.assertEqual(connection_refresh_time, -1)
 
     def test_get_connection_refresh_time_none_existant_env_file(self):
-        connection_refresh_time = self.sess.get_connection_refresh_time(irods_env_file="./test-data/irods_environment_non_existant.json")
+        connection_refresh_time = self.sess.get_connection_refresh_time(
+                irods_env_file=path_join(self.configs_dir,"irods_environment_non_existant.json")
+                )
         self.assertEqual(connection_refresh_time, -1)
 
     def test_get_connection_refresh_time_no_connection_refresh_field(self):
-        connection_refresh_time = self.sess.get_connection_refresh_time(irods_env_file="./test-data/irods_environment_no_refresh_field.json")
+        connection_refresh_time = self.sess.get_connection_refresh_time(
+                irods_env_file=path_join(self.configs_dir,"irods_environment_no_refresh_field.json")
+                )
         self.assertEqual(connection_refresh_time, -1)
 
     def test_get_connection_refresh_time_negative_connection_refresh_field(self):
-        connection_refresh_time = self.sess.get_connection_refresh_time(irods_env_file="./test-data/irods_environment_negative_refresh_field.json")
+        connection_refresh_time = self.sess.get_connection_refresh_time(
+                irods_env_file=path_join(self.configs_dir,"irods_environment_negative_refresh_field.json")
+                )
         self.assertEqual(connection_refresh_time, -1)
 
     def test_get_connection_refresh_time(self):
-        connection_refresh_time = self.sess.get_connection_refresh_time(irods_env_file="./test-data/irods_environment.json")
+        connection_refresh_time = self.sess.get_connection_refresh_time(
+                irods_env_file=path_join(self.configs_dir,"irods_environment.json")
+                )
         self.assertEqual(connection_refresh_time, 3)
+
+
+class RemoteHostTestPool(BasicTestPool):
+
+    @classmethod
+    def setUpClass(cls):
+#       import pdb
+#       pdb.set_trace()
+        super(RemoteHostTestPool,cls).setUpClass()
+        cls.src = cls.configs_dir
+        cls.tempDir = tempfile.mkdtemp()
+        cls.configs_dir = path_join(cls.tempDir,"test-data")
+        shutil.copytree(cls.src, cls.configs_dir)
+        for jsonfile in [path_join(cls.configs_dir,f) for f in os.listdir(cls.configs_dir)]:
+            if not os.path.isfile(jsonfile): continue
+            try:
+                with open(jsonfile,'r') as src: conf = json.load (src)
+            except JSONDecodeError:
+                continue
+            conf["irods_host"] = cls.IRODS_HOST
+            with open(jsonfile,'w') as dst: json.dump (conf,dst)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tempDir)
+
+    def setUp(self):
+        self.sess = helpers.make_session(irods_env_file = path_join(self.configs_dir, "irods_environment.json"))
+
 
 if __name__ == '__main__':
     # let the tests find the parent irods lib
