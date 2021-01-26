@@ -108,6 +108,12 @@ class iRODSDataObjectFileRaw :
         self.desc = descriptor
         self.options = options
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self,*x):
+        self.close()
+
     def close(self):
         self.conn.close_file(self.desc, **self.options)
         self.conn.release()
@@ -117,10 +123,11 @@ class iRODSDataObjectFileRaw :
     def seek(self, offset, whence=0):
         return self.conn.seek_file(self.desc, offset, whence)
 
-    def read(self, b , n = -1):
-        contents = self.conn.read_file(self.desc, size = n, buffer=b)
-        return contents
-        
+    def read(self, n = -1):
+        b = bytearray(8192)
+        bytesread = self.conn.read_file(self.desc, size = n, buffer=b)
+        return bytesread.tobytes()
+
     def write(self, b):
         if isinstance(b, memoryview):
             return self.conn.write_file(self.desc, b.tobytes())

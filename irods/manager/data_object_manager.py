@@ -158,7 +158,8 @@ class DataObjectManager(Manager):
         conn.send(message)
         desc = conn.recv().int_info
 
-        return io.BufferedRandom(iRODSDataObjectFileRaw(conn, desc, **options))
+        #return io.BufferedRandom(iRODSDataObjectFileRaw(conn, desc, **options))
+        return iRODSDataObjectFileRaw(conn, desc, **options)
 
 
     def unlink(self, path, force=False, **options):
