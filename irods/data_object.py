@@ -99,7 +99,9 @@ class iRODSDataObject(object):
         self.manager.replicate(self.path, **options)
 
 
-class iRODSDataObjectFileRaw(io.RawIOBase):
+#class iRODSDataObjectFileRaw(io.RawIOBase):
+
+class iRODSDataObjectFileRaw :
 
     def __init__(self, conn, descriptor, **options):
         self.conn = conn
@@ -109,30 +111,18 @@ class iRODSDataObjectFileRaw(io.RawIOBase):
     def close(self):
         self.conn.close_file(self.desc, **self.options)
         self.conn.release()
-        super(iRODSDataObjectFileRaw, self).close()
+        #super(iRODSDataObjectFileRaw, self).close()
         return None
 
     def seek(self, offset, whence=0):
         return self.conn.seek_file(self.desc, offset, whence)
 
-    def readinto(self, b):
-        contents = self.conn.read_file(self.desc, buffer=b)
-        if contents is None:
-            return 0
-
-        return len(contents)
-
+    def read(self, b , n = -1):
+        contents = self.conn.read_file(self.desc, size = n, buffer=b)
+        return contents
+        
     def write(self, b):
         if isinstance(b, memoryview):
             return self.conn.write_file(self.desc, b.tobytes())
 
         return self.conn.write_file(self.desc, b)
-
-    def readable(self):
-        return True
-
-    def writable(self):
-        return True
-
-    def seekable(self):
-        return True
