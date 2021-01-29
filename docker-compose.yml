@@ -1,0 +1,9 @@
+version: '3'
+services:
+  client-runner:
+    image: ${os_image}
+    command: bash -c '[ "${return_code}" -eq 0 ] && echo PASS || echo FAIL ; bash -c "exit ${return_code}"'
+
+  ubuntu:
+    image: ubuntu:18.04
+    command: tail -f '/dev/null'
