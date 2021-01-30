@@ -1,0 +1,24 @@
+FROM ubuntu:18.04
+ARG  PY_N="3"
+ENV  log_output /tmp
+ENV  pyN "${PY_N}"
+RUN  apt update
+RUN  apt install -y python${PY_N}
+RUN  apt install -y python${pyN}-pip
+RUN  useradd -md /home/user -s /bin/bash user
+RUN  apt install -y git
+WORKDIR /home/user
+COPY ./ ./repo/
+RUN chown -R user repo/
+USER user
+RUN  pip${pyN} install --user --upgrade pip   # get latest pip
+RUN  cd repo && python${pyN} -m pip install --user .    # install PRC for the non-root user
+#RUN  python${pyN} repo/scripts/irods_ping.py iinit \
+#         host irods-provider \
+#         port 1247     \
+#         user rods     \
+#         zone tempZone \
+#         password rods \
+#     && /repo/scripts/wait_on_condition python${pyN} \
+#                                        /repo/scripts/irods_ping.py connect \
+#     && cd repo/irods/test && python${pyN} runner.py | tee ${log_output}/prc_test_logs.txt
