@@ -4,7 +4,7 @@ import io
 from irods.models import DataObject
 from irods.manager import Manager
 from irods.message import (
-    iRODSMessage, FileOpenRequest, ObjCopyRequest, StringStringMap, DataObjInfo, ModDataObjMeta)
+    iRODSMessage, FileOpenRequest, ObjCopyRequest, StringStringMap, DataObjInfo, ModDataObjMeta, STR_PI)
 import irods.exception as ex
 from irods.api_number import api_number
 from irods.data_object import (
@@ -118,7 +118,7 @@ class DataObjectManager(Manager):
         return self.get(path)
 
 
-    def open(self, path, mode, **options):
+    def open(self, path, mode, return_host=None, **options):
         if kw.DEST_RESC_NAME_KW not in options:
             # Use client-side default resource if available
             try:
@@ -157,6 +157,18 @@ class DataObjectManager(Manager):
         conn = self.sess.pool.get_connection()
         conn.send(message)
         desc = conn.recv().int_info
+
+        if isinstance(return_host,dict):
+            choices = ('PUT','GET')
+            keys = [k for k in return_host if k in choices]
+            if len(keys) != 1:
+                raise ValueError("If provided, return_host argument must have 1 key in {}".format(choices))
+            message = iRODSMessage('RODS_API_REQ', msg=message_body,
+                                   int_info=api_number['GET_HOST_FOR_{}_AN'.format(keys[0])])
+            conn.send(message)
+            response = conn.recv()
+            msg = response.get_main_message( STR_PI )
+            return_host[keys[0]] = msg.myStr
 
         return io.BufferedRandom(iRODSDataObjectFileRaw(conn, desc, **options))
 
