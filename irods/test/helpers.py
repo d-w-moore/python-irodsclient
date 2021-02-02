@@ -15,10 +15,43 @@ import random
 import datetime
 import json
 import sys
+import logging
 from irods.session import iRODSSession
 from irods.message import (iRODSMessage, IRODS_VERSION)
 from irods.password_obfuscation import encode
 from six.moves import range
+
+class iRODSUserLogins(object):
+    """A class which creates users and set passwords from a given dict or list of tuples of
+       (username,password).  
+
+       The utility method self.login(username) is then used to generate a session object
+       for one of those users.
+
+       This class may be used standalone or as a mixin.
+    """
+    def session_for_user(self, username):
+        return iRODSSession (port=self.admin.port,zone=self.admin.zone,host=self.admin.host,
+                user=username,password=self._pw[username])
+    
+    def create_user(self, username, password = '', usertype = 'rodsuser', auto_remove = True):
+        u = self.admin.users.create(username,usertype)
+        if password is not None:
+            u.modify('password',password)
+        self._pw[username] = password
+        if auto_remove:
+            self._users_to_remove[username] = True
+
+    def __init__(self,admin_session):
+        self.admin = admin_session
+        self._users_to_remove = {}
+        self._pw = {}
+
+        class at_instance_scope_exit:
+            def __del__(Xself):
+                for username in self._users_to_remove:
+                    u = self.admin.users.remove(username)
+        self.x = at_instance_scope_exit()
 
 
 class StopTestsException(Exception):
@@ -212,14 +245,15 @@ def make_flat_test_dir(dir_path, file_count=10, file_size=1024):
             f.write(os.urandom(file_size))
 
 @contextlib.contextmanager
-def create_simple_resc (self, rescName = None, vault_path = ''):
+def create_simple_resc (self, rescName = None, vault_path = '', hostname = ''):
     if not rescName: 
         rescName =  'simple_resc_' + unique_name (my_function_name() + '_simple_resc', datetime.datetime.now())
     created = False
+    host_name = self.sess.host if not hostname else hostname
     try:
         self.sess.resources.create(rescName,
                                    'unixfilesystem',
-                                   host = self.sess.host,
+                                   host = host_name,
                                    path = vault_path or '/tmp/' + rescName)
         created = True
         yield rescName
@@ -282,3 +316,32 @@ def file_backed_up(filename):
 def irods_session_host_local (sess):
     return socket.gethostbyname(sess.host) == \
            socket.gethostbyname(socket.gethostname())
+
+
+@contextlib.contextmanager
+def enableLogging(logger, handlerType, args, level_ = logging.INFO):
+    """Context manager for temporarily enabling a logger. For debug or test.
+
+    Usage Example
+    -------------
+    Dump INFO and higher priority logging messages from irods.parallel
+    module to file /tmp/logfile.txt:
+
+    with irods.test.helpers.enableLogging(logging.getLogger('irods.parallel'),
+                                          logging.FileHandler,('/tmp/logfile.txt',)):
+        # parallel put/get test call here
+    """
+    h = None
+    saveLevel = logger.level
+    try:
+        logger.setLevel(level_)
+        h = handlerType(*args)
+        h.setLevel( level_ )
+        logger.addHandler(h)
+        yield
+    finally:
+        logger.setLevel(saveLevel)
+        if h in logger.handlers:
+            logger.removeHandler(h)
+
+
