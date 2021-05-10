@@ -86,7 +86,7 @@ class iRODSMessage(object):
         if Xml.tag == 'BinBytesBuf_PI':
             mybin = JSON_Binary_Response()
             mybin.unpack(Xml)
-            json_str = mybin.buf.replace(b'\0',b'')
+            json_str = mybin.buf.replace(b'\0',b'').decode()
         return json.loads( json_str )
 
     @staticmethod
