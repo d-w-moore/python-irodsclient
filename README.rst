@@ -49,7 +49,7 @@ or::
 
  pip install git+https://github.com/irods/python-irodsclient.git[@branch|@commit|@tag]
 
-See also [these instructions](PYTHON_install_caveats.rst), with hints about pip and
+See also :ref:`PYTHON_install_caveats`, with hints about pip and
 virtualenv, relevant to installation on older Linux distributions.
 
 
