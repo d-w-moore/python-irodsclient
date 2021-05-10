@@ -108,6 +108,19 @@ def make_object(session, path, content=None, **options):
     # refresh object after write
     return session.data_objects.get(path)
 
+doit_ = True
+
+def make_object_post_4_1 (session, path, content='', **options):
+    if content: content = iRODSMessage.encode_unicode(content)
+    with session.data_objects.open(path, 'w', **options) as obj_desc:
+        if content:
+            obj_desc.write( content )
+    if options.get('do_get',False):
+        global doit_
+        if doit_:
+            print("DWM ** doing the get *** ")
+            doit_ = False
+        return session.data_objects.get(path)
 
 def make_collection(session, path, object_names=None, object_content=None):
     # create collection
@@ -128,6 +141,16 @@ def make_test_collection(session, path, obj_count):
     for n in range(obj_count):
         obj_path = path + "/test" + str(n).zfill(6) + ".txt"
         make_object(session, obj_path)
+
+    return coll
+
+
+def make_test_collection_post_4_1(session, path, obj_count, do_get = False):
+    coll = session.collections.create(path)
+
+    for n in range(obj_count):
+        obj_path = path + "/test" + str(n).zfill(6) + ".txt"
+        make_object_post_4_1(session, obj_path, do_get = do_get)
 
     return coll
 

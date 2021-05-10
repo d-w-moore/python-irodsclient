@@ -7,6 +7,16 @@ import unittest
 from irods.models import Collection, DataObject
 import irods.test.helpers as helpers
 
+import time,contextlib
+@contextlib.contextmanager
+def timeIt(msg=""):
+    print (msg + " >>>")
+    t= time.time()
+    try:
+      yield
+    finally:
+      print (msg +" <<< "+str(time.time()-t)+" secs")
+
 
 class TestContinueQuery(unittest.TestCase):
 
@@ -18,7 +28,8 @@ class TestContinueQuery(unittest.TestCase):
             # Create test collection
             cls.coll_path = '/{}/home/{}/test_dir'.format(sess.zone, sess.username)
             cls.obj_count = 2500
-            cls.coll = helpers.make_test_collection( sess, cls.coll_path, cls.obj_count)
+            with timeIt(msg="create collection") :
+              cls.coll = helpers.make_test_collection_post_4_1( sess, cls.coll_path, cls.obj_count, do_get=os.environ.get('DO_GET',''))
 
     def setUp(self):
         # open the session (per-test)
@@ -34,7 +45,8 @@ class TestContinueQuery(unittest.TestCase):
         # once only (after all tests), delete large collection
         print ("Deleting the large collection...", file = sys.stderr)
         with helpers.make_session() as sess:
-            sess.collections.remove(cls.coll_path, recurse=True, force=True)
+            with timeIt(msg="remove collection") :
+                sess.collections.remove(cls.coll_path, recurse=True, force=True)
 
     def test_walk_large_collection(self):
         for current_coll, subcolls, objects in self.coll.walk():
