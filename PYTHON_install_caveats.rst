@@ -1,4 +1,4 @@
-..  _PYTHON_install_caveats:
+.. _PYTHON_install_caveats:
 ==================================================
 Python, pip, virtualenv - caveats for use with PRC
 ==================================================
