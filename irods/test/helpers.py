@@ -110,7 +110,7 @@ def make_object(session, path, content=None, **options):
 
 doit_ = True
 
-def make_object_post_4_1 (session, path, content='', **options):
+def make_object_post_4_1 (session, path, content='abcd', **options):
     if content: content = iRODSMessage.encode_unicode(content)
     with session.data_objects.open(path, 'w', **options) as obj_desc:
         if content:
