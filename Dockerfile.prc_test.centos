@@ -23,11 +23,9 @@ RUN  python${py_N} repo/docker_build/iinit.py \
         zone tempZone \
         password rods
 SHELL ["/bin/bash","-c"]
-CMD  echo "Waiting on iRODS server ::: " &&\
-     repo/docker_build/wait_on_condition -v -i 10 -n 30 \
-       'echo -e "\x00\x00\x00\x33<MsgHeader_PI><type>HEARTBEAT</type></MsgHeader_PI>" | nc irods-provider 1247 | grep HEARTBEAT' && \
-     echo "::: iRODS server answered HEARTBEAT message at $(date)" |tee /tmp/irods_is_up && echo '0'>/tmp/pyconn && \
-     for x in {1..8} ; do python${PY_N} ~/repo/prc_irods_connect.py && echo '1'>/tmp/pyconn && break ; done | tee -a /tmp/irods_is_up; \
-     [ `cat /tmp/pyconn` = 1 ] || { echo >&2 "Cannot connect using PRC"; exit 123; } ; \
+CMD  echo "Waiting on iRODS server ::: " && \
+     echo '0'>/tmp/pyconn && \
+     for x in {1..150} ; do python${PY_N} ~/repo/prc_irods_connect.py && echo '1'>/tmp/pyconn && break ; done | tee -a /tmp/irods_is_up; \
+     [ `cat /tmp/pyconn` = 1 ] || { echo >&2 "Cannot connect using PRC"; exit 16; } ; \
      sudo groupadd -o -g $(stat -c%g /irods_shared) irods && sudo usermod -aG irods user && \
      newgrp irods < repo/run_python_tests.sh
