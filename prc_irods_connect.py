@@ -4,7 +4,7 @@ from irods.test.helpers import make_session
 from irods.models import Collection
 from time import sleep
 
-INITIAL_SLEEP = 2
+INITIAL_SLEEP = 1./4.
 
 session = None
 sleep(INITIAL_SLEEP)
