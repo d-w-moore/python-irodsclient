@@ -129,6 +129,7 @@ class TestAccess(unittest.TestCase):
         B = set (map(fields,b_iter))
         return (A-B) | (B-A)
 
+    @unittest.skipIf(True,'true')
     def test_raw_acls__207(self):
         data = helpers.make_object(self.sess,"/".join((self.coll_path,"test_obj")))
         eg = eu = fg = fu = None
