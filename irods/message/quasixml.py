@@ -46,7 +46,7 @@ class Element():
         return '{}({})'.format(self.name, repr(self.body))
 
 
-class Token():
+class Token(object):
     def __init__(self, s):
         self.text = s
     def __repr__(self):
