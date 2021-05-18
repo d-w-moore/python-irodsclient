@@ -6,6 +6,10 @@ class Element():
     """Represents <name>body</name>.
        body is either a string or a list of sub-elements.
     """
+
+    @property
+    def tag(self): return self.name
+
     def __init__(self, name, body):
         if body == []:
             # Empty element.
