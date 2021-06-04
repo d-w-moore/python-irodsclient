@@ -41,7 +41,9 @@ class DataObjectManager(Manager):
     def should_parallelize_transfer( self,
                                      num_threads = 0,
                                      obj_sz = 1+MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE,
-                                     server_version_hint = ()):
+                                     server_version_hint = (),
+                                     measured_obj_size = ()):
+
         # Allow an environment variable to override the detection of the server version.
         # Example: $ export IRODS_VERSION_OVERRIDE="4,2,9" ;  python -m irods.parallel ...
         server_version = ( ast.literal_eval(os.environ.get('IRODS_VERSION_OVERRIDE', '()' )) or server_version_hint or 
@@ -54,6 +56,7 @@ class DataObjectManager(Manager):
             if not isinstance(size,six.integer_types):
                 size = obj_sz.tell()
             obj_sz.seek(pos,os.SEEK_SET)
+            if isinstance(measured_obj_size,list): measured_obj_size[:] = [size]
         else:
             size = obj_sz
             assert (size > -1)
@@ -109,10 +112,10 @@ class DataObjectManager(Manager):
             obj = irods_path
 
         with open(local_path, 'rb') as f, self.open(obj, 'w', **options) as o:
-
-            if self.should_parallelize_transfer (num_threads, f):
+            sizelist = []
+            if self.should_parallelize_transfer (num_threads, f, measured_obj_size = sizelist):
                 f.close()
-                if not self.parallel_put( local_path, (obj,o), num_threads = num_threads,
+                if not self.parallel_put( local_path, (obj,o), total_bytes = sizelist[0], num_threads = num_threads,
                                           target_resource_name = options.get(kw.RESC_NAME_KW,'') or
                                                                  options.get(kw.DEST_RESC_NAME_KW,'')):
                     raise RuntimeError("parallel put failed")
@@ -159,12 +162,13 @@ class DataObjectManager(Manager):
                      file_ ,
                      data_or_path_ ,
                      async_ = False,
+                     total_bytes = -1,
                      num_threads = 0,
                      target_resource_name = '',
                      progressQueue = False):
 
         return parallel.io_main( self.sess, data_or_path_, parallel.Oper.PUT | (parallel.Oper.NONBLOCKING if async_ else 0), file_,
-                                 num_threads = num_threads, target_resource_name = target_resource_name,
+                                 num_threads = num_threads, total_bytes = total_bytes,  target_resource_name = target_resource_name,
                                  queueLength = (DEFAULT_QUEUE_DEPTH if progressQueue else 0))
 
 
