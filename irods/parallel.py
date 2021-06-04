@@ -303,9 +303,21 @@ def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str,
         num_threads = RECOMMENDED_NUM_THREADS_PER_TRANSFER
     num_threads = max(1, min(multiprocessing.cpu_count(), num_threads))
 
+    def bytes_range_for_thread( i, num_threads, total_bytes,  chunk ):
+        begin_offs = i * chunk
+        if i + 1 < num_threads:
+            end_offs = (i + 1) * chunk
+        else:
+            end_offs = total_bytes
+        return six.moves.range(begin_offs, end_offs)
+
     P = 1 + (total_size // num_threads)
+
+    # -- The old PRC/PTE way -- # ranges = [six.moves.range(i*P,min(i*P+P,total_size)) for i in range(num_threads) if i*P < total_size]
+    # -- The iput way:
+    ranges = [bytes_range_for_thread(i, num_threads, total_size, P) for i in range(num_threads)]
+
     logger.info("num_threads = %s ; (P)artitionSize = %s", num_threads, P)
-    ranges = [six.moves.range(i*P,min(i*P+P,total_size)) for i in range(num_threads) if i*P < total_size]
 
     _queueLength = extra_options.get('_queueLength',0)
     if _queueLength > 0:
@@ -324,7 +336,10 @@ def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str,
         if Io is None:
             Io = session.data_objects.open( D.path, Operation.data_object_mode(initial_open = False),
                                             create = False, finalize_on_close = False,
-                                            **{kw.RESC_HIER_STR_KW: hier_str, kw.REPLICA_TOKEN_KW: replica_token} )
+                                            **{ kw.NUM_THREADS_KW: str(num_threads),
+                                                kw.DATA_SIZE_KW: str(total_size),
+                                                kw.RESC_HIER_STR_KW: hier_str,
+                                                kw.REPLICA_TOKEN_KW: replica_token })
         mgr.add_io( Io )
         if File is None: File = gen_file_handle()
         futures.append(executor.submit( _io_part, Io, r, File, Operation, mgr, str(counter), queueObject))
@@ -348,6 +363,7 @@ def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str,
 
 def io_main( session, Data, opr_, fname, R='', **kwopt):
 
+    total_bytes = kwopt.pop('total_bytes', -1)
     Operation = Oper(opr_)
     d_path = None
     Io = None
@@ -365,16 +381,21 @@ def io_main( session, Data, opr_, fname, R='', **kwopt):
     if R_via_libcall:
         R = R_via_libcall
 
-    resc_options = {}
+    num_threads = kwopt.get( 'num_threads', None)
+    if num_threads is None: num_threads = int(kwopt.get('N','0'))
+
+    open_options = {}
     if Operation.isPut():
         if R:
-            resc_options [kw.RESC_NAME_KW] = R
-            resc_options [kw.DEST_RESC_NAME_KW] = R
+            open_options [kw.RESC_NAME_KW] = R
+            open_options [kw.DEST_RESC_NAME_KW] = R
+        open_options[kw.NUM_THREADS_KW] = str(num_threads)
+        open_options[kw.DATA_SIZE_KW] = str(total_bytes)
 
     if (not Io):
         (Io, rawfile) = session.data_objects.open_with_FileRaw( (d_path or Data.path),
                                                                 Operation.data_object_mode(initial_open = True),
-                                                                finalize_on_close = True, **resc_options )
+                                                                finalize_on_close = True, **open_options )
     else:
         rawfile = Io.raw
 
@@ -385,16 +406,13 @@ def io_main( session, Data, opr_, fname, R='', **kwopt):
     if Operation.isGet():
         total_bytes = Io.seek(0,os.SEEK_END)
         Io.seek(0,os.SEEK_SET)
-    else:
-        with open(fname, 'rb') as f:
-            f.seek(0,os.SEEK_END)
-            total_bytes = f.tell()
+    else: # isPut
+        if total_bytes < 0:
+            with open(fname, 'rb') as f:
+                f.seek(0,os.SEEK_END)
+                total_bytes = f.tell()
 
     (replica_token , resc_hier) = rawfile.replica_access_info()
-
-    num_threads = kwopt.pop( 'num_threads', None)
-
-    if num_threads is None: num_threads = int(kwopt.get('N','0'))
 
     queueLength = kwopt.get('queueLength',0)
     retval = _io_multipart_threaded (Operation, (Data, Io), replica_token, resc_hier, session, fname, total_bytes,
