@@ -311,7 +311,7 @@ def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str,
             end_offs = total_bytes
         return six.moves.range(begin_offs, end_offs)
 
-    P = 1 + (total_size // num_threads)
+    P = total_size // num_threads
 
     # -- The old PRC/PTE way -- # ranges = [six.moves.range(i*P,min(i*P+P,total_size)) for i in range(num_threads) if i*P < total_size]
     # -- The iput way:
