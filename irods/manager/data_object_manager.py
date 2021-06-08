@@ -12,16 +12,16 @@ from irods.data_object import (
     iRODSDataObject, iRODSDataObjectFileRaw, chunks, irods_dirname, irods_basename)
 import irods.keywords as kw
 import irods.parallel as parallel
+from irods.parallel import deferred_call
 import six
 import ast
 
 
 MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE = 32 * ( 1024 ** 2)
 
-DEFAULT_NUMBER_OF_THREADS = 3   # dwm
-#DEFAULT_NUMBER_OF_THREADS = 0  # Defaults for reasonable number of threads -- optimized to be
+DEFAULT_NUMBER_OF_THREADS = 0   # Defaults for reasonable number of threads -- optimized to be
                                 # performant but allow no more worker threads than available CPUs.
-                                # Setting this to 1 disables automatic use of parallel transfer.
+
 DEFAULT_QUEUE_DEPTH = 32
 
 class DataObjectManager(Manager):
@@ -114,17 +114,14 @@ class DataObjectManager(Manager):
 
         with open(local_path, 'rb') as f:
             sizelist = []
-            para_xfer = self.should_parallelize_transfer (num_threads, f, measured_obj_size = sizelist)
-            options[kw.NUM_THREADS_KW] = str(num_threads if para_xfer else 1)
-            if sizelist: options[kw.DATA_SIZE_KW] = str(sizelist[0])
-            if para_xfer:
-                with self.open(obj, 'w', **options) as o:
-                    f.close()
-                    if not self.parallel_put( local_path, (obj,o), total_bytes = sizelist[0], num_threads = num_threads,
-                                              target_resource_name = options.get(kw.RESC_NAME_KW,'') or
-                                                                     options.get(kw.DEST_RESC_NAME_KW,''),
-                                              open_options = options ):
-                        raise RuntimeError("parallel put failed")
+            if self.should_parallelize_transfer (num_threads, f, measured_obj_size = sizelist):
+                o = deferred_call( self.open, (obj, 'w'), options)
+                f.close()
+                if not self.parallel_put( local_path, (obj,o), total_bytes = sizelist[0], num_threads = num_threads,
+                                          target_resource_name = options.get(kw.RESC_NAME_KW,'') or
+                                                                 options.get(kw.DEST_RESC_NAME_KW,''),
+                                          open_options = options ):
+                    raise RuntimeError("parallel put failed")
             else:
                 with self.open(obj, 'w', **options) as o:
                     # Set operation type to trigger acPostProcForPut

@@ -26,6 +26,20 @@ logger.addHandler( _nullh )
 MINIMUM_SERVER_VERSION = (4,2,9)
 
 
+class deferred_call(object):
+
+    def __init__(self,fcn,args,kw):
+        self.fcn = fcn
+        self.args = args
+        self.kw = kw
+
+    def __setitem__(self, key, val):
+        self.kw[key] = val
+
+    def __call__(self):
+        return self.fcn(*self.args, **self.kw)
+
+
 try:
     from threading import Barrier   # Use 'Barrier' class if included (as in Python >= 3.2) ...
 except ImportError:                 # ... but otherwise, use this ad hoc:
@@ -293,15 +307,11 @@ def _io_part (objHandle, range_, file_, opr_, mgr_, thread_debug_id = '', queueO
 
 
 def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str, session, fname,
-                           total_size, num_threads = 0, **extra_options):
+                           total_size, num_threads, **extra_options):
     """Called by _io_main.
     Carve up (0,total_size) range into `num_threads` parts and initiate a transfer thread for each one."""
     (D, Io) = dataObj_and_IO
     Operation = Oper( operation_ )
-
-    if num_threads < 1:
-        num_threads = RECOMMENDED_NUM_THREADS_PER_TRANSFER
-    num_threads = max(1, min(multiprocessing.cpu_count(), num_threads))
 
     def bytes_range_for_thread( i, num_threads, total_bytes,  chunk ):
         begin_offs = i * chunk
@@ -383,6 +393,9 @@ def io_main( session, Data, opr_, fname, R='', **kwopt):
 
     num_threads = kwopt.get( 'num_threads', None)
     if num_threads is None: num_threads = int(kwopt.get('N','0'))
+    if num_threads < 1:
+        num_threads = RECOMMENDED_NUM_THREADS_PER_TRANSFER
+    num_threads = max(1, min(multiprocessing.cpu_count(), num_threads))
 
     open_options = {}
     if Operation.isPut():
@@ -397,6 +410,10 @@ def io_main( session, Data, opr_, fname, R='', **kwopt):
                                                                 Operation.data_object_mode(initial_open = True),
                                                                 finalize_on_close = True, **open_options )
     else:
+        if type(Io) is deferred_call:
+            Io[kw.NUM_THREADS_KW] = str(num_threads)
+            Io[kw.DATA_SIZE_KW] =  str(total_bytes)
+            Io = Io()
         rawfile = Io.raw
 
     # data object should now exist
