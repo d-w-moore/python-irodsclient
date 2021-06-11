@@ -75,7 +75,7 @@ class Rule(object):
                     self.body += line
 
 
-    def execute(self):
+    def execute(self, auto_session_cleanup = True):
         # rule input
         param_array = []
         for label, value in self.params.items():
@@ -95,5 +95,5 @@ class Rule(object):
             conn.send(request)
             response = conn.recv()
             out_param_array = response.get_main_message(MsParamArray)
-            self.session.cleanup()
+            if auto_session_cleanup: self.session.cleanup()
         return out_param_array
