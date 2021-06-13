@@ -1,4 +1,6 @@
 from __future__ import absolute_import
+import os
+import itertools
 from irods.models import Collection
 from irods.manager import Manager
 from irods.message import iRODSMessage, CollectionRequest, FileOpenRequest, ObjCopyRequest, StringStringMap
@@ -9,7 +11,46 @@ from irods.constants import SYS_SVR_TO_CLI_COLL_STAT, SYS_CLI_TO_SVR_COLL_STAT_R
 import irods.keywords as kw
 
 
+def make_dir_if_none_exists( path ):
+    if not os.path.isdir(path):
+        os.mkdir (path)
+    
+
 class CollectionManager(Manager):
+
+    def put_recursive (self, localpath, path):
+        c = self.sess.collections.create( path )
+        w = list(itertools.islice(c.walk(), 0, 2))  # dereference first 1 to 2 elements of the walk
+        if len(w) > 1 or len(w[0][-1]) > 0:
+            raise RuntimeError('collection {path!r} exists and is non-empty'.format(**locals()))
+        localpath = os.path.normpath(localpath)
+        for my_dir,sub_dirs,sub_files in os.walk(localpath,topdown=True):
+            dir_without_prefix = os.path.relpath( my_dir, localpath )
+            subcoll = self.sess.collections.create( path if dir_without_prefix == os.path.curdir 
+                                                         else path + "/" + dir_without_prefix )
+            for file_ in sub_files:
+                self.sess.data_objects.put( os.path.join(my_dir,file_), subcoll.path + "/" + file_)
+
+
+    def get_recursive (self, path, localpath):
+        if os.path.isdir(localpath):
+            w = list(itertools.islice(os.walk(localpath), 0, 2))
+            if len(w) > 1 or len(w[0][-1]) > 0:
+                raise RuntimeError('local directory {localpath!r} exists and is non-empty'.format(**locals()))
+        def unprefix (path,prefix=''):
+            return path if not path.startswith(prefix) else path[len(prefix):]
+        c = self.get(path)
+        # TODO #### --------- for visible %-complete status --------------
+        ########### nbytes = sum(d.size for el in c.walk() for d in el[2])
+        c_prefix = c.path + "/"
+        for coll,sub_colls,sub_datas in c.walk(topdown=True):
+            relative_collpath = unprefix (coll.path + "/", c_prefix)
+            new_target_dir = os.path.join(localpath , relative_collpath)
+            make_dir_if_none_exists( new_target_dir )
+            for data in sub_datas:
+                local_data_path = os.path.join(new_target_dir, data.name)
+                self.sess.data_objects.get( data.path, local_data_path )
+
 
     def get(self, path):
         query = self.sess.query(Collection).filter(Collection.name == path)
