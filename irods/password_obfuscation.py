@@ -8,7 +8,19 @@ import string
 import six
 from irods import MAX_PASSWORD_LENGTH
 
-get_uid = getattr(os, 'getuid', lambda:0)
+
+# Windows lacks getuid(), so use an alternative approach for getting salt value.
+get_uid = getattr (os, 'getuid', lambda:_hash_string(os.environ.get('USERNAME','')))
+
+# Use FNV-1a for alternative string hash.
+def _hash_string(s):
+  hash_ = 0x811c9dc5 
+  str_type = type('')
+  for c in s:
+    ordinal = ord(c) if type(c) is str_type else int(c)
+    hash_ = ((hash_ ^ ordinal) * 0x01000193) & 0xffffffff
+  return hash_
+
 
 seq_list = [
         0xd768b678,
