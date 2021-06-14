@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import os
+import stat
 import itertools
 from irods.models import Collection
 from irods.manager import Manager
@@ -11,45 +12,63 @@ from irods.constants import SYS_SVR_TO_CLI_COLL_STAT, SYS_CLI_TO_SVR_COLL_STAT_R
 import irods.keywords as kw
 
 
-def make_dir_if_none_exists( path ):
-    if not os.path.isdir(path):
-        os.mkdir (path)
+class GetPathCreationError ( RuntimeError ):
+    """Error denoting the failure to create a new directory for writing.
+    """
+
+def make_writable_dir_if_none_exists( path ):
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if os.path.isdir( path ):
+        os.chmod(path, os.stat(path).st_mode | stat.S_IWUSR)
+    if not os.path.isdir( path ) or not os.access( path, os.W_OK ):
+        raise GetPathCreationError( '{!r} not a writable directory'.format(path) )
     
+try:
+    from string import maketrans as _maketrans
+except:
+    _maketrans = str.maketrans
+
+_sep2slash = _maketrans(os.path.sep,"/")
+_slash2sep = _maketrans("/",os.path.sep)
+_from_mswin = (lambda path: str.translate(path,_sep2slash)) if os.path.sep != '/' else (lambda x:x)
+_to_mswin =   (lambda path: str.translate(path,_slash2sep)) if os.path.sep != '/' else (lambda x:x)
 
 class CollectionManager(Manager):
 
-    def put_recursive (self, localpath, path):
+    def put_recursive (self, localpath, path, abort_if_not_empty = True, **put_options):
         c = self.sess.collections.create( path )
         w = list(itertools.islice(c.walk(), 0, 2))  # dereference first 1 to 2 elements of the walk
-        if len(w) > 1 or len(w[0][-1]) > 0:
+        if abort_if_not_empty and (len(w) > 1 or len(w[0][-1]) > 0):
             raise RuntimeError('collection {path!r} exists and is non-empty'.format(**locals()))
         localpath = os.path.normpath(localpath)
         for my_dir,sub_dirs,sub_files in os.walk(localpath,topdown=True):
             dir_without_prefix = os.path.relpath( my_dir, localpath )
-            subcoll = self.sess.collections.create( path if dir_without_prefix == os.path.curdir 
-                                                         else path + "/" + dir_without_prefix )
+            subcoll = self.sess.collections.create(path if dir_without_prefix == os.path.curdir 
+                                                        else path + "/" + _from_mswin(dir_without_prefix))
             for file_ in sub_files:
-                self.sess.data_objects.put( os.path.join(my_dir,file_), subcoll.path + "/" + file_)
+                self.sess.data_objects.put( os.path.join(my_dir,file_), subcoll.path + "/" + file_, **put_options)
 
 
-    def get_recursive (self, path, localpath):
+    def get_recursive (self, path, localpath, abort_if_not_empty = True, **get_options):
         if os.path.isdir(localpath):
             w = list(itertools.islice(os.walk(localpath), 0, 2))
-            if len(w) > 1 or len(w[0][-1]) > 0:
+            if abort_if_not_empty and (len(w) > 1 or len(w[0][-1]) > 0):
                 raise RuntimeError('local directory {localpath!r} exists and is non-empty'.format(**locals()))
         def unprefix (path,prefix=''):
             return path if not path.startswith(prefix) else path[len(prefix):]
         c = self.get(path)
-        # TODO #### --------- for visible %-complete status --------------
-        ########### nbytes = sum(d.size for el in c.walk() for d in el[2])
+        # TODO ## For a visible percent-complete status:
+        #      #  nbytes = sum(d.size for el in c.walk() for d in el[2])
+        #      ## (Then use eg tqdm module to create progress-bar.)
         c_prefix = c.path + "/"
         for coll,sub_colls,sub_datas in c.walk(topdown=True):
             relative_collpath = unprefix (coll.path + "/", c_prefix)
-            new_target_dir = os.path.join(localpath , relative_collpath)
-            make_dir_if_none_exists( new_target_dir )
+            new_target_dir = os.path.join(localpath, _to_mswin(relative_collpath))
+            make_writable_dir_if_none_exists( new_target_dir )
             for data in sub_datas:
                 local_data_path = os.path.join(new_target_dir, data.name)
-                self.sess.data_objects.get( data.path, local_data_path )
+                self.sess.data_objects.get( data.path, local_data_path, **get_options )
 
 
     def get(self, path):
