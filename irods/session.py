@@ -139,6 +139,9 @@ class iRODSSession(object):
     def host(self):
         return self.pool.account.host
 
+    @host.setter
+    def host(self, hostname_): self.pool.account.host = hostname_
+
     @property
     def port(self):
         return self.pool.account.port
