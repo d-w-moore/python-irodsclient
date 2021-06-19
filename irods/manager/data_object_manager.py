@@ -213,7 +213,7 @@ class DataObjectManager(Manager):
 
     def open(self, path, mode, create = True, finalize_on_close = True, **options):
         _raw_fd_holder =  options.pop('_raw_fd_holder',[])
-        return_host = options.pop(return_host,None)
+        return_host = options.pop('return_host',None)
         if kw.DEST_RESC_NAME_KW not in options:
             # Use client-side default resource if available
             try:

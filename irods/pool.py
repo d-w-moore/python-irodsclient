@@ -22,6 +22,10 @@ DEFAULT_APPLICATION_NAME = 'python-irodsclient'
 
 class Pool(object):
 
+    def _init_thread_related(self):
+        self._thread_local = threading.local()
+        self._lock = threading.RLock()
+
     def __init__(self, account, application_name='', connection_refresh_time=-1):
         '''
         Pool( account , application_name='' )
@@ -29,9 +33,8 @@ class Pool(object):
         'application_name' specifies the application name as it should appear in an 'ips' listing.
         '''
 
-        self._thread_local = threading.local()
+        self._init_thread_related()
         self.account = account
-        self._lock = threading.RLock()
         self.active = set()
         self.idle = set()
         self.connection_timeout = DEFAULT_CONNECTION_TIMEOUT
@@ -45,6 +48,16 @@ class Pool(object):
         else:
             self.refresh_connection = False
             self.connection_refresh_time = None
+
+    def clone(self):
+        cl = self.__class__(self.account)   # duplicate object with plain-old attributes intact
+        for x,y in self.__dict__.items():
+            if x not in ('idle','active','account') and not x.startswith('_'):
+                setattr(cl, x, y)
+        self._init_thread_related()
+        cl.idle = set()
+        cl.active = set()
+        return cl
 
     @property
     def _conn(self): return getattr( self._thread_local, "_conn", None)

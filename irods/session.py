@@ -38,6 +38,14 @@ class iRODSSession(object):
         self.resources = ResourceManager(self)
         self.zones = ZoneManager(self)
 
+    def clone(self):
+        myclone = self.__class__(configure = False)
+        for key,value in self.__dict__.items():
+            if key not in ('pool',) : setattr(myclone,key,value)
+        myclone.pool = self.pool.clone()
+        myclone.__configured = None
+        return myclone
+
     def __enter__(self):
         return self
 
