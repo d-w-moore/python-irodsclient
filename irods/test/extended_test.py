@@ -4,8 +4,28 @@ from __future__ import absolute_import
 import os
 import sys
 import unittest
+import json
 from irods.models import Collection, DataObject
 import irods.test.helpers as helpers
+
+class TestWithSSL(unittest.TestCase):
+
+    def test_ssl_with_server_verify_set_to_none_281(self):
+        env_file = os.path.expanduser('~/.irods/irods_environment.json')
+        with helpers.file_backed_up(env_file):
+            env = json.load(open(env_file))
+            env.update({ "irods_client_server_negotiation": "request_server_negotiation",
+                         "irods_client_server_policy": "CS_NEG_REQUIRE",
+                         "irods_ssl_ca_certificate_file": "/path/to/some/file.crt",  # does not need to exist
+                         "irods_ssl_verify_server": "none",
+                         "irods_encryption_key_size": 32,
+                         "irods_encryption_salt_size": 8,
+                         "irods_encryption_num_hash_rounds": 16,
+                         "irods_encryption_algorithm": "AES-256-CBC" })
+            with open(env_file,'w') as f:
+                json.dump(env,f)
+            with helpers.make_session() as session:
+                c = session.collections.get('/{session.zone}/home/{session.username}'.format(**locals()))
 
 
 class TestContinueQuery(unittest.TestCase):
