@@ -131,6 +131,10 @@ class DataObjectManager(Manager):
             return self.get(obj)
 
     def chksum(self, path, **options):
+        """
+        See: https://docs.irods.org/4.2.10/doxygen/dataObjChksum_8h.html
+        for a list of applicable options.
+        """
         message_body = DataObjChksumRequest(path, **options)
         message = iRODSMessage('RODS_API_REQ', msg=message_body,
                                int_info=api_number['DATA_OBJ_CHKSUM_AN'])
