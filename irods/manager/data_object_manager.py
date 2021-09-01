@@ -138,8 +138,11 @@ class DataObjectManager(Manager):
         with self.sess.pool.get_connection() as conn:
             conn.send(message)
             response = conn.recv()
-            results = response.get_main_message(DataObjChksumResponse)
-            checksum = results.myStr
+            try:
+                results = response.get_main_message(DataObjChksumResponse)
+                checksum = results.myStr
+            except iRODSMessage.ResponseNotParseable:
+                checksum = ''
         return checksum
 
 

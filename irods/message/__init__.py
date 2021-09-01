@@ -73,6 +73,8 @@ class JSON_Binary_Response(BinBytesBuf):
 
 class iRODSMessage(object):
 
+    class ResponseNotParseable(Exception): pass
+
     def __init__(self, msg_type=b'', msg=None, error=b'', bs=b'', int_info=0):
         self.msg_type = msg_type
         self.msg = msg
@@ -188,7 +190,10 @@ class iRODSMessage(object):
 
     def get_main_message(self, cls):
         msg = cls()
-        logger.debug(self.msg)
+        logger.debug('Attempt to parse server response [%r] as class [%r].',self.msg,cls)
+        if self.msg is None:
+            raise self.ResponseNotParseable( "Server response was None, "
+                                             "while parsing as [{cls.__name__}]".format(**locals()) )
         msg.unpack(ET.fromstring(self.msg))
         return msg
 
