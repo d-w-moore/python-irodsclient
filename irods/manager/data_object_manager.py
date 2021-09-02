@@ -14,6 +14,7 @@ import irods.keywords as kw
 import irods.parallel as parallel
 import six
 import ast
+import logging, pprint
 
 
 MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE = 32 * ( 1024 ** 2)
@@ -142,6 +143,12 @@ class DataObjectManager(Manager):
         with self.sess.pool.get_connection() as conn:
             conn.send(message)
             response = conn.recv()
+            logging.info('in chksum - [\n%s\n]', pprint.pformat(vars(response)))
+            if response.error :
+                from irods.message import Error
+                e = iRODSMessage(msg = response.error).get_main_message(Error)
+                for i in range(e.count):
+                   logging.info(pprint.pformat(vars(e.RErrMsg_PI[i])))
             try:
                 results = response.get_main_message(DataObjChksumResponse)
                 checksum = results.myStr
