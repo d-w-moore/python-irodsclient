@@ -6,6 +6,7 @@ import socket
 import json
 import xml.etree.ElementTree as ET
 from irods.message.message import Message
+import irods.message
 from irods.message.property import (BinaryProperty, StringProperty,
                                     IntegerProperty, LongProperty, ArrayProperty,
                                     SubmessageProperty)
@@ -192,8 +193,12 @@ class iRODSMessage(object):
         msg = cls()
         logger.debug('Attempt to parse server response [%r] as class [%r].',self.msg,cls)
         if self.msg is None:
-            raise self.ResponseNotParseable( "Server response was None, "
-                                             "while parsing as [{cls.__name__}]".format(**locals()) )
+            if cls is not irods.message.Error:
+                # - For dedicated API response classes being built from server response, allow catching
+                #   of the exception.  However, let iRODS errors such as CAT_NO_ROWS_FOUND to filter
+                #   through as usual for express reporting by instances of irods.connection.Connection .
+                message = "Server response was {self.msg} while parsing as [{cls}]".format(**locals())
+                raise self.ResponseNotParseable( message )
         msg.unpack(ET.fromstring(self.msg))
         return msg
 

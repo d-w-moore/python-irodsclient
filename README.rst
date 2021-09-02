@@ -270,7 +270,7 @@ Each data object may be associated with a checksum by calling chksum() on the ob
 behaviors can be elicited by passing in combinations of keywords (for a description of which, please consult the
 `header documentation <https://docs.irods.org/4.2.10/doxygen/dataObjChksum_8h.html>`_ .)
 
-As with most other iRODS API's, it is straightforward to specify keywords by adding them to an option dictionary:
+As with most other iRODS APIs, it is straightforward to specify keywords by adding them to an option dictionary:
 
 >>> data_object_1.chksum()  # - computes the checksum if already in the catalog, otherwise computes and stores it
 ...                         #   (ie. default behavior with no keywords passed in.)

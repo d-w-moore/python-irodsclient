@@ -132,13 +132,13 @@ class DataObjectManager(Manager):
 
     def chksum(self, path, **options):
         """
-        See: https://docs.irods.org/4.2.10/doxygen/dataObjChksum_8h.html
-        for a list of applicable options.
+        See: https://github.com/irods/irods/blob/4-2-stable/lib/api/include/dataObjChksum.h
+        for a list of applicable irods.keywords options.
         """
         message_body = DataObjChksumRequest(path, **options)
         message = iRODSMessage('RODS_API_REQ', msg=message_body,
                                int_info=api_number['DATA_OBJ_CHKSUM_AN'])
-        checksum = None
+        checksum = ""
         with self.sess.pool.get_connection() as conn:
             conn.send(message)
             response = conn.recv()
@@ -146,7 +146,8 @@ class DataObjectManager(Manager):
                 results = response.get_main_message(DataObjChksumResponse)
                 checksum = results.myStr
             except iRODSMessage.ResponseNotParseable:
-                checksum = ''
+                # response.msg is None when VERIFY_CHKSUM_KW is used
+                pass
         return checksum
 
 

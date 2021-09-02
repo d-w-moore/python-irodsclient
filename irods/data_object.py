@@ -91,8 +91,8 @@ class iRODSDataObject(object):
 
     def chksum(self, **options):
         """
-        See: https://docs.irods.org/4.2.10/doxygen/dataObjChksum_8h.html
-        for a list of applicable options.
+        See: https://github.com/irods/irods/blob/4-2-stable/lib/api/include/dataObjChksum.h
+        for a list of applicable irods.keywords options.
         """
         return self.manager.chksum(self.path, **options)
 
