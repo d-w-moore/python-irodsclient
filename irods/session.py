@@ -5,6 +5,7 @@ import logging
 from irods.query import Query
 from irods.pool import Pool
 from irods.account import iRODSAccount
+from irods.manager import Manager
 from irods.manager.collection_manager import CollectionManager
 from irods.manager.data_object_manager import DataObjectManager
 from irods.manager.metadata_manager import MetadataManager
@@ -20,14 +21,41 @@ logger = logging.getLogger(__name__)
 
 class iRODSSession(object):
 
-    def __init__(self, configure=True, **kwargs):
+    def _clone_from (self, other):
+        for k,v in vars(other).items():
+            if k.startswith('__'): continue
+            setattr(self, k, 
+                type(v)(self) if isinstance(v,Manager) else v)
+        self._create_pool()
+        self.__cloned = True
+
+    def clone(self): return iRODSSession( configure = self )
+
+    def _create_pool(self):
+        self.pool = Pool(self._account_configured, 
+                         application_name=self._application_name,
+                         connection_refresh_time=self._connection_refresh_time)
+
+    def __init__(self, configure = True, **kwargs):
+        self.__cloned = False
+        self._application_name = ''
         self.pool = None
         self.numThreads = 0
 
         self.do_configure = (kwargs if configure else {})
-        self.__configured = None
+        self._account_configured = None
+
         if configure:
-            self.__configured = self.configure(**kwargs)
+            if configure is True:
+                self._account_configured = self.configure(**kwargs)
+            elif type(configure) is iRODSSession:
+                self._clone_from( configure )
+            else: raise RuntimeError( 'wrong type for configure while constructing iRODSSession')
+
+        if self.pool is None:
+            self._create_pool()
+
+        if self.__cloned: return
 
         self.collections = CollectionManager(self)
         self.data_objects = DataObjectManager(self)
@@ -56,7 +84,7 @@ class iRODSSession(object):
                 pass
             conn.release(True)
         if self.do_configure: 
-            self.__configured = self.configure(**self.do_configure)
+            self._account_configured = self.configure(**self.do_configure)
 
     def _configure_account(self, **kwargs):
 
@@ -108,12 +136,17 @@ class iRODSSession(object):
         return iRODSAccount(**creds)
 
     def configure(self, **kwargs):
-        account = self.__configured
+        account = self._account_configured
         if not account:
             account = self._configure_account(**kwargs)
-        connection_refresh_time = self.get_connection_refresh_time(**kwargs)
-        logger.debug("In iRODSSession's configure(). connection_refresh_time set to {}".format(connection_refresh_time))
-        self.pool = Pool(account, application_name=kwargs.pop('application_name',''), connection_refresh_time=connection_refresh_time)
+
+        application_name = kwargs.pop('application_name','')
+        if not self._application_name:
+            self._application_name = application_name
+
+        self._connection_refresh_time = self.get_connection_refresh_time(**kwargs)
+        logger.debug("In iRODSSession's configure(). connection_refresh_time set to {}".format(self._connection_refresh_time))
+
         return account
 
     def query(self, *args):
