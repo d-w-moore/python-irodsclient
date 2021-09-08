@@ -13,7 +13,7 @@ class RemoveRuleMessage(Message):
         self.ruleExecId = str(id_)
 
 class Rule(object):
-    def __init__(self, session, rule_file=None, body='', params=None, output=''):
+    def __init__(self, session, rule_file=None, body='', params=None, output='', instance_name = None, old_literal_style = False):
         self.session = session
 
         self.params = {}
@@ -22,13 +22,16 @@ class Rule(object):
         if rule_file:
             self.load(rule_file)
         else:
-            self.body = '@external\n' + body
+            self.body = '@external\n' + body if old_literal_style \
+                   else '@external rule { ' + body + ' }'
 
         # overwrite params and output if received arguments
         if params is not None:
             self.params = params
         if output != '':
             self.output = output
+
+        self.instance_name = instance_name
 
     def remove_by_id(self,*ids):
         with self.session.pool.get_connection() as conn:
@@ -86,7 +89,8 @@ class Rule(object):
 
         # rule body
         addr = RodsHostAddress(hostAddr='', rodsZone='', port=0, dummyInt=0)
-        condInput = StringStringMap({})
+        condInput = StringStringMap( {} if self.instance_name is None
+                                        else {'instance_name':self.instance_name} )
         message_body = RuleExecutionRequest(myRule=self.body, addr=addr, condInput=condInput, outParamDesc=self.output, inpParamArray=inpParamArray)
 
         request = iRODSMessage("RODS_API_REQ", msg=message_body, int_info=api_number['EXEC_MY_RULE_AN'])
