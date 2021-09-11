@@ -27,7 +27,7 @@ class iRODSSession(object):
             setattr(self, k, 
                 type(v)(self) if isinstance(v,Manager) else v)
         self._create_pool()
-        self.__cloned = True
+        self._cloned = True
 
     def clone(self): return iRODSSession( configure = self )
 
@@ -37,7 +37,7 @@ class iRODSSession(object):
                          connection_refresh_time=self._connection_refresh_time)
 
     def __init__(self, configure = True, **kwargs):
-        self.__cloned = False
+        self._cloned = False
         self._application_name = ''
         self.pool = None
         self.numThreads = 0
@@ -55,7 +55,7 @@ class iRODSSession(object):
         if self.pool is None:
             self._create_pool()
 
-        if self.__cloned: return
+        if self._cloned: return
 
         self.collections = CollectionManager(self)
         self.data_objects = DataObjectManager(self)

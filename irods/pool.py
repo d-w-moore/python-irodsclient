@@ -66,6 +66,7 @@ class Pool(object):
                     logger.debug('Connection with id {} was created more than {} seconds ago. Releasing the connection and creating a new one.'.format(id(conn), self.connection_refresh_time))
                     self.release_connection(conn, True)
                     conn = Connection(self, self.account)
+                    print ('conn=',conn)
                     logger.debug("Created new connection with id: {}".format(id(conn)))
             except KeyError:
                 conn = Connection(self, self.account)
