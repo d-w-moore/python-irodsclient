@@ -15,6 +15,7 @@ import irods.parallel as parallel
 import six
 import ast
 
+import logging
 
 MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE = 32 * ( 1024 ** 2)
 
@@ -253,6 +254,8 @@ class DataObjectManager(Manager):
 
         raw = iRODSDataObjectFileRaw(conn, desc, finalize_on_close = finalize_on_close, **options)
         (_raw_fd_holder).append(raw)
+        logging.info('Data Object open yielding raw fd: %r',raw)
+        logging.info('                 from connection: %r',conn)
         return io.BufferedRandom(raw)
 
 
