@@ -187,6 +187,8 @@ class iRODSDataObjectFileRaw(io.RawIOBase):
         return len(contents)
 
     def write(self, b):
+        logging.info('Data Object write  using  raw fd: %r',self)
+        logging.info('                 from connection: %r',self.conn)         
         if isinstance(b, memoryview):
             return self.conn.write_file(self.desc, b.tobytes())
 
