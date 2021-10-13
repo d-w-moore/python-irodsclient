@@ -28,6 +28,8 @@ class iRODSSession(object):
                 type(v)(self) if isinstance(v,Manager) else v)
         self._create_pool()
         self._cloned = True
+        self.__dict__.pop('_ticket',None) # -- For efficiency and consistency, since the
+                                          #    cloned session won't have any ticket active.
 
     def clone(self): return iRODSSession( configure = self )
 
