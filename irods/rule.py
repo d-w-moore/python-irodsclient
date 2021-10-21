@@ -27,7 +27,7 @@ class Rule(object):
 
         # overwrite params and output if received arguments
         if params is not None:
-            self.params = params
+            self.params = (self.params or params)
         if output != '':
             self.output = output
 
@@ -51,7 +51,12 @@ class Rule(object):
             for line in f:
                 # parse input line
                 if line.strip().lower().startswith('input'):
+
                     input_header, input_line = line.split(None, 1)
+
+                    if input_line.strip().lower() == 'null':
+                        self.params = {}
+                        continue
 
                     # sanity check
                     if input_header.lower() != 'input':
