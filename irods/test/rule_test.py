@@ -157,7 +157,7 @@ class TestRule(unittest.TestCase):
         output = 'ruleExecOut'
 
         # run test rule
-        myrule = Rule(session, body=rule_body, old_literal_style = True,
+        myrule = Rule(session, body=rule_body, irods_3_literal_style = True,
                       params=input_params, output=output)
         myrule.execute()
 

@@ -14,7 +14,7 @@ class RemoveRuleMessage(Message):
         self.ruleExecId = str(id_)
 
 class Rule(object):
-    def __init__(self, session, rule_file=None, body='', params=None, output='', instance_name = None, old_literal_style = False):
+    def __init__(self, session, rule_file=None, body='', params=None, output='', instance_name = None, irods_3_literal_style = False):
         self.session = session
 
         self.params = {}
@@ -23,7 +23,7 @@ class Rule(object):
         if rule_file:
             self.load(rule_file)
         else:
-            self.body = '@external\n' + body if old_literal_style \
+            self.body = '@external\n' + body if irods_3_literal_style \
                    else '@external rule { ' + body + ' }'
 
         # overwrite params and output if received arguments
