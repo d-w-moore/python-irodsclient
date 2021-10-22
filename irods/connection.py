@@ -15,7 +15,7 @@ from irods.message import (
     iRODSMessage, StartupPack, AuthResponse, AuthChallenge, AuthPluginOut,
     OpenedDataObjRequest, FileSeekResponse, StringStringMap, VersionResponse,
     PluginAuthMessage, ClientServerNegotiation, Error, GetTempPasswordOut)
-from irods.exception import get_exception_by_code, NetworkException
+from irods.exception import get_exception_by_code, NetworkException, rounded_code
 from irods import (
     MAX_PASSWORD_LENGTH, RESPONSE_LEN,
     AUTH_SCHEME_KEY, AUTH_USER_KEY, AUTH_PWD_KEY, AUTH_TTL_KEY,
@@ -91,7 +91,9 @@ class Connection(object):
             self.release(True)
             raise NetworkException("Unable to send message")
 
-    def recv(self, return_message = ()):
+    def recv(self, return_message = ()
+                 , acceptable_errors = () ):
+        acceptable_codes =  set(rounded_code(e) for e in acceptable_errors)
         try:
             msg = iRODSMessage.recv(self.socket)
         except socket.error:
@@ -104,7 +106,8 @@ class Connection(object):
                 err_msg = iRODSMessage(msg=msg.error).get_main_message(Error).RErrMsg_PI[0].msg
             except TypeError:
                 raise get_exception_by_code(msg.int_info)
-            raise get_exception_by_code(msg.int_info, err_msg)
+            if msg.int_info not in acceptable_codes:
+                raise get_exception_by_code(msg.int_info, err_msg)
         return msg
 
     def recv_into(self, buffer):

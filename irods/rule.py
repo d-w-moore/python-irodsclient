@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from irods.message import iRODSMessage, StringStringMap, RodsHostAddress, STR_PI, MsParam, MsParamArray, RuleExecutionRequest
 from irods.api_number import api_number
+import irods.exception as ex
 from io import open as io_open
 from irods.message import Message, StringProperty
 
@@ -83,7 +84,8 @@ class Rule(object):
                     self.body += line
 
 
-    def execute(self):
+    def execute(self, **options):
+        r_error_stack = options.pop('r_error',None)
         # rule input
         param_array = []
         for label, value in self.params.items():
@@ -102,7 +104,10 @@ class Rule(object):
 
         with self.session.pool.get_connection() as conn:
             conn.send(request)
-            response = conn.recv()
-            out_param_array = response.get_main_message(MsParamArray)
+            response = conn.recv(acceptable_errors = [ex.FAIL_ACTION_ENCOUNTERED_ERR])
+            try:
+                out_param_array = response.get_main_message(MsParamArray, r_error = r_error_stack)
+            except iRODSMessage.ResponseNotParseable:
+                return MsParamArray() # Ergo, no useful return value - but the RError stack will be accessible
             self.session.cleanup()
         return out_param_array

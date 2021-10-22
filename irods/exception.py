@@ -71,14 +71,29 @@ class iRODSException(six.with_metaclass(iRODSExceptionMeta, Exception)):
     pass
 
 
-def rounded_code( the_code ):
-    if isinstance(the_code,str):
-        return globals()[the_code].code
-    elif isinstance(the_code,numbers.Integral):
-        return 1000  * ((-abs(the_code) - 1) // 1000 + 1)
-    else:
-        message = 'Supplied code {the_code!r} must be integer or string'.format(**locals())
-        raise RuntimeError(message)
+def nominal_code( the_code, threshold = 1000 ):
+        nominal = []
+        c = rounded_code( the_code , nominal_int_repo = nominal )
+        return nominal[0] if 0 < abs(nominal[0]) < threshold \
+               else c  # always produce a negative for nonzero integer input
+
+def rounded_code( the_code , nominal_int_repo = () ):
+    nom_err = None
+    try:
+        if isinstance(the_code,type) and \
+           issubclass(the_code, iRODSException): the_code = getattr( the_code, 'code', the_code )
+        if isinstance(the_code,str):
+            nom_err = globals()[the_code].code
+            return nom_err
+        elif isinstance(the_code,numbers.Integral):
+            nom_err = the_code
+            return 1000 * ((-abs(the_code) - 1) // 1000 + 1)
+        else:
+            message = 'Supplied code {the_code!r} must be integer or string'.format(**locals())
+            raise RuntimeError(message)
+    finally:
+        if nom_err is not None and isinstance(nominal_int_repo,list):
+            nominal_int_repo[:] = [nom_err]
 
 
 def get_exception_class_by_code(code, name_only=False):
