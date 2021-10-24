@@ -71,11 +71,11 @@ class iRODSException(six.with_metaclass(iRODSExceptionMeta, Exception)):
     pass
 
 
-def nominal_code( the_code, threshold = 1000 ):
+def nominal_code( the_code, THRESHOLD = 1000 ):
         nominal = []
         c = rounded_code( the_code , nominal_int_repo = nominal )
-        return nominal[0] if 0 < abs(nominal[0]) < threshold \
-               else c  # always produce a negative for nonzero integer input
+        negated = -abs(nominal[0])
+        return c if (negated <= -abs(THRESHOLD)) else negated  # produce a negative for nonzero integer input
 
 def rounded_code( the_code , nominal_int_repo = () ):
     nom_err = None
@@ -97,7 +97,7 @@ def rounded_code( the_code , nominal_int_repo = () ):
 
 
 def get_exception_class_by_code(code, name_only=False):
-    rounded = rounded_code (code)
+    rounded = rounded_code (code)  # rounded up to -1000 if code <= -1000
     cls = iRODSExceptionMeta.codes.get( rounded )
     return cls if not name_only \
       else (cls.__name__ if cls is not None else 'Unknown_iRODS_error')
