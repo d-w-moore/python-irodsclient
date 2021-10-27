@@ -1928,6 +1928,10 @@ class MSI_OPERATION_NOT_ALLOWED(RuleEngineException):
     code = -1110000
 
 
+class RULE_ENGINE_ERROR(RuleEngineException):
+    code = -1828000
+
+
 class PHPException(iRODSException):
     pass
 
@@ -1942,7 +1946,6 @@ class PHP_REQUEST_STARTUP_ERR(PHPException):
 
 class PHP_OPEN_SCRIPT_FILE_ERR(PHPException):
     code = -1602000
-
 
 class PAMException(iRODSException):
     pass

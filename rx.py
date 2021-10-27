@@ -9,6 +9,10 @@ ses = make_session()
 rule = Rule( ses, rule_file = 'test.r',
                   instance_name = 'irods_rule_engine_plugin-irods_rule_language-instance' )
 r = RErrorStack()
-rule.execute(r_error_stack = r, acceptable_errors = (-1, FAIL_ACTION_ENCOUNTERED_ERR))
+rule.execute(r_error_stack = r, acceptable_errors = (
+       #-2,
+          FAIL_ACTION_ENCOUNTERED_ERR,
+       )
+     )
 print (r)
 pass
