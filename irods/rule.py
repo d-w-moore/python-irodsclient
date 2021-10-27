@@ -106,7 +106,7 @@ class Rule(object):
 
         with self.session.pool.get_connection() as conn:
             conn.send(request)
-            response = conn.recv(acceptable_errors = acceptable_errors, return_message = return_message)
+            response = conn.recv(acceptable_errors = acceptable_errors, return_message = return_message, use_rounded_code = True)
             try:
                 out_param_array = response.get_main_message(MsParamArray, r_error = r_error_stack)
             except iRODSMessage.ResponseNotParseable:

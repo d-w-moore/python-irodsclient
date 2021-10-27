@@ -103,8 +103,19 @@ def get_exception_class_by_code(code, name_only=False):
       else (cls.__name__ if cls is not None else 'Unknown_iRODS_error')
 
 
-def get_exception_by_code(code, message=None):
-    return iRODSExceptionMeta.codes[code](message)
+def get_exception_by_code(code, message = None, use_rounded_code = False):
+    if use_rounded_code:
+        code_ = rounded_code( code )
+    else:
+        code_ = code
+
+    exc = iRODSExceptionMeta.codes[code_](message)
+    exc.code = code
+    return exc
+
+
+class UnknowniRODSError(iRODSException):
+    code = 0  # covers rounded_code (errcode) if 0 > errcode > -1000
 
 
 class SystemException(iRODSException):
