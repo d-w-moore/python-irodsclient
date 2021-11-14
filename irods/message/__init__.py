@@ -4,11 +4,39 @@ import struct
 import logging
 import socket
 import json
-from irods.message import quasixml as ET
+import enum
+import os
+import ast
+import xml.etree.ElementTree as ET_xml
+from irods.message import quasixml as ET_quasixml
 from irods.message.message import Message
 from irods.message.property import (BinaryProperty, StringProperty,
                                     IntegerProperty, LongProperty, ArrayProperty,
                                     SubmessageProperty)
+
+class XMLType(enum.Enum):
+    _invalid = 0
+    STANDARD_XML = 1
+    QUASI_XML = 2
+
+# The message parser defaults to its STANDARD_XML setting but this may be over-
+# ridden by setting the environment variable PYTHON_IRODSCLIENT_USE_QUASI_XML
+# to a string evaluating as nonzero or True.
+
+_current_XML_parser = XMLType.QUASI_XML if ast.literal_eval(os.environ.get('PYTHON_IRODSCLIENT_USE_QUASI_XML','0')) \
+                 else XMLType.STANDARD_XML
+
+_XML_parsers = {
+    XMLType.STANDARD_XML : ET_xml,
+    XMLType.QUASI_XML : ET_quasixml
+}
+
+def ET(xml_type=0):
+    global _current_XML_parser
+    if xml_type:
+        _current_XML_parser = XMLType(xml_type)
+    return _XML_parsers[_current_XML_parser]
+
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +109,7 @@ class iRODSMessage(object):
         self.int_info = int_info
 
     def get_json_encoded_struct (self):
-        Xml = ET.fromstring(self.msg.replace(b'\0',b''))
+        Xml = ET().fromstring(self.msg.replace(b'\0',b''))
         json_str = Xml.find('buf').text
         if Xml.tag == 'BinBytesBuf_PI':
             mybin = JSON_Binary_Response()
@@ -97,7 +125,7 @@ class iRODSMessage(object):
         # rsp_header = sock.recv(rsp_header_size, socket.MSG_WAITALL)
         rsp_header = _recv_message_in_len(sock, rsp_header_size)
 
-        xml_root = ET.fromstring(rsp_header)
+        xml_root = ET().fromstring(rsp_header)
         msg_type = xml_root.find('type').text
         msg_len = int(xml_root.find('msgLen').text)
         err_len = int(xml_root.find('errorLen').text)
@@ -124,7 +152,7 @@ class iRODSMessage(object):
         rsp_header_size = struct.unpack(">i", rsp_header_size)[0]
         rsp_header = _recv_message_in_len(sock, rsp_header_size)
 
-        xml_root = ET.fromstring(rsp_header)
+        xml_root = ET().fromstring(rsp_header)
         msg_type = xml_root.find('type').text
         msg_len = int(xml_root.find('msgLen').text)
         err_len = int(xml_root.find('errorLen').text)
@@ -189,7 +217,7 @@ class iRODSMessage(object):
     def get_main_message(self, cls):
         msg = cls()
         logger.debug(self.msg)
-        msg.unpack(ET.fromstring(self.msg))
+        msg.unpack(ET().fromstring(self.msg))
         return msg
 
 
