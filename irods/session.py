@@ -19,6 +19,8 @@ from irods import NATIVE_AUTH_SCHEME, PAM_AUTH_SCHEME
 
 logger = logging.getLogger(__name__)
 
+class NonAnonymousLoginWithoutPassword(Exception): pass
+
 class iRODSSession(object):
 
     @property
@@ -56,7 +58,8 @@ class iRODSSession(object):
 
     def __del__(self):
         self.do_configure = {}
-        self.cleanup()
+        if self.pool is not None:
+            self.cleanup()
 
     def cleanup(self):
         for conn in self.pool.active | self.pool.idle:
@@ -113,7 +116,9 @@ class iRODSSession(object):
         except KeyError:
             pass
 
-        creds['password'] = self.get_irods_password(session_ = self, **creds)
+        pw = creds['password'] = self.get_irods_password(session_ = self, **creds)
+        if not pw and creds.get('irods_user_name') != 'anonymous':
+            raise NonAnonymousLoginWithoutPassword
 
         return iRODSAccount(**creds)
 

@@ -17,9 +17,13 @@ from socket import gethostname
 from irods.password_obfuscation import (encode as pw_encode)
 from irods.connection import PlainTextPAMPasswordError
 from irods.access import iRODSAccess
+import irods.exception as ex
 import contextlib
 import socket
 from re import compile as regex
+import gc
+import six
+
 try:
     from re import _pattern_type as regex_type
 except ImportError:
@@ -384,6 +388,59 @@ class TestAnonymousUser(unittest.TestCase):
         finally:
             os.environ.clear()
             os.environ.update( orig_env )
+ 
+class TestMiscellaneous(unittest.TestCase):
+
+    def setUp(self):
+        admin = self.admin = helpers.make_session()
+        if admin.users.get(admin.username).type != 'rodsadmin':
+            self.skipTest('need admin privilege')
+        admin.users.create('alice','rodsuser')
+
+    def tearDown(self):
+        self.admin.users.remove('alice')
+        self.admin.cleanup()
+
+    @unittest.skipUnless(six.PY3, "Skipping in Python2 because it doesn't reliably do cyclic GC.")
+    def test_destruct_session_with_no_pool_315(self):
+
+        Boom = [False]    # to test if session gets destroyed
+
+        class mySess( iRODSSession ):
+            def __del__(self):
+                self.pool = None
+                super(mySess,self).__del__()  # call parent destructor(s) - will raise
+                                              # an error before the #315 fix
+                Boom[:] = [True]
+
+        admin = self.admin
+        admin.users.modify('alice','password','apass')
+
+        my_sess = mySess( user = 'alice',
+                          password = 'apass',
+                          host = admin.host,
+                          port = admin.port,
+                          zone = admin.zone)
+        my_sess.cleanup()
+        del my_sess
+        gc.collect()
+        self.assertEqual( Boom, [True] )
+
+    def test_non_anon_native_login_omitting_password_fails_1__290(self):
+        # rodsuser with password unset
+        with self.assertRaises(ex.CAT_INVALID_USER):
+            self._non_anon_native_login_omitting_password_fails_N__290()
+
+    def test_non_anon_native_login_omitting_password_fails_2__290(self):
+        # rodsuser with a password set
+        self.admin.users.modify('alice','password','apass')
+        with self.assertRaises(ex.CAT_INVALID_AUTHENTICATION):
+            self._non_anon_native_login_omitting_password_fails_N__290()
+
+    def _non_anon_native_login_omitting_password_fails_N__290(self):
+        admin = self.admin
+        with iRODSSession(zone = admin.zone, port = admin.port, host = admin.host, user = 'alice') as alice:
+               alice.collections.get(helpers.home_collection(alice))
 
 class TestWithSSL(unittest.TestCase):
     '''
