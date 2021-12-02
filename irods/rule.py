@@ -87,7 +87,9 @@ class Rule(object):
     def execute(self, session_cleanup = True,
                       acceptable_errors = (ex.FAIL_ACTION_ENCOUNTERED_ERR,),
                       r_error_stack = None,
-                      return_message = ()):
+                      return_message = (),
+                      use_rounded_code = False
+                      ):
         try:
             # rule input
             param_array = []
@@ -107,7 +109,7 @@ class Rule(object):
 
             with self.session.pool.get_connection() as conn:
                 conn.send(request)
-                response = conn.recv(acceptable_errors = acceptable_errors, return_message = return_message, use_rounded_code = True)
+                response = conn.recv(acceptable_errors = acceptable_errors, return_message = return_message, use_rounded_code = use_rounded_code)
                 try:
                     out_param_array = response.get_main_message(MsParamArray, r_error = r_error_stack)
                 except iRODSMessage.ResponseNotParseable:
