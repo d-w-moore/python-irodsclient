@@ -1,0 +1,36 @@
+#!/bin/bash
+
+jq_process_in_place() {
+    local filename=$1
+    shift
+    local tempname=/tmp/.$$.$(basename "$filename")
+    #echo "tempname = ($tempname)"
+    jq "$@" <"$filename" >"$tempname" && \
+    cp "$tempname" "$filename" && \
+    rm -f "$tempname" \
+        || echo "in PID $$, jq process error" >&2
+}
+
+jq_process_in_place /etc/irods/server_config.json \
+   '.plugin_configuration.rule_engines[1:1]=[ { "instance_name": "irods_rule_engine_plugin-python-instance",
+                                                "plugin_name": "irods_rule_engine_plugin-python",
+                                                "plugin_specific_configuration": {}
+                                              }
+                                            ]'
+
+echo '
+defined_in_both {
+    writeLine("stdout", "irods rule")
+}
+
+failing_rule_core_re {
+    fail(-1)
+}' >> /etc/irods/core.re
+
+echo '
+def defined_in_both(rule_args,callback,rei):
+    callback.writeLine("stdout", "python rule")
+
+def failing_rule_core_py (*_):
+    raise RuntimeError
+' > /etc/irods/core.py
