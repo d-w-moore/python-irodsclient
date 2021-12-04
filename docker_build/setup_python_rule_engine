@@ -3,12 +3,14 @@
 jq_process_in_place() {
     local filename=$1
     shift
-    local tempname=/tmp/.$$.$(basename "$filename")
-    #echo "tempname = ($tempname)"
+    local basenm=$(basename "$filename")
+    local tempname=/tmp/.$$.$basenm
+
     jq "$@" <"$filename" >"$tempname" && \
-    cp "$tempname" "$filename" && \
-    rm -f "$tempname" \
-        || echo "in PID $$, jq process error" >&2
+    cp "$tempname" "$filename"
+    STATUS=$?
+    rm -f "$tempname"
+    [ $STATUS = 0 ] || echo "**** jq process error" >&2
 }
 
 jq_process_in_place /etc/irods/server_config.json \

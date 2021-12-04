@@ -98,6 +98,16 @@ class TestRule(unittest.TestCase):
         myrule.execute()
 
 
+    def test_specifying_python_rep_version_of_rule (self):
+        session = self.sess
+        rule = Rule( session, body = 'defined_in_both',
+                     instance_name = 'irods_rule_engine_plugin-python-instance',
+                     output = 'ruleExecOut' )
+        output  = rule.execute()
+        buf = output.MsParam_PI[0].inOutStruct.stdoutBuf.buf
+        self.assertTrue( buf.rstrip(b'\0').rstrip() == b'python rule' )
+
+
     def test_specifying_rule_instance(self):
 
         self._helper_writeline_to_stream(
