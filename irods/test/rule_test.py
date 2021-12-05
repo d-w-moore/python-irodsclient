@@ -13,6 +13,10 @@ import six
 from io import open as io_open
 
 
+RE_Plugins_installed_run_condition_args = ( os.environ.get('PYTHON_RULE_ENGINE_INSTALLED','*').lower()[:1]=='y',
+                                           'Test depends on server having Python-REP installed beyond the default options' )
+
+
 class TestRule(unittest.TestCase):
 
     '''Suite of tests on rule operations
@@ -98,14 +102,35 @@ class TestRule(unittest.TestCase):
         myrule.execute()
 
 
-    def test_specifying_python_rep_version_of_rule (self):
+    @unittest.skipUnless (*RE_Plugins_installed_run_condition_args)
+    def test_targeting_Python_instance_when_rule_multiply_defined(self,**kw):
+        self._with_X_instance_when_rule_multiply_defined(
+            instance_name  = 'irods_rule_engine_plugin-python-instance',
+            test_condition = lambda bstring: b'python' in bstring
+            )
+
+    @unittest.skipUnless (*RE_Plugins_installed_run_condition_args)
+    def test_targeting_Native_instance_when_rule_multiply_defined(self,**kw):
+        self._with_X_instance_when_rule_multiply_defined(
+            instance_name  = 'irods_rule_engine_plugin-irods_rule_language-instance',
+            test_condition = lambda bstring: b'native' in bstring
+            )
+
+    @unittest.skipUnless (*RE_Plugins_installed_run_condition_args)
+    def test_targeting_Unspecified_instance_when_rule_multiply_defined(self,**kw):
+        self._with_X_instance_when_rule_multiply_defined(
+            test_condition = lambda bstring: b'native' in bstring and b'python' in bstring
+            )
+
+    def _with_X_instance_when_rule_multiply_defined(self,**kw):
         session = self.sess
         rule = Rule( session, body = 'defined_in_both',
-                     instance_name = 'irods_rule_engine_plugin-python-instance',
-                     output = 'ruleExecOut' )
+                     output = 'ruleExecOut',
+                     **{key:val for key,val in kw.items() if key == 'instance_name'}
+                   )
         output  = rule.execute()
         buf = output.MsParam_PI[0].inOutStruct.stdoutBuf.buf
-        self.assertTrue( buf.rstrip(b'\0').rstrip() == b'python rule' )
+        self.assertTrue(kw['test_condition'](buf.rstrip(b'\0').rstrip()))
 
 
     def test_specifying_rule_instance(self):

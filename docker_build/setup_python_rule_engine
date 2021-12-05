@@ -22,7 +22,7 @@ jq_process_in_place /etc/irods/server_config.json \
 
 echo '
 defined_in_both {
-    writeLine("stdout", "irods rule")
+    writeLine("stdout", "native rule")
 }
 
 failing_rule_core_re {
