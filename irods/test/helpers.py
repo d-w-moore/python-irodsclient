@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import print_function
 import os
 import io
 import tempfile
@@ -17,6 +18,10 @@ from irods.session import iRODSSession
 from irods.message import iRODSMessage
 from six.moves import range
 
+def p_xml(eol="\n"):
+    import irods.message
+    msg= "[_{}_]".format(irods.message.ET().__name__)
+    print(msg,end=eol)
 
 def my_function_name():
     """Returns the name of the calling function or method"""

@@ -44,6 +44,7 @@ def make_ufs_resc_in_tmpdir(session, base_name, allow_local = False):
     session.resources.create(base_name,'unixfilesystem',session.host,full_phys_dir)
     return full_phys_dir
 
+from irods.test.helpers import p_xml
 
 class TestDataObjOps(unittest.TestCase):
 
