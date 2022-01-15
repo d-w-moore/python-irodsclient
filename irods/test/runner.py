@@ -12,6 +12,11 @@ import sys
 from unittest import TestLoader, TestSuite
 import xmlrunner
 import logging
+from irods.test.helpers import p_xml
+import getopt
+
+opt,arg = getopt.getopt(sys.argv[1:],"",["print-xml-parser"])
+optD = dict(opt)
 
 logger = logging.getLogger()
 logger.setLevel(logging.ERROR)
@@ -29,6 +34,13 @@ if __name__ == "__main__":
     loader = TestLoader()
     suite = TestSuite(loader.discover(start_dir='.', pattern='*_test.py',
                                       top_level_dir="."))
+
+    if '--print-xml-parser' in optD:
+        run_ = TestSuite.run
+        def TSRun(self,*a,**k):
+            p_xml()
+            return run_(self,*a,**k)
+        TestSuite.run = TSRun
 
     result = xmlrunner.XMLTestRunner(
         verbosity=2, output='/tmp/python-irodsclient/test-reports').run(suite)
