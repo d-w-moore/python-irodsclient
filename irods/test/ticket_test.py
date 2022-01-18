@@ -155,7 +155,36 @@ class TestRodsUserTicketOps(unittest.TestCase):
                 if t1: t1.delete()
                 if t2: t2.delete()
                 if dobj: dobj.unlink(force=True)
+        
 
+    def test_uploads_with_write_ticket_on_collection__5913(self):
+        path = wticket = None
+        if self.bob is None:
+            self.skipTest("A rodsuser (bob) could not be created.")
+        try:
+            with helpers.make_session() as sess:
+                self.coll = helpers.make_collection(sess, self.irods_homedir(sess).path + "/dropbox")
+                path = self.coll.path
+                wticket = Ticket(sess).issue('write', path).string
+
+            with tempfile.NamedTemporaryFile (delete=False) as tmpf:
+                localfile = tmpf.name
+                localbase = os.path.basename(localfile)
+                with helpers.make_session() as sess:
+                    self.assertEqual(0, len(list(sess.query(DataObject).filter(DataObject.name == localbase))))
+                with self.login(self.bob) as bob:
+                    Ticket(bob,wticket).supply()
+                    bob.data_objects.put ( localfile, path+'/'+localbase)
+                    with helpers.make_session() as sess:
+                        self.assertEqual(1, len(list(sess.query(DataObject).filter(DataObject.name == localbase))))
+                    bob.data_objects.unlink(path+'/'+localbase,force=True)
+        finally:
+            with helpers.make_session() as sess:
+                delete_my_tickets(sess)
+            if path:
+                with helpers.make_session() as sess:
+                    self.coll.remove(recurse=True, force=True)
+            
 
     def test_object_read_and_write_tickets(self):
         if self.alice is None or self.bob is None:
