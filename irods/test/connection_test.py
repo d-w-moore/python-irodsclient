@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 import os
 import sys
+import time
 import unittest
 from irods.exception import NetworkException
 import irods.test.helpers as helpers
@@ -20,6 +21,26 @@ class TestConnections(unittest.TestCase):
     def test_connection(self):
         with self.sess.pool.get_connection() as conn:
             self.assertTrue(conn)
+
+    
+    def test_auto_release_of_old_connection(self):
+
+        do_something = lambda ses: ses.collections.get(helpers.home_collection(ses))
+
+        def get_conn_identity(pool,unittest_obj=None):
+            s = (pool.active | pool.idle)
+            if unittest_obj:
+                unittest_obj.assertEqual (len(s), 1)
+            return [conn for conn in s][0]
+
+        with helpers.make_session(refresh_time = 5) as ses:
+            do_something(ses)
+            c1 = get_conn_identity (ses.pool,self)
+            time.sleep(10)
+            do_something(ses)
+            c2 = get_conn_identity (ses.pool,self)
+            self.assertIsNot(c1, c2)
+
 
     def test_connection_destructor(self):
         conn = self.sess.pool.get_connection()
