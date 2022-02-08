@@ -265,7 +265,12 @@ may replace::
 
     "/".join(["", zone, "home", user])
 
-:code:`iRODSPath` is available beginning with PRC release :code:`v1.1.2`.
+:code:`iRODSPath` is available beginning with PRC v1.1.2, as are a few additional methods in the iRODSSession object::
+
+- session.home(): returns the collection object corresponding to the home path of the session's associated user.
+- session.cwd(): returns a stored string which may support the notion of a "current directory".
+- session.chdir(target): changes the stored string to reflect a new  "current directory"
+- session.abs(relative): returns an absolute collection path reflecting the "current directory" with the given relative path appended.
 
 
 Reading and writing files

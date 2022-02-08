@@ -1,5 +1,10 @@
 import re
+import threading
 import logging
+import irods.test.helpers as helpers
+
+_sess_lock = threading.RLock()
+_sess_dict = {}
 
 _multiple_slash = re.compile('/+')
 
@@ -66,3 +71,31 @@ class iRODSPath(str):
                 '/'.join(filter(None, components))
                )
         return path if path else '.'
+
+
+def chdir(session, newPath, verify_path = True):
+    return session.cwd( newPath, verify_path = verify_path)
+
+
+def cwd(session, newPath = None, verify_path = False):
+    if newPath and not isinstance(newPath, iRODSPath):
+        newPath = iRODSPath( newPath, absolute = False )
+    HOME = helpers.home_collection( session )
+    with _sess_lock:
+        cached = _sess_dict.get(session)
+        curPath = (HOME if cached is None else cached)
+        if newPath == '': newPath = HOME
+        if newPath is None:
+            pass
+        elif newPath[:1] != '/':
+            newPath = iRODSPath(curPath, newPath)
+        if newPath or not cached:
+            chdir_target = (newPath if newPath else HOME)
+            if verify_path:
+                session.collections.get(chdir_target) # can raise CollectionDoesNotExist
+            curPath = _sess_dict[session] = chdir_target
+    return curPath
+
+
+def rel_to_abs(session, path):
+    return iRODSPath( cwd(session), path )

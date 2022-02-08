@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 class iRODSSession(object):
 
     def __init__(self, configure=True, **kwargs):
+
+        import irods.util  # inject methods home(), cwd() and abs()
+
         self.pool = None
         self.numThreads = 0
 
