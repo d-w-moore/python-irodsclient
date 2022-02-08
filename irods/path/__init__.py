@@ -1,12 +1,15 @@
 import re
+import logging
 
 _multiple_slash = re.compile('/+')
 
 class iRODSPath(str):
-
-    class LogicalPathError (RuntimeError): pass
-
     """A subclass of the Python string that normalizes iRODS logical paths."""
+
+    class LogicalPathError (RuntimeError):
+        """An exception indicating an ill-formed or illegal path."""
+        pass
+
     def __new__(cls, *elem_list, **kw):
         """
         Initializes our immutable 'str' object with a normalized form.
@@ -25,7 +28,8 @@ class iRODSPath(str):
 
         """
         force_absolute = kw.pop('absolute',True)
-        assert (len(kw) == 0)
+        if kw:
+            logging.warning("iRODSPath options have no effect: %r",kw.items())
         obj = str.__new__(cls,
                           cls.do_path_normalization(elem_list,
                           absolute = force_absolute)  )
