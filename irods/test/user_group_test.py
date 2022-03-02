@@ -50,7 +50,6 @@ class TestUserGroup(unittest.TestCase):
 
     @staticmethod
     def do_something(session):
-        from irods.models import User
         return session.username in [i[User.name] for i in session.query(User)]
 
     def test_modify_password_with_changing_auth_file__328(self):
@@ -72,13 +71,14 @@ class TestUserGroup(unittest.TestCase):
         try:
             ses.users.create('alice', 'rodsuser')
             ses.users.modify('alice', 'password', OLDPASS)
-            for modify_option, sess_factory in [
-               (alice_auth, lambda: iRODSSession(**d)),
-               (True,       lambda: helpers.make_session( irods_env_file = alice_env, irods_authentication_file = alice_auth))]:
-                    OLDPASS,NEWPASS=next(password_generator)
-                    with sess_factory() as alice_ses:
-                        alice = alice_ses.users.get(alice_ses.username)
-                        alice.modify_password(OLDPASS, NEWPASS, modify_irods_authentication_file = modify_option)
+            for modify_option, sess_factory in [ (alice_auth, lambda: iRODSSession(**d)),
+                                                 (True,
+                                                 lambda: helpers.make_session(irods_env_file = alice_env,
+                                                                              irods_authentication_file = alice_auth)) ]:
+                OLDPASS,NEWPASS=next(password_generator)
+                with sess_factory() as alice_ses:
+                    alice = alice_ses.users.get(alice_ses.username)
+                    alice.modify_password(OLDPASS, NEWPASS, modify_irods_authentication_file = modify_option)
             d['password'] = NEWPASS
             with iRODSSession(**d) as session:
                 self.do_something(session)           # can we still do stuff with the final value of the password?

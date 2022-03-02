@@ -92,11 +92,9 @@ class UserManager(Manager):
         This error will be seen when `modify_irods_authentication_file' is set True and the
         authentication scheme in effect for the session is other than iRODS native,
         using a password loaded from the client environment.
-	"""
+        """
 
-        def __init__(self,msg=None):
-            """Initialize  the exception object (with a message if desired)."""
-            super(UserManager.EnvStoredPasswordNotEdited,self).__init__(msg)
+        pass
 
     @staticmethod
     def abspath_exists(path):
@@ -106,7 +104,7 @@ class UserManager(Manager):
 
     def modify_password(self, old_value, new_value, modify_irods_authentication_file = False):
 
-        '''
+        """
         Change the password for the current user (in the manner of `ipasswd').
 
         Parameters:
@@ -114,7 +112,7 @@ class UserManager(Manager):
             new_value - the desired (new) password
             modify_irods_authentication_file - Can be False, True, or a string.  If a string, it should indicate
                                   the absolute path of an IRODS_AUTHENTICATION_FILE to be altered.
-        '''
+        """
         with self.sess.pool.get_connection() as conn:
 
             hash_new_value = obf.obfuscate_new_password(new_value, old_value, conn.client_signature)
