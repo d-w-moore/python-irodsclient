@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 
 ARG irods_pkg_dir
-ARG server_py=3
+ARG server_py=${server_python_version}
 ENV SERVER_PY "${server_py}"
 
 RUN apt update
