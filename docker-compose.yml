@@ -37,6 +37,6 @@ services:
       dockerfile: Dockerfile.prc_test.${client_os_generic}
       args:
         os_image: "$client_os_image"
-        py_N: "$python_version"
+        py_N: "$client_python_version"
     depends_on:
       - irods-provider
