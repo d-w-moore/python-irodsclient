@@ -161,8 +161,11 @@ class DataObjectManager(Manager):
                     for chunk in chunks(f, self.WRITE_BUFFER_SIZE):
                         o.write(chunk)
         if kw.ALL_KW in options:
-            options[kw.UPDATE_REPL_KW] = ''
-            self.replicate(obj, **options)
+            repl_options = options.copy()
+            repl_options[kw.UPDATE_REPL_KW] = ''
+            del repl_options[kw.REG_CHKSUM_KW]
+            self.replicate(obj, **repl_options)
+
 
         if return_data_object:
             return self.get(obj)

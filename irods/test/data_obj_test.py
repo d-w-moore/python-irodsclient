@@ -934,8 +934,6 @@ class TestDataObjOps(unittest.TestCase):
         server_vsn = self.sess.server_version
         if server_vsn <= (4, 1, 4):
             self.skipTest('For iRODS 4.1.5 and newer')
-        elif server_vsn > (4, 2, 11):
-            self.skipTest('In iRODS releases post-4.2.11, a PUT may not overwrite all replicas of a checksummed object')
         try:
             number_of_replicas = 7
             session = self.sess
