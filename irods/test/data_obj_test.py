@@ -903,6 +903,7 @@ class TestDataObjOps(unittest.TestCase):
             self.assertEqual(replica.number, i)
 
         # now trim odd-numbered replicas
+        # note (see irods/irods#4861): COPIES_KW might disappear in the future
         options = {kw.COPIES_KW: 1}
         for i in [1, 3, 5]:
             options[kw.REPL_NUM_KW] = str(i)
@@ -978,15 +979,6 @@ class TestDataObjOps(unittest.TestCase):
             checksum = base64.b64encode(hashlib.sha256(obj_content.encode('utf-8')).digest()).decode()
             with open(test_file, 'w') as f:
                 f.write(obj_content)
-
-            # update all replicas
-            # -------------------
-            # Note this doesn't work in iRODS 4.3.0 and later because necessary options to overwrite all
-            # replicas of a checksummed object would include VERIFY_CHKSUM_KW and FORCE_FLAG_KW, which in com-
-            # bination with the REG_CHKSUM_KW and ALL_KW produces an USER_INCOMPATIBLE_PARAMS error.  If we
-            # choose to omit VERIFY_CHKSUM_KW, we get SYS_NOT_ALLOWED with a warning that VERIFY_CHKSUM_KW is
-            # required.  So it seems the repave operation performed by this test would require a put followed
-            # by a REPL with the full set of options required to repave.
 
             options = {kw.REG_CHKSUM_KW: '', kw.ALL_KW: ''}
             session.data_objects.put(test_file, obj_path, **options)

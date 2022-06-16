@@ -163,6 +163,9 @@ class DataObjectManager(Manager):
         if kw.ALL_KW in options:
             repl_options = options.copy()
             repl_options[kw.UPDATE_REPL_KW] = ''
+            # Leaving REG_CHKSUM_KW set would raise the error:
+            # Requested to register checksum without verifying, but source replica has a checksum. This can result
+            # in multiple replicas being marked good with different checksums, which is an inconsistency.
             del repl_options[kw.REG_CHKSUM_KW]
             self.replicate(obj, **repl_options)
 
@@ -342,7 +345,6 @@ class DataObjectManager(Manager):
             offset=0,
             dataSize=-1,
             numThreads=self.sess.numThreads,
-#           oprType=oprType,
             KeyValPair_PI=StringStringMap(options),
         )
         message = iRODSMessage('RODS_API_REQ', msg=message_body,
