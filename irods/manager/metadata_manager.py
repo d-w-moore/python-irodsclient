@@ -38,7 +38,7 @@ class MetadataManager(Manager):
             irods_kw_opt.update([(kw.ADMIN_KW,"")])
         newSelf._use_ts = timestamps
         newSelf.__kw = irods_kw_opt
-        return newSelf 
+        return newSelf
 
     @staticmethod
     def _model_class_to_resource_type(model_cls):

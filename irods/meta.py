@@ -78,9 +78,8 @@ class iRODSMetaCollection(object):
 
     def __call__(self, admin = False, timestamps = False, **opts):
         x = copy.copy(self)
-        #import pdb;pdb.set_trace() # DWM
         x._manager = (x._manager)(admin, timestamps, **opts)
-        x._reset_metadata() # DWM ?
+        x._reset_metadata()
         return x
 
     def __init__(self, manager, model_cls, path):
