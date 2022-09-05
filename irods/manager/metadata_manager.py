@@ -33,12 +33,12 @@ class MetadataManager(Manager):
         return kw_
 
     def __call__(self, admin = False, timestamps = False, **irods_kw_opt):
-        x = copy.copy(self)
+        newSelf = copy.copy(self)
         if admin:
             irods_kw_opt.update([(kw.ADMIN_KW,"")])
-        self._use_ts = timestamps
-        x.__kw = irods_kw_opt
-        return x
+        newSelf._use_ts = timestamps
+        newSelf.__kw = irods_kw_opt
+        return newSelf 
 
     @staticmethod
     def _model_class_to_resource_type(model_cls):
