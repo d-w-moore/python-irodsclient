@@ -39,6 +39,7 @@ CMD apt install -y $(/tmp/build_deps_list /irods_packages/irods*{serv,dev,icomma
                                                      && /tmp/setup_python_rule_engine; } } && \
     { pgrep -u irods irodsServer >/dev/null || su irods -c '~/irodsctl start'; \
       env PORT=8888 /tmp/send_oneshot "iRODS is running..." & } && \
+    echo "REACHED HERE -- DWM" &&\
     { [ ! -d /irods_shared ] || { mkdir -p /irods_shared/reg_resc && mkdir -p /irods_shared/tmp && \
                                   chown -R irods.irods /irods_shared && chmod g+ws /irods_shared/tmp && \
                                   chmod 777 /irods_shared/reg_resc ; } } && \
