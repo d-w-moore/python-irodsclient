@@ -23,6 +23,13 @@ from irods.message import (
 from irods.exception import (get_exception_by_code, NetworkException, nominal_code)
 from irods.message import (PamAuthRequest, PamAuthRequestOut)
 
+def need_context_regenerate(acct):
+    no_param = []
+    ssl_ctx_param = getattr(acct,'ssl_context',no_param)
+    if ssl_ctx_param is no_param:
+        return False
+    return not isinstance(ssl_ctx_param, ssl.SSLContext) and bool(ssl_ctx_param)
+    
 
 ALLOW_PAM_LONG_TOKENS = True      # True to fix [#279]
 # Message to be logged when the connection
@@ -160,6 +167,47 @@ class Connection(object):
             return False
         return False
 
+    @staticmethod
+    def make_ssl_context(irods_account):
+        verify = getattr(irods_account,'ssl_verify_server',None)
+        CAfile = getattr(irods_account,'ssl_ca_certificate_file',None)
+        CApath = getattr(irods_account,'ssl_ca_certificate_path',None)
+#       print ('make ssl context -->')
+#       print ('\t','verify=',verify)
+#       print ('\t','CAfile=',CAfile)
+#       print ('\t','CApath=',CApath)
+        ctx = ssl._create_unverified_context( check_hostname = (verify == 'hostname'),
+                                              cafile = CAfile, capath = CApath)
+        return ctx
+
+    @staticmethod
+    def print_ctx( c ):
+        print('--context--')
+        for x in [#'cert_store_stats',
+         'protocol',
+         'check_hostname',
+         'verify_flags',
+         'verify_mode',
+#        'get_ca_certs',
+#        'get_ciphers',
+#        'load_cert_chain',
+#        'load_default_certs',
+#        'load_dh_params',
+#        'load_verify_locations',
+#        'options',
+#        'post_handshake_auth',
+#        'session_stats',
+#        'set_alpn_protocols',
+#        'set_ciphers',
+#        'set_default_verify_paths',
+#        'set_ecdh_curve',
+#        'set_npn_protocols',
+#        'set_servername_callback',
+#        'wrap_bio',
+#        'wrap_socket'
+        ]:
+            print('\t',x,getattr(c,x,None))
+
     def ssl_startup(self):
         # Get encryption settings from client environment
         host = self.account.host
@@ -169,9 +217,13 @@ class Connection(object):
         salt_size = self.account.encryption_salt_size
 
         # Get or create SSL context
+        if getattr(self.account,'make_ssl_context',False) or need_context_regenerate( self.account ):
+            self.account.ssl_context = self.make_ssl_context( self.account )
+
         try:
             context = self.account.ssl_context
         except AttributeError:
+            # For reverse compatibility with <= v1.1.5
             CA_file = getattr(self.account, 'ssl_ca_certificate_file', None)
             verify_server_mode = getattr(self.account,'ssl_verify_server', 'hostname')
             if verify_server_mode == 'none':
@@ -180,6 +232,8 @@ class Connection(object):
             if CA_file is None:
                 context.check_hostname = False
                 context.verify_mode = 0  # VERIFY_NONE
+
+        self.print_ctx( context )
 
         # Wrap socket with context
         wrapped_socket = context.wrap_socket(self.socket, server_hostname=host)
