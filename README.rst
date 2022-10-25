@@ -86,12 +86,16 @@ Using environment files (including any SSL settings) in ``~/.irods/``:
 ... except KeyError:
 ...     env_file = os.path.expanduser('~/.irods/irods_environment.json')
 ...
->>> ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=None, capath=None, cadata=None)
->>> ssl_settings = {'ssl_context': ssl_context}
->>> with iRODSSession(irods_env_file=env_file, **ssl_settings) as session:
+>>> ssl_settings = {} # Optionally: {'ssl_context': <customized_SSLContext>}
+>>> with iRODSSession(irods_env_file=env_file, \**ssl_settings) as session:
 ...     # workload
 ...
 >>>
+
+An SSL connect can be made without specifying an 'ssl_context' argument, in which
+case the Python client will internally generate its own SSLContext object to best
+match the iRODS SSL configuration parameters given in the iRODSSession constructor
+or environment file.
 
 Passing iRODS credentials as keyword arguments:
 
