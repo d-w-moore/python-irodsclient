@@ -167,6 +167,7 @@ class Connection(object):
         CAfile = getattr(irods_account,'ssl_ca_certificate_file',None)
         CApath = getattr(irods_account,'ssl_ca_certificate_path',None)
         ctx = ssl._create_unverified_context(check_hostname = (verify in ('hostname',None)),
+                                             cert_reqs = (CERT_NONE if (CAfile is None is CApath) else CERT_OPTIONAL),
                                              cafile = CAfile, capath = CApath)
         return ctx
 
