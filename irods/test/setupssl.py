@@ -9,6 +9,16 @@ import shutil
 from subprocess import (Popen, PIPE)
 
 IRODS_SSL_DIR = '/etc/irods/ssl'
+SERVER_CERT_HOSTNAME = None
+
+def create_server_cert(process_output = sys.stdout, irods_key_path = 'irods.key', hostname = SERVER_CERT_HOSTNAME):
+    p = Popen("openssl req -new -x509 -key '{irods_key_path}' -out irods.crt -days 365 <<EOF{_sep_}"
+              "US{_sep_}North Carolina{_sep_}Chapel Hill{_sep_}UNC{_sep_}RENCI{_sep_}"
+              "{host}{_sep_}anon@mail.com{_sep_}EOF\n""".format(
+              host = (hostname if hostname else socket.gethostname()), _sep_ = "\n",**locals()),
+        shell = True, stdout = process_output, stderr = process_output)
+    p.wait()
+    return p.returncode
 
 def create_ssl_dir():
     save_cwd = os.getcwd()
@@ -19,21 +29,16 @@ def create_ssl_dir():
         os.chdir(IRODS_SSL_DIR)
         Popen("openssl genrsa -out irods.key 2048",**silent_run).communicate()
         with open("/dev/null","wb") as dev_null:
-            p = Popen("openssl req -new -x509 -key irods.key -out irods.crt -days 365 <<EOF{_sep_}"
-                      "US{_sep_}North Carolina{_sep_}Chapel Hill{_sep_}UNC{_sep_}RENCI{_sep_}"
-                      "{host}{_sep_}anon@mail.com{_sep_}EOF\n""".format(
-                host = socket.gethostname(), _sep_="\n"),shell=True, stdout=dev_null, stderr=dev_null)
-            p.wait()
-            if 0 == p.returncode:
+            if 0 == create_server_cert(process_output = dev_null):
                 Popen('openssl dhparam -2 -out dhparams.pem',**silent_run).communicate()
         return os.listdir(".")
     finally:
         os.chdir(save_cwd)
 
-def test(opts,args=()):
+def test(optionD, args=()):
     if args: print ('warning: non-option args are ignored',file=sys.stderr)
     affirm = 'n' if os.path.exists(IRODS_SSL_DIR) else 'y'
-    if not [v for k,v in opts if k == '-f'] and affirm == 'n' and posix.isatty(sys.stdin.fileno()):
+    if '-f' not in optionD and affirm == 'n' and posix.isatty(sys.stdin.fileno()):
         try:
             input_ = raw_input
         except NameError:
@@ -47,4 +52,7 @@ def test(opts,args=()):
     
 if __name__ == '__main__':
     import getopt
-    test(*getopt.getopt(sys.argv[1:],'f')) # f = force
+    opts, args = getopt.getopt(sys.argv[1:],'fh:')
+    optD = dict(opts)
+    SERVER_CERT_HOSTNAME = optD.get('-h')
+    test(optD, args)
