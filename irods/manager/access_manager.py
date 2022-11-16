@@ -56,9 +56,13 @@ class AccessManager(Manager):
         results = self.sess.query(user_type.name, user_type.zone, access_type.name)\
             .filter(*conditions).all()
 
+        def get_usertype(row):
+            return self.sess.users.get(row[user_type.name], row[user_type.zone]).type
+
         return [iRODSAccess(
             access_name=row[access_type.name],
             user_name=row[user_type.name],
+            user_type=get_usertype(row),
             path=target.path,
             user_zone=row[user_type.zone]
         ) for row in results]
