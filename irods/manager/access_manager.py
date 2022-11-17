@@ -114,7 +114,9 @@ class AccessManager(Manager):
         acls = [ iRODSAccess ( r[access_column.name],
                                target.path,
                                user_lookup[r[access_column.user_id]].name,
-                               user_lookup[r[access_column.user_id]].zone  ) for r in rows ]
+                               user_lookup[r[access_column.user_id]].zone,
+                               user_lookup[r[access_column.user_id]].type,
+                             ) for r in rows ]
         return acls
 
 
