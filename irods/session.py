@@ -54,6 +54,19 @@ class iRODSSession(object):
     def auth_file (self):
         return self._auth_file
 
+    # session.acls will act identically to session.permissions, except its `get'
+    # method has a default parameter of report_raw_acls = True, so it enumerates
+    # ACLs exactly in the manner of "ils -A".
+
+    @property
+    def acls(self):
+        class ACLs(self.permissions.__class__):
+            def get(self, target, report_raw_acls = True, **kw):
+                return super(ACLs,self).get(target,report_raw_acls,**kw)
+        _acls = getattr(self,'_acls',None)
+        if not _acls: _acls = self._acls = ACLs(self.permissions.sess)
+        return _acls
+
     def __init__(self, configure = True, auto_cleanup = True, **kwargs):
         self.pool = None
         self.numThreads = 0
