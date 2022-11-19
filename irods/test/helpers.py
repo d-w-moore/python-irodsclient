@@ -13,7 +13,10 @@ import threading
 import random
 import datetime
 import json
-from pwd import getpwnam
+try:
+    from pwd import getpwnam
+except:
+    getpwnam = None
 from irods.session import iRODSSession
 from irods.message import iRODSMessage
 from irods.password_obfuscation import encode
@@ -97,18 +100,22 @@ def make_session(**kwargs):
         except KeyError:
             env_file = os.path.expanduser('~/.irods/irods_environment.json')
 
-    try:
-        os.environ['IRODS_CI_TEST_RUN']
-        uid = getpwnam('irods').pw_uid
-    except KeyError:
-        uid = None
+    uid = None
+    if getpwnam is not None:
+        try:
+            os.environ['IRODS_CI_TEST_RUN']
+            uid = getpwnam('irods').pw_uid
+        except KeyError:
+            pass
 
     return iRODSSession( irods_authentication_uid = uid, irods_env_file = env_file, **kwargs )
 
 
-def home_collection(session):
-    return "/{0.zone}/home/{0.username}".format(session)
-
+def home_collection(session, as_object = False):
+    coll_name= "/{0.zone}/home/{0.username}".format(session)
+    return session.collections.get(coll_name) \
+           if as_object \
+           else coll_name
 
 def make_object(session, path, content=None, **options):
     if content is None:
