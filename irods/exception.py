@@ -2033,6 +2033,9 @@ class PHP_REQUEST_STARTUP_ERR(PHPException):
 class PHP_OPEN_SCRIPT_FILE_ERR(PHPException):
     code = -1602000
 
+class DIRECT_CHILD_ACCESS(iRODSException):
+    code = -1816000
+
 class PAMException(iRODSException):
     pass
 
