@@ -1,0 +1,85 @@
+#! /usr/bin/env python
+from __future__ import absolute_import
+import os
+import six
+import sys
+import unittest
+
+from irods.test import helpers
+
+class TestResource(unittest.TestCase):
+
+    from helpers import create_simple_resc_hierarchy
+
+    def setUp(self):
+        self.sess = helpers.make_session()
+
+    # this will probably replace the older test (which follows below it, and tested only at 2 levels)
+
+    def test_resource_properties_for_parent_and_hierarchy_at_3_levels__392(self):
+        ses = self.sess
+        root = "deferred_392"
+        pt = "pt_392"
+        leaf = "leaf_392"
+        root_resc = ses.resources.create(root,"deferred")
+        try:
+            # Create two (passthru + storage) hierarchies below the root: ie. pt0;leaf0 and pt1;leaf1
+            with self.create_simple_resc_hierarchy(pt + "_0",leaf + "_0") as resc_hier_0, \
+                 self.create_simple_resc_hierarchy(pt + "_1",leaf + "_1") as resc_hier_1:
+                try:
+                    # Adopt both passthru's as children under the main root (deferred) node.
+                    ses.resources.add_child( root, pt + "_0")
+                    ses.resources.add_child( root, pt + "_1")
+                    # Now we have two different 3-deep hierarchies (root;pt0;leaf0 and root;pt1;leaf) sharing the same root node.
+                    # Descend each and make sure the relationships hold
+                    for mid in root_resc.children:
+                        hierarchy = [root_resc, mid, mid.children[0]]
+                        parent_resc = None
+                        hier_str = root
+                        # Assert that the hierarchy and parent properties hold at each level, in both tree branches.
+                        for n,resc in enumerate(hierarchy):
+                            if n > 0:
+                                hier_str += ";{}".format(resc.name)
+                            self.assertEqual( resc.parent_id, (None if n == 0 else parent_resc.id))
+                            self.assertEqual( resc.parent_name, (None if n == 0 else parent_resc.name))
+                            self.assertEqual( resc.hierarchy, hier_str)
+                            self.assertIs( type(resc.hierarchy), str )                   # type of hierarchy field is string.
+                            if resc.parent is None:
+                                self.assertIs( resc.parent_name, None )
+                                self.assertIs( resc.parent_id, None )
+                            else:
+                                self.assertIn( type(resc.parent_id), six.integer_types ) # type of a non-null id field is integer.
+                                self.assertIs( type(resc.parent_name), str )             # type of a non-null name field is string.
+                            parent_resc = resc
+                finally:
+                    ses.resources.remove_child( root, pt + "_0")
+                    ses.resources.remove_child( root, pt + "_1")
+        finally:
+            ses.resources.remove(root)
+
+
+    def test_new_resource_properties_for_parent_and_hierarchy__392(self):
+        ses = self.sess
+        root = 'pt_392'
+        leaf = 'leaf_392'
+        with self.create_simple_resc_hierarchy(root,leaf) as resc_hier:
+
+            parent_name, child_name = resc_hier.split(';')
+
+            parent = ses.resources.get(parent_name)
+            child = ses.resources.get(child_name)
+
+            self.assertEqual( child.hierarchy, resc_hier )            # hierarchy of the leaf is as expected.
+            self.assertEqual( child.parent_id, parent.id )            # child has a reference to parent node's id.
+            self.assertEqual( child.parent_name, parent_name )        # child has a reference to parent node's name.
+            self.assertEqual( parent.hierarchy, parent_name )         # hierarchy of a root node is just the name.
+
+            self.assertIn( type(child.parent_id), six.integer_types ) # type of id field is integer.
+            self.assertIs( type(child.parent_name), str )             # type of name field is string.
+            self.assertIs( type(child.hierarchy), str )               # type of hierarchy field is string.
+
+
+if __name__ == '__main__':
+    # let the tests find the parent irods lib
+    sys.path.insert(0, os.path.abspath('../..'))
+    unittest.main()
