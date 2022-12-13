@@ -42,8 +42,8 @@ class TestResource(unittest.TestCase):
                                 hier_str += ";{}".format(resc.name)
                             self.assertEqual(resc.parent_id, (None if n == 0 else parent_resc.id))
                             self.assertEqual(resc.parent_name, (None if n == 0 else parent_resc.name))
-                            self.assertEqual(resc.hierarchy, hier_str)
-                            self.assertIs(type(resc.hierarchy), str)                   # type of hierarchy field is string.
+                            self.assertEqual(resc.hierarchy_string, hier_str)
+                            self.assertIs(type(resc.hierarchy_string), str)                   # type of hierarchy field is string.
                             if resc.parent is None:
                                 self.assertIs(resc.parent_id, None)
                                 self.assertIs(resc.parent_name, None)
