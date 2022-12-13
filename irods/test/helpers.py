@@ -13,11 +13,14 @@ import threading
 import random
 import datetime
 import json
-from pwd import getpwnam
 from irods.session import iRODSSession
 from irods.message import iRODSMessage
 from irods.password_obfuscation import encode
 from six.moves import range
+try:
+  from pwd import getpwnam
+except:
+  pass
 
 
 def my_function_name():
@@ -88,6 +91,14 @@ def make_environment_and_auth_files( dir_, **params ):
     return (config, auth)
 
 
+def get_uid(user):
+    uid = None
+    try:
+       uid = getpwnam(user).pw_uid
+    except:
+       uid = sum(ord(char) for char in os.getlogin(user))
+    return uid
+
 def make_session(**kwargs):
     try:
         env_file = kwargs.pop('irods_env_file')
@@ -99,7 +110,7 @@ def make_session(**kwargs):
 
     try:
         os.environ['IRODS_CI_TEST_RUN']
-        uid = getpwnam('irods').pw_uid
+        uid = get_uid('irods')
     except KeyError:
         uid = None
 
