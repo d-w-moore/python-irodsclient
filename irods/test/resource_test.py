@@ -28,8 +28,8 @@ class TestResource(unittest.TestCase):
                  self.create_simple_resc_hierarchy(pt + "_1",leaf + "_1") as resc_hier_1:
                 try:
                     # Adopt both passthru's as children under the main root (deferred) node.
-                    ses.resources.add_child( root, pt + "_0")
-                    ses.resources.add_child( root, pt + "_1")
+                    ses.resources.add_child(root, pt + "_0")
+                    ses.resources.add_child(root, pt + "_1")
                     # Now we have two different 3-deep hierarchies (root;pt0;leaf0 and root;pt1;leaf) sharing the same root node.
                     # Descend each and make sure the relationships hold
                     for mid in root_resc.children:
@@ -40,20 +40,20 @@ class TestResource(unittest.TestCase):
                         for n,resc in enumerate(hierarchy):
                             if n > 0:
                                 hier_str += ";{}".format(resc.name)
-                            self.assertEqual( resc.parent_id, (None if n == 0 else parent_resc.id))
-                            self.assertEqual( resc.parent_name, (None if n == 0 else parent_resc.name))
-                            self.assertEqual( resc.hierarchy, hier_str)
-                            self.assertIs( type(resc.hierarchy), str )                   # type of hierarchy field is string.
+                            self.assertEqual(resc.parent_id, (None if n == 0 else parent_resc.id))
+                            self.assertEqual(resc.parent_name, (None if n == 0 else parent_resc.name))
+                            self.assertEqual(resc.hierarchy, hier_str)
+                            self.assertIs(type(resc.hierarchy), str)                   # type of hierarchy field is string.
                             if resc.parent is None:
-                                self.assertIs( resc.parent_name, None )
-                                self.assertIs( resc.parent_id, None )
+                                self.assertIs(resc.parent_id, None)
+                                self.assertIs(resc.parent_name, None)
                             else:
-                                self.assertIn( type(resc.parent_id), six.integer_types ) # type of a non-null id field is integer.
-                                self.assertIs( type(resc.parent_name), str )             # type of a non-null name field is string.
+                                self.assertIn(type(resc.parent_id), six.integer_types) # type of a non-null id field is integer.
+                                self.assertIs(type(resc.parent_name), str)             # type of a non-null name field is string.
                             parent_resc = resc
                 finally:
-                    ses.resources.remove_child( root, pt + "_0")
-                    ses.resources.remove_child( root, pt + "_1")
+                    ses.resources.remove_child(root, pt + "_0")
+                    ses.resources.remove_child(root, pt + "_1")
         finally:
             ses.resources.remove(root)
 
