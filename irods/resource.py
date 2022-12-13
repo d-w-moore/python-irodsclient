@@ -7,7 +7,7 @@ import six
 class iRODSResource(object):
 
     def __init__(self, manager, result=None):
-        self._hierarchy = ''
+        self._hierarchy_string = ''
         self._parent_name = ''
         self._parent_id = ''
         '''
@@ -72,14 +72,14 @@ class iRODSResource(object):
     ## Cached property to expose resource hierarchy string
 
     @property
-    def hierarchy(self):
-        if self._hierarchy == '':
-            self._hierarchy = ';'.join(r.name for r in self.node_to_hier())
-        return self._hierarchy
+    def hierarchy_string(self):
+        if self._hierarchy_string == '':
+            self._hierarchy_string = ';'.join(r.name for r in self.hierarchy_as_list_of_resource_objects())
+        return self._hierarchy_string
 
     ## Retrieve chain of parent objects to top level parent
 
-    def node_to_hier(self):
+    def hierarchy_as_list_of_resource_objects(self):
         trace_to_root = [self]
         sess = self.manager.sess
         r = self.parent_id
