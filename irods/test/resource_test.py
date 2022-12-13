@@ -58,27 +58,6 @@ class TestResource(unittest.TestCase):
             ses.resources.remove(root)
 
 
-    def test_new_resource_properties_for_parent_and_hierarchy__392(self):
-        ses = self.sess
-        root = 'pt_392'
-        leaf = 'leaf_392'
-        with self.create_simple_resc_hierarchy(root,leaf) as resc_hier:
-
-            parent_name, child_name = resc_hier.split(';')
-
-            parent = ses.resources.get(parent_name)
-            child = ses.resources.get(child_name)
-
-            self.assertEqual( child.hierarchy, resc_hier )            # hierarchy of the leaf is as expected.
-            self.assertEqual( child.parent_id, parent.id )            # child has a reference to parent node's id.
-            self.assertEqual( child.parent_name, parent_name )        # child has a reference to parent node's name.
-            self.assertEqual( parent.hierarchy, parent_name )         # hierarchy of a root node is just the name.
-
-            self.assertIn( type(child.parent_id), six.integer_types ) # type of id field is integer.
-            self.assertIs( type(child.parent_name), str )             # type of name field is string.
-            self.assertIs( type(child.hierarchy), str )               # type of hierarchy field is string.
-
-
 if __name__ == '__main__':
     # let the tests find the parent irods lib
     sys.path.insert(0, os.path.abspath('../..'))
