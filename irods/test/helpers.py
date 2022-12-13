@@ -91,13 +91,17 @@ def make_environment_and_auth_files( dir_, **params ):
     return (config, auth)
 
 
+# Get the UID of a user (identified by name) if the OS supports it.
+# Else, return None.
+
 def get_uid(user):
     uid = None
     try:
-       uid = getpwnam(user).pw_uid
+        uid = getpwnam(user).pw_uid
     except:
-       uid = sum(ord(char) for char in os.getlogin(user))
+        pass
     return uid
+
 
 def make_session(**kwargs):
     try:
