@@ -24,8 +24,8 @@ class TestResource(unittest.TestCase):
         root_resc = ses.resources.create(root,"deferred")
         try:
             # Create two (passthru + storage) hierarchies below the root: ie. pt0;leaf0 and pt1;leaf1
-            with self.create_simple_resc_hierarchy(pt + "_0",leaf + "_0") as resc_hier_0, \
-                 self.create_simple_resc_hierarchy(pt + "_1",leaf + "_1") as resc_hier_1:
+            with self.create_simple_resc_hierarchy(pt + "_0", leaf + "_0"), \
+                 self.create_simple_resc_hierarchy(pt + "_1", leaf + "_1"):
                 try:
                     # Adopt both passthru's as children under the main root (deferred) node.
                     ses.resources.add_child(root, pt + "_0")
