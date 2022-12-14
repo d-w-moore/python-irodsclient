@@ -2,12 +2,55 @@ from __future__ import absolute_import
 from irods.models import Resource
 from irods.meta import iRODSMetaCollection
 import six
+import threading
+
+
+class Hierarchy(object):
+
+    def __init__(self):
+        self.cache = {}
+
+    def __setitem__(self, node_id, parent):
+        self.cache[node_id] = parent
+
+    def __getitem__(self,node_id):
+        return self.cache.get(node_id)
+
+    # Internally cache parent info so as not to repeat queries unnecessarily....
+
+    def trace_to_root(self, node, always_query = False):
+        x = [node]
+        sess = node.manager.sess
+        r = node.parent_id
+        while r is not None:
+            if self[r] is None or always_query:
+                parent_row = sess.query(Resource).filter(Resource.id == r).one()
+                self[r] = iRODSResource(node.manager, parent_row)
+            P = self[r]
+            x.append(P)
+            r = P.parent_id
+        return x
+
+    def hierarchy_string_for_node(self, node):
+        L = reversed(self.trace_to_root( node))
+        return ';'.join(obj.name for obj in L)
+    
+
+_hier = threading.local()
+_hier_lock = threading.Lock()
+
+
+def _default_hierarchy_object(refresh = False):
+    with _hier_lock:
+        if refresh: _hier.object = None
+        if getattr(_hier,'object',None) is None:
+            _hier.object = Hierarchy()
+    return _hier.object
 
 
 class iRODSResource(object):
 
     def __init__(self, manager, result=None):
-        self._hierarchy_string = ''
         self._parent_name = ''
         self._parent_id = ''
         '''
@@ -69,25 +112,14 @@ class iRODSResource(object):
                 self._parent_name = sess.query(Resource).filter(Resource.id == self.parent).one()[Resource.name]
         return self._parent_name
 
-    ## Cached property to expose resource hierarchy string
-
     @property
     def hierarchy_string(self):
-        if self._hierarchy_string == '':
-            self._hierarchy_string = ';'.join(r.name for r in self.hierarchy_as_list_of_resource_objects())
-        return self._hierarchy_string
 
-    ## Retrieve chain of parent objects to top level parent
+        # Retrieve the global (aka thread-local) objectd queries/caches parent info for all resource nodes
+        lookup = _default_hierarchy_object()
 
-    def hierarchy_as_list_of_resource_objects(self):
-        trace_to_root = [self]
-        sess = self.manager.sess
-        r = self.parent_id
-        while r is not None:
-            parent = sess.query(Resource).filter(Resource.id == r).one()
-            trace_to_root.append(iRODSResource(self.manager, parent))
-            r = trace_to_root[-1].parent_id
-        return list(reversed(trace_to_root))
+        # Through that object, calculate the hierarchy string
+        return lookup.hierarchy_string_for_node(self)
 
     @property
     def metadata(self):
