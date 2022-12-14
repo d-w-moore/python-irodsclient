@@ -100,15 +100,18 @@ class iRODSException(six.with_metaclass(iRODSExceptionMeta, Exception)):
         argl = list(arg)
 
         # For consistency with the text representation, allow initialization with an Errno object
-        # at the end of the argument list, i.e. my_iRODSException("specific error message", Errno(int_error_code, ...))
+        # at the end of the argument list.
+        # Example: err = UNIX_FILE_OPEN_ERR('message', Errno(13))
+        #          err_copy = eval(repr(err))
         if hasattr(self.__class__,'code'):
            if argl and isinstance (argl[-1],Errno):
                explicit_errno = argl.pop()
 
         super(iRODSException,self).__init__(*argl)
 
-        # Also with the text representation, the instance "code" attribute should be (-errno) plus the thousands
-        # attribute stored in the class.  The following does _not_ modify the class "code" attribute.
+        # To properly represent the Errno instance, the "code" attribute should be (-errno) plus the thousands
+        # attribute stored in the class's code attribute.  Because Python honors the instance "code" attribute
+        # over the class "code" attribute, the following does _not_ modify the class:
         if explicit_errno:
             self.code -= int(explicit_errno)
 
