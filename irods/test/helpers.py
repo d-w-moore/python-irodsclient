@@ -14,10 +14,13 @@ import random
 import datetime
 import json
 from irods.session import iRODSSession
-from irods.message import iRODSMessage
+from irods.message import (iRODSMessage, IRODS_VERSION)
 from irods.password_obfuscation import encode
 from six.moves import range
 
+
+class iRODS_Server_Too_Recent (Exception):
+    pass
 
 def my_function_name():
     """Returns the name of the calling function or method"""
@@ -87,6 +90,8 @@ def make_environment_and_auth_files( dir_, **params ):
     return (config, auth)
 
 
+# Create a connection for test, based on ~/.irods environment by default.
+
 def make_session(**kwargs):
     try:
         env_file = kwargs.pop('irods_env_file')
@@ -95,7 +100,16 @@ def make_session(**kwargs):
             env_file = os.environ['IRODS_ENVIRONMENT_FILE']
         except KeyError:
             env_file = os.path.expanduser('~/.irods/irods_environment.json')
-    return iRODSSession( irods_env_file = env_file, **kwargs )
+    session = iRODSSession( irods_env_file = env_file, **kwargs )
+
+    connected_version = session.server_version[:3]
+    advertised_version = IRODS_VERSION[:3]
+    if connected_version > advertised_version:
+        msg = ("Connected server is {connected_version}, "
+               "but this python-irodsclient advertises compatibility up to {advertised_version}.").format(**locals())
+        raise iRODS_Server_Too_Recent(msg)
+
+    return session
 
 
 def home_collection(session):
