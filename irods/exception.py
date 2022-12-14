@@ -3,10 +3,10 @@
 
 
 from __future__ import absolute_import
-import six
-import numbers
 import errno
+import numbers
 import os
+import six
 
 
 class PycommandsException(Exception):
