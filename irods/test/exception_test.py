@@ -4,7 +4,6 @@ from __future__ import absolute_import
 from datetime import datetime
 import errno
 import os
-import re
 import sys
 import unittest
 import irods.test.helpers as helpers

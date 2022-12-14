@@ -82,8 +82,8 @@ class Errno:
         e = self.int_code
         try:
             return self.__class__.__name__ + repr(tuple([e, errno.errorcode[e], os.strerror(e)]))
-        except Exception as exc:
-            pass # print(repr(exc))
+        except Exception:
+            pass
         return self.__class__.__name__ + repr(tuple([e,]))
     def __int__(self):
         return self.int_code
@@ -104,8 +104,8 @@ class iRODSException(six.with_metaclass(iRODSExceptionMeta, Exception)):
         # Example: err = UNIX_FILE_OPEN_ERR('message', Errno(13))
         #          err_copy = eval(repr(err))
         if hasattr(self.__class__,'code'):
-           if argl and isinstance (argl[-1],Errno):
-               explicit_errno = argl.pop()
+            if argl and isinstance (argl[-1],Errno):
+                explicit_errno = argl.pop()
 
         super(iRODSException,self).__init__(*argl)
 
