@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import print_function
 import os
 import io
 import tempfile
@@ -13,14 +14,25 @@ import threading
 import random
 import datetime
 import json
+import sys
 from irods.session import iRODSSession
 from irods.message import (iRODSMessage, IRODS_VERSION)
 from irods.password_obfuscation import encode
 from six.moves import range
 
 
-class iRODS_Server_Too_Recent (Exception):
+class StopTestsException(Exception):
+
+    def __init__(self,*args,**kwargs):
+        super(StopTestsException,self).__init__(*args,**kwargs)
+        if 'unittest' in sys.modules.keys():
+            print("Aborting tests [ Got : %r ]" % self, file = sys.stderr)
+            os.abort()
+
+
+class iRODS_Server_Too_Recent(StopTestsException):
     pass
+
 
 def my_function_name():
     """Returns the name of the calling function or method"""
