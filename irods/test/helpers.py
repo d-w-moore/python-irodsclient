@@ -104,7 +104,7 @@ def make_environment_and_auth_files( dir_, **params ):
 
 # Create a connection for test, based on ~/.irods environment by default.
 
-def make_session(**kwargs):
+def make_session(test_server_version = True, **kwargs):
     try:
         env_file = kwargs.pop('irods_env_file')
     except KeyError:
@@ -114,12 +114,13 @@ def make_session(**kwargs):
             env_file = os.path.expanduser('~/.irods/irods_environment.json')
     session = iRODSSession( irods_env_file = env_file, **kwargs )
 
-    connected_version = session.server_version[:3]
-    advertised_version = IRODS_VERSION[:3]
-    if connected_version > advertised_version:
-        msg = ("Connected server is {connected_version}, "
-               "but this python-irodsclient advertises compatibility up to {advertised_version}.").format(**locals())
-        raise iRODS_Server_Too_Recent(msg)
+    if test_server_version:
+        connected_version = session.server_version[:3]
+        advertised_version = IRODS_VERSION[:3]
+        if connected_version > advertised_version:
+            msg = ("Connected server is {connected_version}, "
+                   "but this python-irodsclient advertises compatibility up to {advertised_version}.").format(**locals())
+            raise iRODS_Server_Too_Recent(msg)
 
     return session
 
