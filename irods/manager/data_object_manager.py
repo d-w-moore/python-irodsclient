@@ -82,7 +82,7 @@ class DataObjectManager(Manager):
         return size > MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE
 
 
-    def _download(self, obj, local_path, num_threads, **options):
+    def _download(self, obj, local_path, num_threads, async_ = False, **options):
         """Transfer the contents of a data object to a local file.
 
         Called from get() when a local path is named.
@@ -95,20 +95,19 @@ class DataObjectManager(Manager):
         # Check for force flag if local_file exists
         if os.path.exists(local_file) and kw.FORCE_FLAG_KW not in options:
             raise ex.OVERWRITE_WITHOUT_FORCE_FLAG
-
-        with open(local_file, 'wb') as f, self.open(obj, 'r', **options) as o:
-
+        o = self.open(obj, 'r', **options)
+        with open(local_file, 'wb') as f:
             if self.should_parallelize_transfer (num_threads, o):
                 f.close()
                 if not self.parallel_get( (obj,o), local_path, num_threads = num_threads,
-                                          target_resource_name = options.get(kw.RESC_NAME_KW,'')):
+                                          target_resource_name = options.get(kw.RESC_NAME_KW,''), async_ = async_):
                     raise RuntimeError("parallel get failed")
             else:
                 for chunk in chunks(o, self.READ_BUFFER_SIZE):
                     f.write(chunk)
 
 
-    def get(self, path, local_path = None, num_threads = DEFAULT_NUMBER_OF_THREADS, **options):
+    def get(self, path, local_path = None, num_threads = DEFAULT_NUMBER_OF_THREADS, async_ = False, **options):
         """
         Get a reference to the data object at the specified `path'.
 
@@ -119,7 +118,7 @@ class DataObjectManager(Manager):
 
         # TODO: optimize
         if local_path:
-            self._download(path, local_path, num_threads = num_threads, **options)
+            self._download(path, local_path, num_threads = num_threads, async_ = async_, **options)
 
         query = self.sess.query(DataObject)\
             .filter(DataObject.name == irods_basename(path))\
@@ -136,7 +135,7 @@ class DataObjectManager(Manager):
         return iRODSDataObject(self, parent, results)
 
 
-    def put(self, local_path, irods_path, return_data_object = False, num_threads = DEFAULT_NUMBER_OF_THREADS, **options):
+    def put(self, local_path, irods_path, return_data_object = False, num_threads = DEFAULT_NUMBER_OF_THREADS, async_ = False, **options):
 
         if self.sess.collections.exists(irods_path):
             obj = iRODSCollection.normalize_path(irods_path, os.path.basename(local_path))
@@ -151,7 +150,7 @@ class DataObjectManager(Manager):
                 if not self.parallel_put( local_path, (obj,o), total_bytes = sizelist[0], num_threads = num_threads,
                                           target_resource_name = options.get(kw.RESC_NAME_KW,'') or
                                                                  options.get(kw.DEST_RESC_NAME_KW,''),
-                                          open_options = options ):
+                                          open_options = options, async_ = async_ ):
                     raise RuntimeError("parallel put failed")
             else:
                 with self.open(obj, 'w', **options) as o:
@@ -222,8 +221,12 @@ class DataObjectManager(Manager):
         for parallel download.
 
         """
-        return parallel.io_main( self.sess, data_or_path_, parallel.Oper.GET | (parallel.Oper.NONBLOCKING if async_ else 0), file_,
-                                 num_threads = num_threads, target_resource_name = target_resource_name,
+
+        if async_ is not False: progressQueue = True
+
+        return parallel.io_main( self.sess, data_or_path_, parallel.Oper.GET | (parallel.Oper.NONBLOCKING if progressQueue else 0), 
+                                 file_, num_threads = num_threads, target_resource_name = target_resource_name,
+                                 async_ = async_,
                                  queueLength = (DEFAULT_QUEUE_DEPTH if progressQueue else 0))
 
     def parallel_put(self,
@@ -241,9 +244,11 @@ class DataObjectManager(Manager):
         data object is determined to be of appropriate size for parallel upload.
 
         """
-        return parallel.io_main( self.sess, data_or_path_, parallel.Oper.PUT | (parallel.Oper.NONBLOCKING if async_ else 0), file_,
-                                 num_threads = num_threads, total_bytes = total_bytes,  target_resource_name = target_resource_name,
-                                 open_options = open_options,
+        if async_ is not False: progressQueue = True
+
+        return parallel.io_main( self.sess, data_or_path_, parallel.Oper.PUT | (parallel.Oper.NONBLOCKING if progressQueue else 0),
+                                 file_, num_threads = num_threads, total_bytes = total_bytes,  target_resource_name = target_resource_name,
+                                 open_options = open_options, async_ = async_,
                                  queueLength = (DEFAULT_QUEUE_DEPTH if progressQueue else 0)
                                )
 

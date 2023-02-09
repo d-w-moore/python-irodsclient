@@ -1,21 +1,22 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import os
-import ssl
-import time
-import sys
-import logging
-import contextlib
+import atexit
 import concurrent.futures
-import threading
+import contextlib
+import logging
 import multiprocessing
+import os
 import six
+from six.moves.queue import Queue,Full,Empty
+import ssl
+import sys
+import threading
+import time
 
 from irods.data_object import iRODSDataObject
 from irods.exception import DataObjectDoesNotExist
 import irods.keywords as kw
-from six.moves.queue import Queue,Full,Empty
 
 
 logger = logging.getLogger( __name__ )
@@ -341,12 +342,12 @@ def _io_part (objHandle, range_, file_, opr_, mgr_, thread_debug_id = '', queueO
         else _copy_part (objHandle, file_, length, queueObject, thread_debug_id, mgr_) )
 
 
-def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str, session, fname,
-                           total_size, num_threads, **extra_options):
+def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str, session, fname, total_size, num_threads, **extra_options):
     """Called by _io_main.
 
     Carve up (0,total_size) range into `num_threads` parts and initiate a transfer thread for each one.
     """
+
     (Data_object, Io) = dataObj_and_IO
     Operation = Oper( operation_ )
 
@@ -488,17 +489,22 @@ def io_main( session, Data, opr_, fname, R='', **kwopt):
     #   - upon completion with a boolean completion status, otherwise.
 
     if Operation.isNonBlocking():
-
         if queueLength > 0:
             (futures, chunk_notify_queue, mgr) = retval
         else:
             futures = retval
             chunk_notify_queue = total_bytes = None
 
-        return AsyncNotify( futures,                              # individual futures, one per transfer thread
-                            progress_Queue = chunk_notify_queue,  # for notifying the progress indicator thread
-                            total = total_bytes,                  # total number of bytes for parallel transfer
-                            keep_ = {'mgr': mgr}  )   # an open raw i/o object needing to be persisted, if any
+        notifier = AsyncNotify( futures,                              # individual futures, one per transfer thread
+                                progress_Queue = chunk_notify_queue,  # for notifying the progress indicator thread
+                                total = total_bytes,                  # total number of bytes for parallel transfer
+                                keep_ = {'mgr': mgr}  )   # an open raw i/o object needing to be persisted, if any
+        try:
+            kwopt.pop('async_',{})['notifier'] = notifier
+        except TypeError:
+            pass
+        atexit.register(lambda:notifier.wait_until_transfer_done())
+        return notifier
     else:
         (_bytes_transferred, _bytes_total) = retval
         return (_bytes_transferred == _bytes_total)
