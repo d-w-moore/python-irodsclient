@@ -442,6 +442,12 @@ class TestMeta(unittest.TestCase):
                 if d: d.unlink(force = True)
                 helpers.remove_unused_metadata(session)
 
+    def test_numeric_zero_in_metadata__issue_434(self):
+        obj = self.obj
+        for name_,type_ in {'float':float,'int':int}.items():
+                obj.metadata.set( name_, type_(0), 'units')
+                self.assertEqual(0, type_(obj.metadata.get_one(name_).value))
+
 if __name__ == '__main__':
     # let the tests find the parent irods lib
     sys.path.insert(0, os.path.abspath('../..'))
