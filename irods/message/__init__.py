@@ -670,9 +670,9 @@ class MetadataRequest(Message):
 
     def __init__(self, *args, **metadata_opts):
         super(MetadataRequest, self).__init__()
-        for i in range(len(args)):
-            if args[i]:
-                setattr(self, 'arg%d' % i, args[i])
+        for i,arg in enumerate(args):
+            if arg is not None and str(arg):
+                setattr(self, 'arg%d' % i, arg)
         self.KeyValPair_PI = StringStringMap(metadata_opts)
 
     arg0 = StringProperty()
