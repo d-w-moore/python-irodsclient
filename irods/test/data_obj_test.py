@@ -15,6 +15,7 @@ import socket
 import stat
 import string
 import sys
+import subprocess
 import time
 import unittest
 import xml.etree.ElementTree
@@ -38,7 +39,9 @@ import irods.exception as ex
 from irods.column import Criterion
 from irods.data_object import chunks, irods_dirname
 import irods.test.helpers as helpers
+import irods.test.modules as test_modules
 import irods.keywords as kw
+import irods.client_configuration as config
 from irods.manager import data_object_manager
 from irods.message import RErrorStack
 from irods.message import ( ET, XML_Parser_Type, default_XML_parser, current_XML_parser )
@@ -1887,6 +1890,73 @@ class TestDataObjOps(unittest.TestCase):
                 self.assertEqual(repl.comments, comment)
             finally:
                 d.unlink(force = True)
+
+    def _auto_close_test(self, data_object_path, content):
+        d = None
+        try:
+            d = self.sess.data_objects.get(data_object_path)
+            self.assertEqual(int(d.replicas[0].status), 1)
+            self.assertEqual(d.open('r').read().decode(), content)
+        finally:
+            if d: d.unlink(force = True)
+
+    def test_data_objects_auto_close_on_process_exit__issue_456(self):
+        program = os.path.join(test_modules.__path__[0], 'test_auto_close_of_data_objects__issue_456.py')
+        # Use the currently running Python interpreter binary to run the script in the child process.
+        p = subprocess.Popen([sys.executable,program], stdout=subprocess.PIPE)
+        data_object_path, expected_content = p.communicate()[0].decode().split()
+        self._auto_close_test(data_object_path, expected_content)
+
+    def test_data_objects_auto_close_on_function_exit__issue_456(self):
+        import irods.test.modules.test_auto_close_of_data_objects__issue_456 as test_module
+        data_object_path, expected_content = test_module.test(return_locals = ('name','expected_content'))
+        self._auto_close_test(data_object_path, expected_content)
+
+    @unittest.skipIf(helpers.configuration_file_exists(),"test would overwrite pre-existing configuration.")
+    def test_settings_save_and_autoload__issue_471(self):
+        import irods.test.modules.test_saving_and_loading_of_settings__issue_471 as test_module
+        truth = int(time.time())
+        test_output = test_module.test(truth)
+        self.assertEqual(test_output, str(truth))
+
+    def test_settings_load_and_save_471(self):
+        from .. import settings_path_environment_variable, get_settings_path, DEFAULT_CONFIG_PATH
+        settings_path = get_settings_path()
+        with helpers.file_backed_up(settings_path, require_that_file_exists = False):
+
+            RANDOM_VALUE=int(time.time())
+            config.data_objects.auto_close = RANDOM_VALUE
+
+            # Create empty settings file.
+            with open(settings_path,'w') as f:
+                pass
+
+            # For "silent" loading.
+            load_logging_options =  {'logging_level':logging.DEBUG}
+
+            config.load(**load_logging_options)
+
+            # Load from empty settings should change nothing.
+            self.assertTrue(config.data_objects.auto_close, RANDOM_VALUE)
+
+            os.unlink(settings_path)
+            config.load(**load_logging_options)
+            # Load from nonexistent settings file should change nothing.
+            self.assertTrue(config.data_objects.auto_close, RANDOM_VALUE)
+
+            with helpers.environment_variable_backed_up(settings_path_environment_variable):
+                os.environ.pop(settings_path_environment_variable,None)
+                for i, test_path in enumerate([None, '', '/tmp/.prc']):
+                    if test_path is not None:
+                        os.environ[settings_path_environment_variable] = test_path
+                    # Check that load and save work as expected.
+                    config.data_objects.auto_close = RANDOM_VALUE - i - 1
+                    saved_path = config.save()
+                    # File path should be as expected.
+                    self.assertEqual(saved_path, (DEFAULT_CONFIG_PATH if not test_path else test_path))
+                    config.data_objects.auto_close = RANDOM_VALUE
+                    config.load(**load_logging_options)
+                    self.assertTrue(config.data_objects.auto_close, RANDOM_VALUE - i - 1)
 
 if __name__ == '__main__':
     # let the tests find the parent irods lib
