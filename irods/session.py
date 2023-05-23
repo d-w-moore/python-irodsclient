@@ -147,6 +147,8 @@ class iRODSSession(object):
         self.resources = ResourceManager(self)
         self.zones = ZoneManager(self)
         self._auto_cleanup = auto_cleanup   # TODO: allow setting parent thread in _weakly_reference call
+        self.ticket__ = ''
+        self.ticket_applied = weakref.WeakKeyDictionary() # conn -> ticket applied
         if auto_cleanup:
             _weakly_reference(self)
 
@@ -171,6 +173,8 @@ class iRODSSession(object):
             if setter:
                 setter(other)
         other.cleanup(new_host = kwargs.pop('host',''))
+        other.ticket__ = kwargs.pop('ticket',self.ticket__)
+        self.ticket_applied = weakref.WeakKeyDictionary() # conn -> ticket applied
         if other._auto_cleanup:
             _weakly_reference(other)  # TODO set parent thread
         return other
@@ -251,7 +255,7 @@ class iRODSSession(object):
             account = self._configure_account(**kwargs)
         connection_refresh_time = self.get_connection_refresh_time(**kwargs)
         logger.debug("In iRODSSession's configure(). connection_refresh_time set to {}".format(connection_refresh_time))
-        self.pool = Pool(account, application_name=kwargs.pop('application_name',''), connection_refresh_time=connection_refresh_time)
+        self.pool = Pool(account, application_name=kwargs.pop('application_name',''), connection_refresh_time=connection_refresh_time, session = self)
         conn_timeout = getattr(self,'_cached_connection_timeout',None)
         self.pool.connection_timeout = conn_timeout
         return account
