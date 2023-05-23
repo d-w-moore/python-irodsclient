@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import atexit
+import copy
 import os
 import ast
 import json
@@ -145,7 +146,9 @@ class iRODSSession(object):
         self.user_groups = GroupManager(self)
         self.resources = ResourceManager(self)
         self.zones = ZoneManager(self)
-
+        self._auto_cleanup = auto_cleanup
+        self.ticket__ = ''
+        self.ticket_applied = weakref.WeakKeyDictionary() # conn -> ticket applied
         if auto_cleanup:
             _weakly_reference(self)
 
@@ -162,14 +165,40 @@ class iRODSSession(object):
         if self.pool is not None:
             self.cleanup()
 
-    def cleanup(self):
-        for conn in self.pool.active | self.pool.idle:
-            try:
-                conn.disconnect()
-            except NetworkException:
-                pass
-            conn.release(True)
+    def clone(self, **kwargs):
+        other = copy.copy(self)
+        other.pool = None
+        for k,v in vars(self).items():
+            if getattr(v,'_set_manager_session',None) is not None:
+                vcopy = copy.copy(v)
+                # Deep-copy into the manager object for the cloned session and set its parent session
+                # reference to correspond to the clone.
+                setattr(other,k,vcopy)
+                vcopy._set_manager_session(other)
+            elif isinstance(v,iRODSAccount):
+                # Deep-copy the iRODSAccount subobject, since we might be setting the hostname on that object.
+                setattr(other,k,copy.copy(v))
+
+        other.cleanup(new_host = kwargs.pop('host',''))
+        other.ticket__ = kwargs.pop('ticket',self.ticket__)
+        self.ticket_applied = weakref.WeakKeyDictionary() # conn -> ticket applied
+        if other._auto_cleanup:
+            _weakly_reference(other)
+        return other
+
+    def cleanup(self, new_host = ''):
+        if self.pool:
+            for conn in self.pool.active | self.pool.idle:
+                try:
+                    conn.disconnect()
+                except NetworkException:
+                    pass
+                conn.release(True)
         if self.do_configure: 
+            if new_host:
+                d = self.do_configure.setdefault('_overrides',{})
+                d['irods_host'] = new_host
+                self.__configured = None
             self.__configured = self.configure(**self.do_configure)
 
     def _configure_account(self, **kwargs):
@@ -233,7 +262,7 @@ class iRODSSession(object):
             account = self._configure_account(**kwargs)
         connection_refresh_time = self.get_connection_refresh_time(**kwargs)
         logger.debug("In iRODSSession's configure(). connection_refresh_time set to {}".format(connection_refresh_time))
-        self.pool = Pool(account, application_name=kwargs.pop('application_name',''), connection_refresh_time=connection_refresh_time)
+        self.pool = Pool(account, application_name=kwargs.pop('application_name',''), connection_refresh_time=connection_refresh_time, session = self)
         conn_timeout = getattr(self,'_cached_connection_timeout',None)
         self.pool.connection_timeout = conn_timeout
         return account

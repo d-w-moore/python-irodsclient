@@ -5,7 +5,8 @@ from irods.models import DataObject, Collection
 from irods.manager import Manager
 from irods.message import (
     iRODSMessage, FileOpenRequest, ObjCopyRequest, StringStringMap, DataObjInfo, ModDataObjMeta,
-    DataObjChksumRequest, DataObjChksumResponse, RErrorStack)
+    DataObjChksumRequest, DataObjChksumResponse, RErrorStack, STR_PI
+    )
 import irods.exception as ex
 from irods.api_number import api_number
 from irods.collection import iRODSCollection
@@ -19,7 +20,6 @@ import ast
 import json
 import logging
 
-
 MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE = 32 * ( 1024 ** 2)
 
 DEFAULT_NUMBER_OF_THREADS = 0   # Defaults for reasonable number of threads -- optimized to be
@@ -27,6 +27,7 @@ DEFAULT_NUMBER_OF_THREADS = 0   # Defaults for reasonable number of threads -- o
 
 DEFAULT_QUEUE_DEPTH = 32
 
+logger = logging.getLogger(__name__)
 
 class Server_Checksum_Warning(Exception):
     """Error from iRODS server indicating some replica checksums are missing or incorrect."""
@@ -62,9 +63,6 @@ class DataObjectManager(Manager):
 
         # Allow an environment variable to override the detection of the server version.
         # Example: $ export IRODS_VERSION_OVERRIDE="4,2,9" ;  python -m irods.parallel ...
-        # ---
-        # Delete the following line on resolution of https://github.com/irods/irods/issues/5932 :
-        if getattr(self.sess,'ticket__',None) is not None: return False
         server_version = ( ast.literal_eval(os.environ.get('IRODS_VERSION_OVERRIDE', '()' )) or server_version_hint or 
                            self.server_version )
         if num_threads == 1 or ( server_version < parallel.MINIMUM_SERVER_VERSION ):
@@ -96,16 +94,18 @@ class DataObjectManager(Manager):
         if os.path.exists(local_file) and kw.FORCE_FLAG_KW not in options:
             raise ex.OVERWRITE_WITHOUT_FORCE_FLAG
 
-        with open(local_file, 'wb') as f, self.open(obj, 'r', **options) as o:
-
-            if self.should_parallelize_transfer (num_threads, o):
-                f.close()
-                if not self.parallel_get( (obj,o), local_path, num_threads = num_threads,
-                                          target_resource_name = options.get(kw.RESC_NAME_KW,'')):
-                    raise RuntimeError("parallel get failed")
-            else:
-                for chunk in chunks(o, self.READ_BUFFER_SIZE):
-                    f.write(chunk)
+        data_open_returned_values_ = {}
+        with open(local_file, 'wb') as f:
+            with self.open(obj, 'r', returned_values = data_open_returned_values_, **options) as o:
+                if self.should_parallelize_transfer (num_threads, o):
+                    f.close()
+                    if not self.parallel_get( (obj,o), local_path, num_threads = num_threads,
+                                              target_resource_name = options.get(kw.RESC_NAME_KW,''),
+                                              data_open_returned_values = data_open_returned_values_):
+                        raise RuntimeError("parallel get failed")
+                else:
+                    for chunk in chunks(o, self.READ_BUFFER_SIZE):
+                        f.write(chunk)
 
 
     def get(self, path, local_path = None, num_threads = DEFAULT_NUMBER_OF_THREADS, **options):
@@ -126,7 +126,7 @@ class DataObjectManager(Manager):
             .filter(DataObject.collection_id == parent.id)\
             .add_keyword(kw.ZONE_KW, path.split('/')[1])
 
-        if hasattr(self.sess,'ticket__'):
+        if self.sess.ticket__:
             query = query.filter(Collection.id != 0) # a no-op, but necessary because CAT_SQL_ERR results if the ticket
                                                      # is for a DataObject and we don't explicitly join to Collection
 
@@ -214,6 +214,7 @@ class DataObjectManager(Manager):
                      async_ = False,
                      num_threads = 0,
                      target_resource_name = '',
+                     data_open_returned_values = None,
                      progressQueue = False):
         """Call into the irods.parallel library for multi-1247 GET.
 
@@ -224,6 +225,7 @@ class DataObjectManager(Manager):
         """
         return parallel.io_main( self.sess, data_or_path_, parallel.Oper.GET | (parallel.Oper.NONBLOCKING if async_ else 0), file_,
                                  num_threads = num_threads, target_resource_name = target_resource_name,
+                                 data_open_returned_values = data_open_returned_values,
                                  queueLength = (DEFAULT_QUEUE_DEPTH if progressQueue else 0))
 
     def parallel_put(self,
@@ -296,7 +298,9 @@ class DataObjectManager(Manager):
                                kw.RESC_HIER_STR_KW
                            ))
 
-    def open(self, path, mode, create = True, finalize_on_close = True, **options):
+
+    def open(self, path, mode, create = True, finalize_on_close = True, returned_values = None, allow_redirect = True, **options):
+
         _raw_fd_holder =  options.get('_raw_fd_holder',[])
         # If no keywords are used that would influence the server as to the choice of a storage resource,
         # then use the default resource in the client configuration.
@@ -317,29 +321,79 @@ class DataObjectManager(Manager):
         }[mode]
         # TODO: Use seek_to_end
 
+        if not isinstance(returned_values, dict):
+            returned_values = {}
+
         try:
             oprType = options[kw.OPR_TYPE_KW]
         except KeyError:
             oprType = 0
 
-        message_body = FileOpenRequest(
-            objPath=path,
-            createMode=0,
-            openFlags=flags,
-            offset=0,
-            dataSize=-1,
-            numThreads=self.sess.numThreads,
-            oprType=oprType,
-            KeyValPair_PI=StringStringMap(options),
-        )
-        message = iRODSMessage('RODS_API_REQ', msg=message_body,
-                               int_info=api_number['DATA_OBJ_OPEN_AN'])
+        def make_FileOpenRequest(**extra_opts):
+            options_ = dict(options) if extra_opts else options
+            options_.update(extra_opts)
+            return  FileOpenRequest(
+                objPath=path,
+                createMode=0,
+                openFlags=flags,
+                offset=0,
+                dataSize=-1,
+                numThreads=self.sess.numThreads,
+                oprType=oprType,
+                KeyValPair_PI=StringStringMap(options_),
+            )
+
+        requested_hierarchy = options.get(kw.RESC_HIER_STR_KW, None)
 
         conn = self.sess.pool.get_connection()
+        redirected_host = ''
+
+        use_get_rescinfo_apis = False
+
+        if allow_redirect and conn.server_version >= (4,3,1):
+            key = 'CREATE' if mode[0] in ('w','a') else 'OPEN'
+            message = iRODSMessage('RODS_API_REQ',
+                                   msg=make_FileOpenRequest(**{kw.GET_RESOURCE_INFO_OP_TYPE_KW:key}),
+                                   int_info=api_number['GET_RESOURCE_INFO_FOR_OPERATION_AN'])
+            conn.send(message)
+            response = conn.recv()
+            msg = response.get_main_message( STR_PI )
+            use_get_rescinfo_apis = True
+
+            # Get the information needed for the redirect
+            _ = json.loads(msg.myStr)
+            redirected_host = _["host"]
+            requested_hierarchy = _["resource_hierarchy"]
+
+        target_zone = list(filter(None, path.split('/')))
+        if target_zone:
+            target_zone = target_zone[0]
+
+        directed_sess = self.sess
+
+        if redirected_host and use_get_rescinfo_apis:
+            # Redirect only if the local zone is being targeted, and if the hostname is changed from the original.
+            if target_zone == self.sess.zone and (self.sess.host != redirected_host):
+                # This is the actual redirect.
+                directed_sess = self.sess.clone(host = redirected_host)
+                returned_values['session'] = directed_sess
+                conn = directed_sess.pool.get_connection()
+                logger.debug('redirect_to_host = %s', redirected_host)
+
+        # Restore RESC HIER for DATA_OBJ_OPEN call
+        if requested_hierarchy is not None:
+            options[kw.RESC_HIER_STR_KW] = requested_hierarchy
+        message_body = make_FileOpenRequest()
+
+        # Perform DATA_OBJ_OPEN call
+        message = iRODSMessage('RODS_API_REQ', msg=message_body,
+                               int_info=api_number['DATA_OBJ_OPEN_AN'])
         conn.send(message)
         desc = conn.recv().int_info
 
         raw = iRODSDataObjectFileRaw(conn, desc, finalize_on_close = finalize_on_close, **options)
+        raw.session = directed_sess
+
         (_raw_fd_holder).append(raw)
         return io.BufferedRandom(raw)
 
