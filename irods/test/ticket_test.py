@@ -160,6 +160,38 @@ class TestRodsUserTicketOps(unittest.TestCase):
                 if dobj: dobj.unlink(force=True)
 
 
+    def test_open_data_object_for_write_with_ticket(self):
+        if self.alice is None or self.bob is None:
+            self.skipTest("A rodsuser (alice and/or bob) could not be created.")
+        t = None
+        data_objs = []
+        tmpfiles = []
+        tickets = {}
+        try:
+            # Create ticket for read access to alice's home collection.
+            alice = self.login(self.alice)
+            home = self.irods_homedir(alice)
+
+            # Create 'R' and 'W' in alice's home collection.
+            data_objs = [helpers.make_object(alice,home.path+"/"+name,content='abcxyz') for name in ('R','W')]
+            tickets = {
+                #'R': Ticket(alice).issue('read',  home.path + "/R"),
+                'W': Ticket(alice).issue('write', home.path + "/W")
+            }
+            # Test only write ticket allows upload.
+            with self.login(self.bob) as bob:
+                rw_names={}
+                for name in  ('W',):
+                    Ticket(bob, tickets[name].string).supply()
+                    bob.data_objects.open(home.path+"/"+name,"w") # instead of PUT # -- dwm
+        finally:
+            for t in tickets.values():
+                t.delete()
+            for d in data_objs:
+                d.unlink(force=True)
+            for file_ in tmpfiles: os.unlink( file_.name )
+            alice.cleanup()
+
     def test_object_read_and_write_tickets(self):
         if self.alice is None or self.bob is None:
             self.skipTest("A rodsuser (alice and/or bob) could not be created.")
