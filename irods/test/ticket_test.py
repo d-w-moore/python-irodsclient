@@ -163,9 +163,10 @@ class TestRodsUserTicketOps(unittest.TestCase):
     def test_object_read_and_write_tickets(self):
         if self.alice is None or self.bob is None:
             self.skipTest("A rodsuser (alice and/or bob) could not be created.")
-        t=None
-        data_objs=[]
-        tmpfiles=[]
+        t = None
+        data_objs = []
+        tmpfiles = []
+        tickets = {}
         try:
             # Create ticket for read access to alice's home collection.
             alice = self.login(self.alice)
@@ -174,14 +175,14 @@ class TestRodsUserTicketOps(unittest.TestCase):
             # Create 'R' and 'W' in alice's home collection.
             data_objs = [helpers.make_object(alice,home.path+"/"+name,content='abcxyz') for name in ('R','W')]
             tickets = {
-                'R': Ticket(alice).issue('read',  home.path + "/R").string,
-                'W': Ticket(alice).issue('write', home.path + "/W").string
+                'R': Ticket(alice).issue('read',  home.path + "/R"),
+                'W': Ticket(alice).issue('write', home.path + "/W")
             }
             # Test only write ticket allows upload.
             with self.login(self.bob) as bob:
                 rw_names={}
                 for name in  ('R','W'):
-                    Ticket( bob, tickets[name] ).supply()
+                    Ticket( bob, tickets[name].string ).supply()
                     with tempfile.NamedTemporaryFile (delete=False) as tmpf:
                         tmpfiles += [tmpf]
                         rw_names[name] = tmpf.name
@@ -206,7 +207,8 @@ class TestRodsUserTicketOps(unittest.TestCase):
                         self.assertEqual(tmpread.read(),
                                          'abcxyz' if name == 'R' else 'hello')
         finally:
-            if t: t.delete()
+            for t in tickets.values():
+                t.delete()
             for d in data_objs:
                 d.unlink(force=True)
             for file_ in tmpfiles: os.unlink( file_.name )
