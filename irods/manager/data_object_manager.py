@@ -300,6 +300,7 @@ class DataObjectManager(Manager):
 
 
     def open(self, path, mode, create = True, finalize_on_close = True, return_params = None, allow_redirect = True, **options):  # dwm
+        if self.sess.ticket__: allow_redirect = False
         _raw_fd_holder =  options.get('_raw_fd_holder',[])
         # If no keywords are used that would influence the server as to the choice of a storage resource,
         # then use the default resource in the client configuration.
