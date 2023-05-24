@@ -81,7 +81,6 @@ class Ticket(object):
         return self._api_request("mod",*arglist,**opt)
 
     def supply(self,**opt):
-        #object_ = self._api_request("session",**opt)
         self.session.ticket__ = self._ticket
         return self
 
