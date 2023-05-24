@@ -198,10 +198,10 @@ class TestRodsUserTicketOps(unittest.TestCase):
                             raise AssertionError("A read ticket allowed a data object write operation to happen without error.")
 
             # Test upload was successful, by getting and confirming contents.
-
             with self.login(self.bob) as bob:  # This check must be in a new session or we get CollectionDoesNotExist. - Possibly a new issue [ ]
                 for name in  ('R','W'):
-                    Ticket( bob, tickets[name] ).supply()
+                    bob.cleanup() # clear out existing connections
+                    Ticket( bob, tickets[name].string ).supply()
                     bob.data_objects.get(home.path+"/"+name,rw_names[ name ],**{kw.FORCE_FLAG_KW:''})
                     with open(rw_names[ name ],'r') as tmpread:
                         self.assertEqual(tmpread.read(),
