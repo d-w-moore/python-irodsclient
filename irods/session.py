@@ -168,10 +168,17 @@ class iRODSSession(object):
     def clone(self, **kwargs):
         other = copy.copy(self)
         other.pool = None
-        for k,v in vars(other).items():
-            setter = getattr(v,'_set_manager_session',None)
-            if setter:
-                setter(other)
+        for k,v in vars(self).items():
+            if getattr(v,'_set_manager_session',None) is not None:
+                vcopy = copy.copy(v)
+                # Deep-copy into the manager object for the cloned session and set its parent session
+                # reference to correspond to the clone.
+                setattr(other,k,vcopy)
+                vcopy._set_manager_session(other)
+            elif isinstance(v,iRODSAccount):
+                # Deep-copy the iRODSAccount subobject, since we might be setting the hostname on that object.
+                setattr(other,k,copy.copy(v))
+
         other.cleanup(new_host = kwargs.pop('host',''))
         other.ticket__ = kwargs.pop('ticket',self.ticket__)
         self.ticket_applied = weakref.WeakKeyDictionary() # conn -> ticket applied

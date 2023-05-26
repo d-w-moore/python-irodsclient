@@ -446,25 +446,26 @@ def io_main( session, Data, opr_, fname, R='', **kwopt):
         open_options[kw.NUM_THREADS_KW] = str(num_threads)
         open_options[kw.DATA_SIZE_KW] = str(total_bytes)
 
-    dic = {}
+    output_values = {}
     if (not Io):
         (Io, rawfile) = session.data_objects.open_with_FileRaw( (d_path or Data.path),
                                                                 Operation.data_object_mode(initial_open = True),
-                                                                finalize_on_close = True, return_params = dic, **open_options )
+                                                                finalize_on_close = True, returned_values = output_values, **open_options )
     else:
         if type(Io) is deferred_call:
             Io[kw.NUM_THREADS_KW] = str(num_threads)
             Io[kw.DATA_SIZE_KW] =  str(total_bytes)
-            Io['return_params']= dic
+            Io['returned_values']= output_values
             Io = Io()
         rawfile = Io.raw
 
-    session = dic.get('session',session)
+    if 'session' in output_values:
+        session = output_values['session']
 
     # At this point, the data object's existence in the catalog is guaranteed,
     # whether the Operation is a GET or PUT.
 
-    if not isinstance(Data,iRODSDataObject) or 'session' in dic:
+    if not isinstance(Data,iRODSDataObject) or 'session' in output_values:
         Data = session.data_objects.get(d_path)
 
     # Determine total number of bytes for transfer.

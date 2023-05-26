@@ -28,6 +28,7 @@ DEFAULT_NUMBER_OF_THREADS = 0   # Defaults for reasonable number of threads -- o
 
 DEFAULT_QUEUE_DEPTH = 32
 
+logger = logging.getLogger(__name__)
 
 class Server_Checksum_Warning(Exception):
     """Error from iRODS server indicating some replica checksums are missing or incorrect."""
@@ -65,7 +66,7 @@ class DataObjectManager(Manager):
         # Example: $ export IRODS_VERSION_OVERRIDE="4,2,9" ;  python -m irods.parallel ...
         # ---
         # Delete the following line on resolution of https://github.com/irods/irods/issues/5932 :
-        if self.sess.ticket__: return False
+#       if self.sess.ticket__: return False
         server_version = ( ast.literal_eval(os.environ.get('IRODS_VERSION_OVERRIDE', '()' )) or server_version_hint or 
                            self.server_version )
         if num_threads == 1 or ( server_version < parallel.MINIMUM_SERVER_VERSION ):
@@ -298,7 +299,8 @@ class DataObjectManager(Manager):
                            ))
 
 
-    def open(self, path, mode, create = True, finalize_on_close = True, return_params = None, allow_redirect = True, **options):
+    def open(self, path, mode, create = True, finalize_on_close = True, returned_values = None, allow_redirect = True, **options):
+
         _raw_fd_holder =  options.get('_raw_fd_holder',[])
         # If no keywords are used that would influence the server as to the choice of a storage resource,
         # then use the default resource in the client configuration.
@@ -319,10 +321,8 @@ class DataObjectManager(Manager):
         }[mode]
         # TODO: Use seek_to_end
 
-        writing = mode[:1] in ('w','a')
-        if return_params is None:
-            return_params = {}
-        return_params.update({("PUT" if writing else "GET"):1})
+        if not isinstance(returned_values, dict):
+            returned_values = {}
 
         try:
             oprType = options[kw.OPR_TYPE_KW]
@@ -346,41 +346,49 @@ class DataObjectManager(Manager):
         message_body = make_FileOpenRequest()
 
         conn = self.sess.pool.get_connection()
-        in_val = True
         redirected_host = ''
-        if not allow_redirect:
-            return_params = None
 
-        if isinstance(return_params, dict) and conn.server_version >= (4,2,9):
-            choices = ('PUT','GET')
-            key_val = [(k,v) for k,v in return_params.items() if k in choices]
-            if len(key_val) != 1:
-                raise ValueError("If provided, return_host argument must have 1 key in {}".format(choices))
-            (key, in_val) = key_val[0]
+        use_get_rescinfo_apis = False
+
+        if allow_redirect and conn.server_version >= (4,3,1):
+            key = 'PUT' if mode[0] in ('w','a') else 'GET'
+            api_index = "GET_RESCINFO_FOR_{}_AN".format(key)
             message = iRODSMessage('RODS_API_REQ', msg=message_body,
-                                   int_info=api_number['GET_HOST_FOR_{}_AN'.format(key)])
+                                   int_info=api_number[api_index])
             conn.send(message)
             response = conn.recv()
             msg = response.get_main_message( STR_PI )
-            return_params[key] = redirected_host = msg.myStr
+            use_get_rescinfo_apis = True
+
+            # Get the information needed for the redirect
+            _ = json.loads(msg.myStr)
+            redirected_host = _["host"]
+            requested_hierarchy = _["resc_hier"]
 
         target_zone = list(filter(None, path.split('/')))
         if target_zone:
             target_zone = target_zone[0]
 
         directed_sess = self.sess
-        if redirected_host:
-            # Redirect only if the local zone is being targeted.
-            if target_zone == self.sess.zone:
-                directed_sess = self.sess.clone(host = redirected_host)
-                return_params['session'] = directed_sess
-                conn = directed_sess.pool.get_connection()
 
-        # restore RESC HIER for DATA_OBJ_OPEN call
+        if redirected_host and use_get_rescinfo_apis:
+            # Redirect only if the local zone is being targeted, and if the hostname is changed from the original.
+            if target_zone == self.sess.zone and (self.sess.host != redirected_host 
+                                                  or str(allow_redirect).lower() == 'force' # TODO - remove - for debug only
+                                                  ):
+                # This is the actual redirect.
+                directed_sess = self.sess.clone(host = redirected_host)
+                returned_values['session'] = directed_sess
+                conn = directed_sess.pool.get_connection()
+                logger.debug('redirect_to_host = %s', redirected_host)
+
+        # Restore RESC HIER for DATA_OBJ_OPEN call
         if requested_hierarchy is not None:
             options[kw.RESC_HIER_STR_KW] = requested_hierarchy
             message_body = make_FileOpenRequest()
 
+
+        # Perform DATA_OBJ_OPEN call
         message = iRODSMessage('RODS_API_REQ', msg=message_body,
                                int_info=api_number['DATA_OBJ_OPEN_AN'])
         conn.send(message)
