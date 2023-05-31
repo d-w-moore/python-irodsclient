@@ -354,22 +354,20 @@ class DataObjectManager(Manager):
         message_body = make_FileOpenRequest()
 
         conn = self.sess.pool.get_connection()
-        in_val = True
         redirected_host = ''
-        if not allow_redirect:
-            return_params = None
 
-        if isinstance(return_params, dict) and conn.server_version >= (4,2,9):
+        if allow_redirect and conn.server_version >= (4,2,9):
             choices = ('PUT','GET')
             key_val = [(k,v) for k,v in return_params.items() if k in choices]
             if len(key_val) != 1:
                 raise ValueError("If provided, return_host argument must have 1 key in {}".format(choices))
-            (key, in_val) = key_val[0]
+            (key, _) = key_val[0]
             message = iRODSMessage('RODS_API_REQ', msg=message_body,
                                    int_info=api_number['GET_HOST_FOR_{}_AN'.format(key)])
             conn.send(message)
             response = conn.recv()
             msg = response.get_main_message( STR_PI )
+            # key is 'GET' or 'PUT'
             return_params[key] = redirected_host = msg.myStr
 
         target_zone = list(filter(None, path.split('/')))
