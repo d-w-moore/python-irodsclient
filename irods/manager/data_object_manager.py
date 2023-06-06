@@ -299,7 +299,7 @@ class DataObjectManager(Manager):
                            ))
 
 
-    def open(self, path, mode, create = True, finalize_on_close = True, return_params = None, allow_redirect = True, **options):
+    def open(self, path, mode, create = True, finalize_on_close = True, returned_values = None, allow_redirect = True, **options):
 
         # TODO - find out whether this is irods/irods#5932 related, or a new issue.
         # With a ticket enabled for the session, it is not possible to open the object with a cloned session, so ... give up here.
@@ -328,9 +328,10 @@ class DataObjectManager(Manager):
         # TODO: Use seek_to_end
 
         writing = mode[:1] in ('w','a')
-        if return_params is None:
-            return_params = {}
-        return_params.update({("PUT" if writing else "GET"):1})
+
+        if not isinstance(returned_values, dict):
+            returned_values = {}
+        returned_values.update({("PUT" if writing else "GET"):1})
 
         try:
             oprType = options[kw.OPR_TYPE_KW]
@@ -358,7 +359,7 @@ class DataObjectManager(Manager):
 
         if allow_redirect and conn.server_version >= (4,2,9):
             choices = ('PUT','GET')
-            key_val = [(k,v) for k,v in return_params.items() if k in choices]
+            key_val = [(k,v) for k,v in returned_values.items() if k in choices]
             if len(key_val) != 1:
                 raise ValueError("If provided, return_host argument must have 1 key in {}".format(choices))
             (key, _) = key_val[0]
@@ -368,7 +369,7 @@ class DataObjectManager(Manager):
             response = conn.recv()
             msg = response.get_main_message( STR_PI )
             # key is 'GET' or 'PUT'
-            return_params[key] = redirected_host = msg.myStr
+            returned_values[key] = redirected_host = msg.myStr
 
         target_zone = list(filter(None, path.split('/')))
         if target_zone:
@@ -379,7 +380,7 @@ class DataObjectManager(Manager):
             # Redirect only if the local zone is being targeted.
             if target_zone == self.sess.zone:
                 directed_sess = self.sess.clone(host = redirected_host)
-                return_params['session'] = directed_sess
+                returned_values['session'] = directed_sess
                 conn = directed_sess.pool.get_connection()
 
         # restore RESC HIER for DATA_OBJ_OPEN call

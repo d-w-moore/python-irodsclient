@@ -171,13 +171,12 @@ class iRODSSession(object):
         for k,v in vars(self).items():
             if getattr(v,'_set_manager_session',None) is not None:
                 vcopy = copy.copy(v)
-                setattr(other,k,vcopy)            # deep-copy into the manager object for the cloned session
-                vcopy._set_manager_session(other) # and set its parent session reference to correspond to the clone.
-
-########### # TODO - test    - Probably need to deep-copy into the account object as well.
-            #      -  this   - This is because we could be setting a new hostname within that
-            #      - change! - object and don't want to modify the original account object.
+                # Deep-copy into the manager object for the cloned session and set its parent session
+                # reference to correspond to the clone.
+                setattr(other,k,vcopy)
+                vcopy._set_manager_session(other)
             elif isinstance(v,iRODSAccount):
+                # Deep-copy the iRODSAccount subobject, since we might be setting the hostname on that object.
                 setattr(other,k,copy.copy(v))
 
         other.cleanup(new_host = kwargs.pop('host',''))
