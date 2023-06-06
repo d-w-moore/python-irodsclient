@@ -654,6 +654,19 @@ class TestDataObjOps(unittest.TestCase):
             with obj.open('r') as f:
                 self.assertEqual(f.read().decode(), obj.path)
 
+    def _skip_unless_connected_to_this_computer_by_other_than_localhost_synonym(self):
+        if self.sess.host not in ({socket.gethostname()} - {'localhost', '127.0.0.1'}):
+            self.skipTest('This test requires being connected to a local server, but not via "localhost" or a synonym.')
+
+    def test_redirect_in_data_object_open__issue_452(self): #dwm
+        self._skip_unless_connected_to_this_computer_by_other_than_localhost_synonym()
+
+        home = helpers.home_collection(self.sess)
+
+        with create_simple_resc(hostname = 'localhost') as rescName:
+            io = self.sess.data_objects.open(home + '/data_open_452',**{kw.RESC_NAME_KW: rescName})
+            self.assertEqual('localhost', io.raw.session.host)
+            io.close()
 
     def test_create_with_checksum(self):
         # skip if server is remote
