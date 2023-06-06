@@ -658,15 +658,24 @@ class TestDataObjOps(unittest.TestCase):
         if self.sess.host not in ({socket.gethostname()} - {'localhost', '127.0.0.1'}):
             self.skipTest('This test requires being connected to a local server, but not via "localhost" or a synonym.')
 
-    def test_redirect_in_data_object_open__issue_452(self): #dwm
+    def test_redirect_in_data_object_open__issue_452(self):
         self._skip_unless_connected_to_this_computer_by_other_than_localhost_synonym()
+        sess = self.sess
+        home = helpers.home_collection(sess)
 
-        home = helpers.home_collection(self.sess)
+        with self.create_simple_resc(hostname = 'localhost') as rescName:
+            from pdb import set_trace as b
+            b()
+            try:
+                test_path = home + '/data_open_452'
+                io = sess.data_objects.open(test_path, 'w', **{kw.RESC_NAME_KW: rescName})
+                self.assertEqual('localhost', io.raw.session.host)
+                io.close()
+            finally:
+                if sess.data_objects.exists(test_path):
+                    sess.data_objects.unlink(test_path, force=True)
+                1
 
-        with create_simple_resc(hostname = 'localhost') as rescName:
-            io = self.sess.data_objects.open(home + '/data_open_452',**{kw.RESC_NAME_KW: rescName})
-            self.assertEqual('localhost', io.raw.session.host)
-            io.close()
 
     def test_create_with_checksum(self):
         # skip if server is remote
