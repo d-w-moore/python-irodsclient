@@ -17,6 +17,7 @@ import re
 import time
 import concurrent.futures
 import xml.etree.ElementTree
+import itertools
 
 from irods.models import Collection, DataObject
 import irods.exception as ex
@@ -244,12 +245,13 @@ class TestDataObjOps(unittest.TestCase):
             NumThreadsRegex = re.compile('^num_threads\s*=\s*(\d+)',re.MULTILINE)
 
             try:
-                with irods.parallel.enableLogging( logging.StreamHandler, (PUT_LOG,), level_=logging.INFO):
+                logger = logging.getLogger('irods.parallel')
+                with helpers.enableLogging(logger, logging.StreamHandler, (PUT_LOG,), level_ = logging.DEBUG):
                     self.sess.data_objects.put(datafile.name, data_obj_name, num_threads = 0, **options)  # - PUT
                     match = NumThreadsRegex.search (PUT_LOG.getvalue())
                     self.assertTrue (match is not None and int(match.group(1)) >= 1) # - PARALLEL code path taken?
 
-                with irods.parallel.enableLogging( logging.StreamHandler, (GET_LOG,), level_=logging.INFO):
+                with helpers.enableLogging(logger, logging.StreamHandler, (GET_LOG,), level_ = logging.DEBUG):
                     self.sess.data_objects.get(data_obj_name, datafile.name+".get", num_threads = 0, **options) # - GET
                     match = NumThreadsRegex.search (GET_LOG.getvalue())
                     self.assertTrue (match is not None and int(match.group(1)) >= 1) # - PARALLEL code path taken?
@@ -653,6 +655,61 @@ class TestDataObjOps(unittest.TestCase):
             obj = self.sess.data_objects.get(filename)
             with obj.open('r') as f:
                 self.assertEqual(f.read().decode(), obj.path)
+
+    def _skip_unless_connected_to_this_computer_by_other_than_localhost_synonym(self):
+        if self.sess.host not in ({socket.gethostname()} - {'localhost', '127.0.0.1'}):
+            self.skipTest('This test requires being connected to a local server, but not via "localhost" or a synonym.')
+
+    def test_redirect_in_data_object_put__issue_452(self):
+        self._skip_unless_connected_to_this_computer_by_other_than_localhost_synonym()
+        paths_to_delete = []
+        with self.create_simple_resc(hostname = 'localhost') as rescName:
+            try:
+                SMALL = 1; LARGE = 40
+                for megabyte_length in (SMALL, LARGE):
+                    with NamedTemporaryFile() as f:
+                        megabyte = b'_'*1024**2
+                        for _ in range(megabyte_length):
+                            f.write(megabyte)
+                        f.flush()
+                        name = helpers.unique_name(helpers.my_function_name(), datetime.now())
+                        remote_name='/{self.sess.zone}/home/{self.sess.username}/{name}'.format(**locals())
+                        paths_to_delete.append(remote_name)
+                        PUT_LOG = self.In_Memory_Stream()
+                        with helpers.enableLogging(logging.getLogger('irods.manager.data_object_manager'),
+                                                   logging.StreamHandler, (PUT_LOG,), level_ = logging.INFO),\
+                             helpers.enableLogging(logging.getLogger('irods.parallel'),
+                                                   logging.StreamHandler, (PUT_LOG,), level_ = logging.INFO):
+                                self.sess.data_objects.put(f.name, remote_name, **{kw.DEST_RESC_NAME_KW: rescName})
+                        nthr = 0
+                        search_text = PUT_LOG.getvalue()
+                        find_iterator = itertools.chain( re.finditer('redirect_to_host = (\S+)', search_text),
+                                                         re.finditer('target_host = (\S+)', search_text) )
+                        for match in find_iterator:
+                            nthr += 1
+                            self.assertEqual(match.group(1), 'localhost')
+                        occur_threshold = (1 if megabyte_length <= 32 else 2)
+                        self.assertGreaterEqual(nthr, occur_threshold)
+            finally:
+                for path in paths_to_delete:
+                    if self.sess.data_objects.exists(path):
+                        self.sess.data_objects.unlink(path, force = True)
+
+
+    def test_redirect_in_data_object_open__issue_452(self):
+        self._skip_unless_connected_to_this_computer_by_other_than_localhost_synonym()
+        sess = self.sess
+        home = helpers.home_collection(sess)
+
+        with self.create_simple_resc(hostname = 'localhost') as rescName:
+            try:
+                test_path = home + '/data_open_452'
+                io = sess.data_objects.open(test_path, 'w', **{kw.RESC_NAME_KW: rescName})
+                self.assertEqual('localhost', io.raw.session.host)
+                io.close()
+            finally:
+                if sess.data_objects.exists(test_path):
+                    sess.data_objects.unlink(test_path, force=True)
 
 
     def test_create_with_checksum(self):

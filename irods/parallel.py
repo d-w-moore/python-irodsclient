@@ -364,6 +364,7 @@ def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str,
                                                 kw.RESC_HIER_STR_KW: hier_str,
                                                 kw.REPLICA_TOKEN_KW: replica_token })
         mgr.add_io( Io )
+        logger.debug('target_host = %s', Io.raw.session.pool.account.host)
         if File is None: File = gen_file_handle()
         futures.append(executor.submit( _io_part, Io, byte_range, File, Operation, mgr, str(counter), queueObject))
         counter += 1
