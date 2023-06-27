@@ -7,6 +7,7 @@ import six
 import os
 import ssl
 import datetime
+import irods.login
 import irods.password_obfuscation as obf
 from irods import MAX_NAME_LEN
 from ast import literal_eval as safe_eval
@@ -20,6 +21,7 @@ from irods.message import (
     OpenedDataObjRequest, FileSeekResponse, StringStringMap, VersionResponse,
     PluginAuthMessage, ClientServerNegotiation, Error, GetTempPasswordOut)
 from irods.exception import (get_exception_by_code, NetworkException, nominal_code)
+import irods.exception as ex
 from irods.message import (PamAuthRequest, PamAuthRequestOut)
 
 
@@ -34,7 +36,7 @@ from irods import (
     AUTH_SCHEME_KEY, AUTH_USER_KEY, AUTH_PWD_KEY, AUTH_TTL_KEY,
     NATIVE_AUTH_SCHEME,
     GSI_AUTH_PLUGIN, GSI_AUTH_SCHEME, GSI_OID,
-    PAM_AUTH_SCHEME)
+    PAM_AUTH_SCHEME, PAM_AUTH_SCHEMES)
 from irods.client_server_negotiation import (
     perform_negotiation,
     validate_policy,
@@ -62,17 +64,34 @@ class Connection(object):
         self._server_version = self._connect()
         self._disconnected = False
 
-        scheme = self.account.authentication_scheme
+        scheme = self.account._original_authentication_scheme
+        auth_type = ''
 
-        if scheme == NATIVE_AUTH_SCHEME:
-            self._login_native()
-        elif scheme == GSI_AUTH_SCHEME:
-            self.client_ctx = None
-            self._login_gsi()
-        elif scheme == PAM_AUTH_SCHEME:
-            self._login_pam()
+        if self.server_version >= (4,3,0):  ## TODO - a setting is needed, eg. "auth.use_login_modules"
+            # use client side "plugin" module: irods.login.<scheme>
+            irods.login.load_plugins(subset=[scheme])
+            auth_module = getattr(irods.login, scheme, None)
+            if auth_module:
+                auth_module.login(self)
+                auth_type = auth_module.__name__
         else:
-            raise ValueError("Unknown authentication scheme %s" % scheme)
+            # use legacy (iRODS pre-4.3 style) authentication
+            auth_type = scheme
+            try:
+                if scheme == NATIVE_AUTH_SCHEME:
+                    self._login_native()
+                elif scheme == GSI_AUTH_SCHEME:
+                    self.client_ctx = None
+                    self._login_gsi()
+                elif scheme == PAM_AUTH_SCHEME:
+                    self._login_pam()
+            except:
+                auth_type = None
+
+        if not auth_type:
+            msg = "Authentication failed: scheme = {scheme!r}, auth_type = {auth_type!r}".format(**locals())
+            raise ValueError(msg)
+
         self.create_time = datetime.datetime.now()
         self.last_used_time = self.create_time
 
@@ -437,9 +456,30 @@ class Connection(object):
 
     def _login_pam(self):
 
+        inline_password = (self.account.authentication_scheme == self.account._original_authentication_scheme)
+        #TODO: 1. make TTL configurable (auth.pam.time_to_live)
         time_to_live_in_seconds = 60
-
         pam_password = PAM_PW_ESC_PATTERN.sub(lambda m: '\\'+m.group(1), self.account.password)
+        if not inline_password:
+            try:
+                self._login_native(password = pam_password)
+                pass
+            except (ex.CAT_PASSWORD_EXPIRED, ex.CAT_INVALID_USER, ex.CAT_INVALID_AUTHENTICATION):
+                # Fall through and retry the native login later, after creating a new PAM password
+                pass
+            else:
+                # Login succeeded, we're within the time-to-live.
+                return
+
+            #TODO: 1. move this to fall-through section above
+            #      2. create setting: auth.pam.time_to_live
+            #      3. create setting: auth.pam.reinit_password
+            _pam_pw_override = os.environ.get('PAM_PW')
+            if _pam_pw_override != None:
+                pam_password = _pam_pw_override
+            else:
+                raise RuntimeError('WRONG_PASSWORD_FIELD')
+
 
         ctx_user = '%s=%s' % (AUTH_USER_KEY, self.account.client_user)
         ctx_pwd = '%s=%s' % (AUTH_PWD_KEY, pam_password)
@@ -462,7 +502,7 @@ class Connection(object):
         else:
 
             message_body = PluginAuthMessage(
-                auth_scheme_ = PAM_AUTH_SCHEME,
+                auth_scheme_ = PAM_AUTH_SCHEME, # don't use "pam_password" here ;)
                 context_ = ctx)
 
         auth_req = iRODSMessage(
@@ -488,7 +528,13 @@ class Connection(object):
             if type(drop) is list:
                 drop[:] = [ auth_out.result_ ]
 
-        self._login_native(password=auth_out.result_)
+        self._login_native(password = auth_out.result_)
+
+        # Store new password in .irodsA if requested.
+        if self.account._auth_file:
+            with open(self.account._auth_file,'w') as f:
+                f.write(obf.encode(auth_out.result_))
+                print('new PAM pw write succeeded')
 
         logger.info("PAM authorization validated")
 
