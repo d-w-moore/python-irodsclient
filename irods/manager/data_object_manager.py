@@ -58,34 +58,41 @@ class DataObjectManager(Manager):
                                      measured_obj_size = (), ## output variable. If a list is provided, it shall
                                                               # be truncated to contain one value, the size of the
                                                               # seekable object (if one is provided for `obj_sz').
-                                     open_options = ()
+                                     open_options = ()        # If this options is of type dict, set DATA_SIZE_KW from stat'ed size
         ):
 
         provided_data_size = int(dict(open_options).get(kw.DATA_SIZE_KW,"-1"))
-
+        size = None
+        value = None
         # Allow an environment variable to override the detection of the server version.
         # Example: $ export IRODS_VERSION_OVERRIDE="4,2,9" ;  python -m irods.parallel ...
         # ---
         # Delete the following line on resolution of https://github.com/irods/irods/issues/5932 :
-        if getattr(self.sess,'ticket__',None) is not None: return False
+        if getattr(self.sess,'ticket__',None) is not None:
+            value = False
         server_version = ( ast.literal_eval(os.environ.get('IRODS_VERSION_OVERRIDE', '()' )) or server_version_hint or 
                            self.server_version )
         if num_threads == 1 or ( server_version < parallel.MINIMUM_SERVER_VERSION ):
-            return False
+            value = False
         if getattr(obj_sz,'seek',None) :
-            if provided_data_size >= 0:
-                size = provided_data_size             # use the size indicated by the DATA_SIZE_KW.
-            else:
+            if provided_data_size >= 0:           # if positive value supplied via DATA_SIZE_KW, then:
+                size = provided_data_size             # use that value
+            else:                                 # else:
                 pos = obj_sz.tell()                   # stat the object.
                 size = obj_sz.seek(0,os.SEEK_END)
                 if not isinstance(size,six.integer_types):
                     size = obj_sz.tell()
                 obj_sz.seek(pos,os.SEEK_SET)
-            if isinstance(measured_obj_size,list): measured_obj_size[:] = [size]
+            if isinstance(measured_obj_size,list):
+                measured_obj_size[:] = [size]
         else:
             size = obj_sz
             assert (size > -1)
-        return size > MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE
+        if value is None:
+            value = (size > MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE)
+        if isinstance(open_options,dict):
+            open_options[kw.DATA_SIZE_KW] = size
+        return value
 
 
     def _download(self, obj, local_path, num_threads, **options):
@@ -104,7 +111,7 @@ class DataObjectManager(Manager):
 
         with open(local_file, 'wb') as f, self.open(obj, 'r', **options) as o:
 
-            if self.should_parallelize_transfer (num_threads, o, open_options = options):
+            if self.should_parallelize_transfer (num_threads, o, open_options = options.items()):
                 f.close()
                 if not self.parallel_get( (obj,o), local_path, num_threads = num_threads,
                                           target_resource_name = options.get(kw.RESC_NAME_KW,'')):
@@ -333,7 +340,7 @@ class DataObjectManager(Manager):
             createMode=0,
             openFlags=flags,
             offset=0,
-            dataSize=-1,
+            dataSize=int(options.get(kw.DATA_SIZE_KW,'-1')),
             numThreads=self.sess.numThreads,
             oprType=oprType,
             KeyValPair_PI=StringStringMap(options),
