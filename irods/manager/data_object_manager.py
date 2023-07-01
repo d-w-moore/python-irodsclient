@@ -340,7 +340,7 @@ class DataObjectManager(Manager):
             createMode=0,
             openFlags=flags,
             offset=0,
-            dataSize=int(options.get(kw.DATA_SIZE_KW,'-1')),
+            dataSize=int(options.get(kw.DATA_SIZE_KW,'0')),
             numThreads=self.sess.numThreads,
             oprType=oprType,
             KeyValPair_PI=StringStringMap(options),
