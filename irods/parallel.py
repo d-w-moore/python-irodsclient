@@ -18,9 +18,9 @@ import irods.keywords as kw
 from six.moves.queue import Queue,Full,Empty
 
 
-logger = logging.getLogger( __name__ )
+logger = logging.getLogger(__name__)
 _nullh  = logging.NullHandler()
-logger.addHandler( _nullh )
+logger.addHandler(_nullh)
 
 
 MINIMUM_SERVER_VERSION = (4,2,9)
@@ -73,28 +73,6 @@ except ImportError:                 # ... but otherwise, use this ad hoc:
             self.barrier.acquire()
             self.barrier.release()
             return count - 1
-
-@contextlib.contextmanager
-def enableLogging(handlerType,args,level_ = logging.INFO):
-    """Context manager for temporarily enabling a logger. For debug or test.
-
-    Usage Example -
-    with irods.parallel.enableLogging(logging.FileHandler,('/tmp/logfile.txt',)):
-        # parallel put/get code here
-    """
-    h = None
-    saveLevel = logger.level
-    try:
-        logger.setLevel(level_)
-        h = handlerType(*args)
-        h.setLevel( level_ )
-        logger.addHandler(h)
-        yield
-    finally:
-        logger.setLevel(saveLevel)
-        if h in logger.handlers:
-            logger.removeHandler(h)
-
 
 RECOMMENDED_NUM_THREADS_PER_TRANSFER = 3
 
@@ -386,6 +364,7 @@ def _io_multipart_threaded(operation_ , dataObj_and_IO, replica_token, hier_str,
                                                 kw.RESC_HIER_STR_KW: hier_str,
                                                 kw.REPLICA_TOKEN_KW: replica_token })
         mgr.add_io( Io )
+        logger.info('target_host = %s', Io.raw.session.pool.account.host)
         if File is None: File = gen_file_handle()
         futures.append(executor.submit( _io_part, Io, byte_range, File, Operation, mgr, str(counter), queueObject))
         counter += 1

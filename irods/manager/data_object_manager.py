@@ -19,7 +19,7 @@ import six
 import ast
 import json
 import logging
-
+import threading
 
 
 MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE = 32 * ( 1024 ** 2)
@@ -29,6 +29,7 @@ DEFAULT_NUMBER_OF_THREADS = 0   # Defaults for reasonable number of threads -- o
 
 DEFAULT_QUEUE_DEPTH = 32
 
+logger = logging.getLogger(__name__)
 
 class Server_Checksum_Warning(Exception):
     """Error from iRODS server indicating some replica checksums are missing or incorrect."""
@@ -382,6 +383,7 @@ class DataObjectManager(Manager):
                 directed_sess = self.sess.clone(host = redirected_host)
                 returned_values['session'] = directed_sess
                 conn = directed_sess.pool.get_connection()
+                logger.info('redirect_to_host = %s', redirected_host)
 
         # restore RESC HIER for DATA_OBJ_OPEN call
         if requested_hierarchy is not None:
