@@ -290,9 +290,14 @@ def irods_session_host_local (sess):
 def enableLogging(logger, handlerType, args, level_ = logging.INFO):
     """Context manager for temporarily enabling a logger. For debug or test.
 
-    Usage Example -
-    with irods.parallel.enableLogging(logging.FileHandler,('/tmp/logfile.txt',)):
-        # parallel put/get code here
+    Usage Example
+    -------------
+    Dump INFO and higher priority logging messages from irods.parallel
+    module to file /tmp/logfile.txt:
+
+    with irods.test.helpers.enableLogging(logging.getLogger('irods.parallel'),
+                                          logging.FileHandler,('/tmp/logfile.txt',)):
+        # parallel put/get test call here
     """
     h = None
     saveLevel = logger.level
