@@ -200,7 +200,7 @@ class TestRodsUserTicketOps(unittest.TestCase):
             with self.login(self.bob) as bob:  # This check must be in a new session or we get CollectionDoesNotExist. - Possibly a new issue [ ]
                 for name in  ('R','W'):
                     bob.cleanup() # clear out existing connections
-                    Ticket( bob, tickets[name].string ).supply()
+                    Ticket( bob, tickets[name] ).supply()
                     bob.data_objects.get(home.path+"/"+name,rw_names[ name ],**{kw.FORCE_FLAG_KW:''})
                     with open(rw_names[ name ],'r') as tmpread:
                         self.assertEqual(tmpread.read(),
