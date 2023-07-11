@@ -305,8 +305,9 @@ class DataObjectManager(Manager):
         # TODO - find out whether this is irods/irods#5932 related, or a new issue.
         # With a ticket enabled for the session, it is not possible to open the object with a cloned session, so ... give up here.
         # Idea - Maybe this would be possible if we call session cleanup for the _old_ session?
-        if self.sess.ticket__:
-            allow_redirect = False
+# dwm
+#       if self.sess.ticket__:
+#           allow_redirect = False
 
         _raw_fd_holder =  options.get('_raw_fd_holder',[])
         # If no keywords are used that would influence the server as to the choice of a storage resource,
