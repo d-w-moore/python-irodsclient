@@ -1,3 +1,4 @@
+from __future__ import print_function
 from __future__ import absolute_import
 import atexit
 import copy
@@ -21,6 +22,7 @@ from irods.password_obfuscation import decode
 from irods import NATIVE_AUTH_SCHEME, PAM_AUTH_SCHEME
 import threading
 import weakref
+import irods.manager
 from . import DEFAULT_CONNECTION_TIMEOUT
 
 _sessions = None
@@ -164,6 +166,30 @@ class iRODSSession(object):
         #   raised during __init__), then try to clean up.
         if self.pool is not None:
             self.cleanup()
+
+    @staticmethod
+    def type_to_str(t):
+        try:
+            return t.__name__
+        except:
+            return str(t)
+
+    def _list(self,obj,seen=(),indent=0):
+        seen = (seen if isinstance(seen,dict) else dict(seen))
+        seen[obj] = True
+        for k,v in vars(obj).items():
+            indent_ = ' '*indent
+            if isinstance(v,iRODSSession) and v is not self: 
+                indent = '[E]'+indent[3:]
+            print(indent_, end='')
+            #print(k, self.type_to_str(type(v)), v, sep='\t')
+            print('%-20s %-20s %-50s'%(k, self.type_to_str(type(v)), v))
+            if isinstance(v,(Pool,iRODSSession,iRODSAccount, irods.manager.Manager)) and not seen.get(v,False):
+                self._list(v,seen=seen,indent=indent+4)
+
+    def list(self):
+        _seen_ = {}
+        self._list(self,seen = _seen_)
 
     def clone(self, **kwargs):
         other = copy.copy(self)
