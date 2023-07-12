@@ -167,31 +167,9 @@ class iRODSSession(object):
         if self.pool is not None:
             self.cleanup()
 
-    @staticmethod
-    def type_to_str(t):
-        try:
-            return t.__name__
-        except:
-            return str(t)
-
-    def _list(self,obj,seen=(),indent=4):
-        if (indent == 4): print('--------\nobj =',obj)
-        seen = (seen if isinstance(seen,dict) else dict(seen))
-        seen[obj] = True
-        for k,v in vars(obj).items():
-            indent_ = ' '*indent
-            if isinstance(v,iRODSSession) and v is not self: 
-                indent_ = '[E]'+indent_[3:]
-                seen[v] = True  # don't delve into non-relevant sessions
-            print(indent_, end='')
-            #print(k, self.type_to_str(type(v)), v, sep='\t')
-            print('%-20s %-20s %-50s'%(k, self.type_to_str(type(v)), v))
-            if isinstance(v,(Pool,iRODSSession,iRODSAccount, irods.manager.Manager)) and not seen.get(v,False):
-                self._list(v,seen=seen,indent=indent+4)
-
     def list(self):
         _seen_ = {}
-        self._list(self,seen = _seen_)
+        _list(self,seen = _seen_)
 
     def clone(self, **kwargs):
         other = copy.copy(self)
@@ -429,3 +407,30 @@ class iRODSSession(object):
                 connection_refresh_time = -1
 
         return connection_refresh_time
+
+
+def type_to_str(t):
+    try:
+        return t.__name__
+    except:
+        return str(t)
+
+sescls = {'iRODSSession':iRODSSession }
+
+def _list(toplevel, obj, seen=(), indent=4, session_class = 'iRODSSession'):
+    if type(session_class) is str:
+        session_class = sescls[session_class]
+    if (indent == 4):
+        print('--------\nobj =',obj)
+    seen = (seen if isinstance(seen,dict) else dict(seen))
+    seen[obj] = True
+    for k,v in vars(obj).items():
+        indent_ = ' '*indent
+        if isinstance(v,session_class) and v is not toplevel: 
+            indent_ = '[E]'+indent_[3:] # flag as error -> parent ref is a different session
+            seen[v] = True  # don't delve into non-relevant sessions
+        print(indent_, end='')
+        print('%-20s %-20s %-50s'%(k, type_to_str(type(v)), v))
+        if isinstance(v,(Pool,session_class,iRODSAccount, irods.manager.Manager)) and not seen.get(v,False):
+                _list(toplevel, v, seen=seen, indent=indent+4)
+

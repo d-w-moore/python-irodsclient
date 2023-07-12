@@ -16,3 +16,12 @@ class Manager(object):
 
     def _set_manager_session(self, sess):
         self.sess = sess
+
+'''
+def _setup_for_limiting_connections():
+    import gc
+    # When sessions and managers go out of scope, clean them up with some urgency:
+    gc.set_threshold(32)
+
+_setup_for_limiting_connections()
+'''

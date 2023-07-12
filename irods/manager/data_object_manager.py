@@ -382,7 +382,10 @@ class DataObjectManager(Manager):
             # Redirect only if the local zone is being targeted.
             if target_zone == self.sess.zone:
                 directed_sess = self.sess.clone(host = redirected_host)
+                if type(allow_redirect) is str:
+                    directed_sess.ticket__ = allow_redirect
                 returned_values['session'] = directed_sess
+      # # # # # self.sess.pool.release_connection(conn,destroy=True) # dwm - test
                 conn = directed_sess.pool.get_connection()
                 logger.info('redirect_to_host = %s', redirected_host)
 
