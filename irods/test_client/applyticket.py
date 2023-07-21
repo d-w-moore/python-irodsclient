@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys,os
 import irods.test.helpers as h
-from irods.simple_client import Session
+from irods.experimental.client.simple import Session
 from irods.ticket import Ticket
 #s = h.make_session()
 
