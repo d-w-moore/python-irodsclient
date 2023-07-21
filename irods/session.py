@@ -174,7 +174,8 @@ class iRODSSession(object):
         except:
             return str(t)
 
-    def _list(self,obj,seen=(),indent=0):
+    def _list(self,obj,seen=(),indent=4):
+        if (indent == 4): print('--------\nobj =',obj)
         seen = (seen if isinstance(seen,dict) else dict(seen))
         seen[obj] = True
         for k,v in vars(obj).items():
