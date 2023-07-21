@@ -181,7 +181,8 @@ class iRODSSession(object):
         for k,v in vars(obj).items():
             indent_ = ' '*indent
             if isinstance(v,iRODSSession) and v is not self: 
-                indent = '[E]'+indent[3:]
+                indent_ = '[E]'+indent_[3:]
+                seen[v] = True  # don't delve into non-relevant sessions
             print(indent_, end='')
             #print(k, self.type_to_str(type(v)), v, sep='\t')
             print('%-20s %-20s %-50s'%(k, self.type_to_str(type(v)), v))
