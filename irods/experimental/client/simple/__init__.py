@@ -88,7 +88,7 @@ class Session(object):
                 if self.conn is None:
                     self.conn = Connection(self.account)
                     if self.ticket__ and not self.ticket_is_applied:
-                        Ticket(self, self.ticket__).supply()
+                        Ticket._lowlevel_api_request(self.conn, "session", self.ticket__)
                         self.ticket_is_applied = True
 
                 return self.conn
