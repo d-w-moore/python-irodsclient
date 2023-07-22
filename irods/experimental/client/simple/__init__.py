@@ -60,14 +60,15 @@ class Session(object):
         other.account = copy.copy(self.account)
         if host:
             other.account.host = host
-        other.conn = None
         for n,v in vars(self).items():
             if isinstance(v, Manager):
-                setattr(other,n,v.__class__(other))  # ctor call based on
+                setattr(other,n,v.__class__(other))
+        other.cleanup()
         return other
 
     def cleanup(self):
         self.conn = None
+        self.ticket_is_applied = False
 
     @property
     def connection(self):
@@ -86,8 +87,10 @@ class Session(object):
             def get_connection():
                 if self.conn is None:
                     self.conn = Connection(self.account)
-                    if self.ticket__:
+                    if self.ticket__ and not self.ticket_is_applied:
                         Ticket(self, self.ticket__).supply()
+                        self.ticket_is_applied = True
+
                 return self.conn
         return _()  # -> allows source level compatibility with much of existing PRC as of version 1.1.8
                     #    (many low-level calls throughout PRC use session.pool.get_connection())
@@ -99,6 +102,7 @@ class Session(object):
         self._auth_file = ''
         self.account = None
         self.conn = None
+        self.ticket_is_applied = False
         self.ticket__ = ticket
         self.data_objects = DataObjectManager(self)
         self.collections = CollectionManager(self)
