@@ -104,6 +104,7 @@ class Session(object):
         self.conn = None
         self.ticket_is_applied = False
         self.ticket__ = ticket
+        self.numThreads = 0
         self.data_objects = DataObjectManager(self)
         self.collections = CollectionManager(self)
         if configure:
