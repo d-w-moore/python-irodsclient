@@ -328,6 +328,8 @@ class Connection(object):
 
     DISALLOWING_PAM_PLAINTEXT = True
 
+    def release(self,*_): pass
+
     def __enter__(self):
         return self
 
