@@ -84,6 +84,9 @@ class Session(object):
     def pool(self):
         class _:
             @staticmethod
+            def release_connection(*_,**__):
+                self.cleanup()
+            @staticmethod
             def get_connection():
                 if self.conn is None:
                     self.conn = Connection(self.account)
@@ -328,7 +331,7 @@ class Connection(object):
 
     DISALLOWING_PAM_PLAINTEXT = True
 
-    def release(self,*_): pass
+    def release(self,*_,**_kw):pass
 
     def __enter__(self):
         return self
