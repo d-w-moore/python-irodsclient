@@ -18,10 +18,12 @@ import six
 import socket
 import ssl
 import struct
+import sys
 
 import irods.password_obfuscation as obf
 from irods import MAX_NAME_LEN
 
+from irods.session import _list
 from irods.password_obfuscation import decode
 from irods.account import iRODSAccount
 from irods.manager import Manager
@@ -53,7 +55,7 @@ class Session(object):
     def __exit__(self,*_):
         self.cleanup()
         return
-
+ 
     def clone(self, *,
                     host = ''):
         other = copy.copy(self)
@@ -64,6 +66,8 @@ class Session(object):
             if isinstance(v, Manager):
                 setattr(other,n,v.__class__(other))
         other.cleanup()
+        if '-v' in sys.modules['__main__'].opts:
+            _list(other,other,session_class = type(other))
         return other
 
     def cleanup(self):
@@ -501,6 +505,7 @@ class Connection(object):
 
         try:
             s = socket.create_connection(address, timeout)
+            print ('*****\tid = ',id(s),'; socket =',s)
             self._disconnected = False
         except socket.error:
             raise NetworkException(
