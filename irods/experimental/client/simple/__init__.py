@@ -57,7 +57,7 @@ class Session(object):
     def clone(self, *,
                     host = ''):
         other = copy.copy(self)
-        other.account = copy.copy(self.account)
+        other.account = copy.deepcopy(self.account)
         if host:
             other.account.host = host
         for n,v in vars(self).items():
