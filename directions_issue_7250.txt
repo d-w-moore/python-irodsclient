@@ -1,0 +1,15 @@
+On single-node iRODS system:
+
+as irods service account user, do:
+        $ itouch '~/file_for_bob.txt'
+        $ iticket create read '~/file_for_bob.txt' bob_ticket
+        $ iticket mod bob_ticket uses 10000                     # <-- appears to be central; lockup doesnt reproduce without it.
+
+as ubuntu user (auth'd to irods as user bob):
+
+        $ git clone http://github.com/d-w-moore/python-irodsclient
+        $ cd python_irodsclient
+        $ git checkout demo_irods_issue_7250
+        $ pip3 install -e .
+        $ python3 ../irods7250.py -v -t bob_ticket /tempZone/home/rods/file_for_bob.txt                  # <-- locks up 
+        $ python3 ../irods7250.py -v -g `hostname` -t bob_ticket /tempZone/home/rods/file_for_bob.txt    # <-- does not lock up 
