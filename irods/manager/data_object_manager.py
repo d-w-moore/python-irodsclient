@@ -331,9 +331,10 @@ class DataObjectManager(Manager):
 
         writing = mode[:1] in ('w','a')
 
+        MY_D = {}
         if not isinstance(returned_values, dict):
-            returned_values = {}
-        returned_values.update({("PUT" if writing else "GET"):1})
+            returned_values = MY_D
+            returned_values.update({("PUT" if writing else "GET"):1})
 
         try:
             oprType = options[kw.OPR_TYPE_KW]
@@ -365,13 +366,17 @@ class DataObjectManager(Manager):
             if len(key_val) != 1:
                 raise ValueError("If provided, return_host argument must have 1 key in {}".format(choices))
             (key, _) = key_val[0]
-            message = iRODSMessage('RODS_API_REQ', msg=message_body,
-                                   int_info=api_number['GET_HOST_FOR_{}_AN'.format(key)])
-            conn.send(message)
-            response = conn.recv()
-            msg = response.get_main_message( STR_PI )
-            # key is 'GET' or 'PUT'
-            returned_values[key] = redirected_host = msg.myStr
+
+            if returned_values is not MY_D:
+                redirected_host = returned_values[key]
+            else:
+                message = iRODSMessage('RODS_API_REQ', msg=message_body,
+                                       int_info=api_number['GET_HOST_FOR_{}_AN'.format(key)])
+                conn.send(message)
+                response = conn.recv()
+                msg = response.get_main_message( STR_PI )
+                # key is 'GET' or 'PUT'
+                returned_values[key] = redirected_host = msg.myStr
 
         target_zone = list(filter(None, path.split('/')))
         if target_zone:
