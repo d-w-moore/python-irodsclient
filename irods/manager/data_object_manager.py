@@ -368,8 +368,10 @@ class DataObjectManager(Manager):
             (key, _) = key_val[0]
 
             if returned_values is not MY_D:
+                # avoid GET_INFO_FOR_*, as GET or PUT hostname was passed in through returned values.
                 redirected_host = returned_values[key]
             else:
+                # perform GET_INFO_FOR_*
                 message = iRODSMessage('RODS_API_REQ', msg=message_body,
                                        int_info=api_number['GET_HOST_FOR_{}_AN'.format(key)])
                 conn.send(message)

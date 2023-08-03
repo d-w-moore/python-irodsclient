@@ -415,11 +415,14 @@ def type_to_str(t):
     except:
         return str(t)
 
-sescls = {'iRODSSession':iRODSSession }
-
-def _list(toplevel, obj, seen=(), indent=4, session_class = 'iRODSSession'):
-    if type(session_class) is str:
-        session_class = sescls[session_class]
+def _list(toplevel,
+          obj=None,
+          seen=(),
+          indent=4,
+          session_class = None):
+    if obj is None: obj = toplevel
+    if session_class is None:
+        session_class = type(toplevel)
     if (indent == 4):
         print('--------\nobj =',obj)
     seen = (seen if isinstance(seen,dict) else dict(seen))
