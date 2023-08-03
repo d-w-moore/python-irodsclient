@@ -95,6 +95,7 @@ class Session(object):
                 if self.conn is None:
                     self.conn = Connection(self.account)
                     if self.ticket__ and not self.ticket_is_applied:
+                        print('_-'*15+'_\t', "applying ticket '{self.ticket__}' to {self.conn}".format(**locals()))
                         Ticket._lowlevel_api_request(self.conn, "session", self.ticket__)
                         self.ticket_is_applied = True
 
