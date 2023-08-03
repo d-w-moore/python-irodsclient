@@ -66,7 +66,7 @@ class Session(object):
             if isinstance(v, Manager):
                 setattr(other,n,v.__class__(other))
         other.cleanup()
-        if '-v' in sys.modules['__main__'].opts:
+        if '-v' in getattr(sys.modules['__main__'],'opts',{}):  # main module global 'opts', if it exists
             _list(other,other,session_class = type(other))
         return other
 
