@@ -74,28 +74,6 @@ except ImportError:                 # ... but otherwise, use this ad hoc:
             self.barrier.release()
             return count - 1
 
-@contextlib.contextmanager
-def enableLogging(handlerType,args,level_ = logging.INFO):
-    """Context manager for temporarily enabling a logger. For debug or test.
-
-    Usage Example -
-    with irods.parallel.enableLogging(logging.FileHandler,('/tmp/logfile.txt',)):
-        # parallel put/get code here
-    """
-    h = None
-    saveLevel = logger.level
-    try:
-        logger.setLevel(level_)
-        h = handlerType(*args)
-        h.setLevel( level_ )
-        logger.addHandler(h)
-        yield
-    finally:
-        logger.setLevel(saveLevel)
-        if h in logger.handlers:
-            logger.removeHandler(h)
-
-
 RECOMMENDED_NUM_THREADS_PER_TRANSFER = 3
 
 verboseConnection = False

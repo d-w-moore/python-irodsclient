@@ -15,6 +15,7 @@ import random
 import datetime
 import json
 import sys
+import logging
 from irods.session import iRODSSession
 from irods.message import (iRODSMessage, IRODS_VERSION)
 from irods.password_obfuscation import encode
@@ -282,3 +283,32 @@ def file_backed_up(filename):
 def irods_session_host_local (sess):
     return socket.gethostbyname(sess.host) == \
            socket.gethostbyname(socket.gethostname())
+
+
+@contextlib.contextmanager
+def enableLogging(logger, handlerType, args, level_ = logging.INFO):
+    """Context manager for temporarily enabling a logger. For debug or test.
+
+    Usage Example
+    -------------
+    Dump INFO and higher priority logging messages from irods.parallel
+    module to file /tmp/logfile.txt:
+
+    with irods.test.helpers.enableLogging(logging.getLogger('irods.parallel'),
+                                          logging.FileHandler,('/tmp/logfile.txt',)):
+        # parallel put/get test call here
+    """
+    h = None
+    saveLevel = logger.level
+    try:
+        logger.setLevel(level_)
+        h = handlerType(*args)
+        h.setLevel( level_ )
+        logger.addHandler(h)
+        yield
+    finally:
+        logger.setLevel(saveLevel)
+        if h in logger.handlers:
+            logger.removeHandler(h)
+
+
