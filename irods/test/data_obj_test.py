@@ -677,9 +677,9 @@ class TestDataObjOps(unittest.TestCase):
                         paths_to_delete.append(remote_name)
                         PUT_LOG = self.In_Memory_Stream()
                         with helpers.enableLogging(logging.getLogger('irods.manager.data_object_manager'),
-                                                   logging.StreamHandler, (PUT_LOG,), level_ = logging.INFO),\
+                                                   logging.StreamHandler, (PUT_LOG,), level_ = logging.DEBUG),\
                              helpers.enableLogging(logging.getLogger('irods.parallel'),
-                                                   logging.StreamHandler, (PUT_LOG,), level_ = logging.INFO):
+                                                   logging.StreamHandler, (PUT_LOG,), level_ = logging.DEBUG):
                                 self.sess.data_objects.put(f.name, remote_name, **{kw.DEST_RESC_NAME_KW: rescName})
                         nthr = 0
                         search_text = PUT_LOG.getvalue()
