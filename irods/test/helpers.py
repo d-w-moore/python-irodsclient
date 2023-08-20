@@ -21,6 +21,37 @@ from irods.message import (iRODSMessage, IRODS_VERSION)
 from irods.password_obfuscation import encode
 from six.moves import range
 
+class irods_user_logins(object):
+    """A class which creates users and set passwords from a given dict or list of tuples of
+       (username,password).  
+
+       The utility method self.login(username) is then used to generate a session object
+       for one of those users.
+
+       This class may be used standalone or as a mixin.
+    """
+    def session_for_user(self, username):
+        return iRODSSession (port=self.admin.port,zone=self.admin.zone,host=self.admin.host,
+                user=username,password=self._pw[username])
+    
+    def create_user(self, username, password = '', usertype = 'rodsuser', auto_remove = True):
+        u = self.admin.users.create(username,usertype)
+        if password is not None:
+            u.modify('password',password)
+        self._pw[username] = password
+        if auto_remove:
+            self._users_to_remove[username] = True
+
+    def __init__(self,admin_session):
+        self.admin = admin_session
+        self._users_to_remove = {}
+        self._pw = {}
+        class at_instance_scope_exit:
+            def __del__(_):
+                for username in self._users_to_remove:
+                    u = self.admin.users.remove(username)
+        self.x = at_instance_scope_exit()
+
 
 class StopTestsException(Exception):
 
