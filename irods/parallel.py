@@ -433,8 +433,8 @@ def io_main( session, Data, opr_, fname, R='', **kwopt):
     else:
         if type(Io) is deferred_call:
             Io[kw.NUM_THREADS_KW] = str(num_threads)
-            Io[kw.DATA_SIZE_KW] =  str(total_bytes)
-            Io['returned_values']= output_values
+            Io[kw.DATA_SIZE_KW] = str(total_bytes)
+            Io['returned_values'] = output_values
             Io = Io()
         rawfile = Io.raw
 

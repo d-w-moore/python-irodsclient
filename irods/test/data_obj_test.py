@@ -1,23 +1,35 @@
 #! /usr/bin/env python
 from __future__ import absolute_import
-import os
-import stat
-import sys
-import socket
-import json
-import hashlib
 import base64
-import random
-import string
-import unittest
-import contextlib  # check if redundant
-import logging
-import io
-import re
-import time
 import concurrent.futures
-import xml.etree.ElementTree
+import contextlib  # check if redundant
+import socket
+import hashlib
+import io
 import itertools
+import json
+import logging
+import os
+import random
+import re
+import socket
+import stat
+import string
+import sys
+import time
+import unittest
+import xml.etree.ElementTree
+
+ipmatcher = re.compile('(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$')
+
+def is_localhost_ip(s):
+  match = ipmatcher.match(s)
+  octets = [] if not match else [int(_) for _ in match.groups()]
+  return [127,0,0,1] <= octets <= [127,255,255,254]
+
+def is_localhost_synonym(name):
+    return is_localhost_ip(name) or \
+           is_localhost_ip(socket.gethostbyname(name))
 
 from irods.access import iRODSAccess
 from irods.models import Collection, DataObject
@@ -663,7 +675,7 @@ class TestDataObjOps(unittest.TestCase):
                 self.assertEqual(f.read().decode(), obj.path)
 
     def _skip_unless_connected_to_this_computer_by_other_than_localhost_synonym(self):
-        if self.sess.host not in ({socket.gethostname()} - {'localhost', '127.0.0.1'}):
+        if is_localhost_synonym(self.sess.host):
             self.skipTest('This test requires being connected to a local server, but not via "localhost" or a synonym.')
 
     class WrongUserType(RuntimeError): pass
