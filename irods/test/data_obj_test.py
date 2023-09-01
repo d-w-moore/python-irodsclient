@@ -20,16 +20,17 @@ import time
 import unittest
 import xml.etree.ElementTree
 
-ipmatcher = re.compile('(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$')
+ip_pattern = re.compile(r'(\d+)\.(\d+)\.(\d+)\.(\d+)$')
+localhost_with_optional_domain_pattern = re.compile('localhost(\.\S\S*)?$')
 
 def is_localhost_ip(s):
-  match = ipmatcher.match(s)
+  match = ip_pattern.match(s)
   octets = [] if not match else [int(_) for _ in match.groups()]
   return [127,0,0,1] <= octets <= [127,255,255,254]
 
 def is_localhost_synonym(name):
-    return is_localhost_ip(name) or \
-           is_localhost_ip(socket.gethostbyname(name))
+    return localhost_with_optional_domain_pattern.match(name.lower()) or \
+           is_localhost_ip(name)
 
 from irods.access import iRODSAccess
 from irods.models import Collection, DataObject
@@ -675,8 +676,12 @@ class TestDataObjOps(unittest.TestCase):
                 self.assertEqual(f.read().decode(), obj.path)
 
     def _skip_unless_connected_to_this_computer_by_other_than_localhost_synonym(self):
+        #import pdb
+        #from pdb import set_trace as b
+        #b()
         if is_localhost_synonym(self.sess.host):
             self.skipTest('This test requires being connected to a local server, but not via "localhost" or a synonym.')
+        1;
 
     class WrongUserType(RuntimeError): pass
 
