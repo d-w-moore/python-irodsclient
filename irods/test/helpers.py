@@ -325,10 +325,10 @@ def enableLogging(logger, handlerType, args, level_ = logging.INFO):
     Usage Example
     -------------
     Dump INFO and higher priority logging messages from irods.parallel
-    module to file /tmp/logfile.txt:
+    module to a temporary log file:
 
     with irods.test.helpers.enableLogging(logging.getLogger('irods.parallel'),
-                                          logging.FileHandler,('/tmp/logfile.txt',)):
+                                          logging.FileHandler,(tempfile.gettempdir()+'/logfile.txt',)):
         # parallel put/get test call here
     """
     h = None

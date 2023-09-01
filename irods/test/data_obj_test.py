@@ -31,7 +31,7 @@ from irods.manager import data_object_manager
 from irods.message import RErrorStack
 from irods.message import ( ET, XML_Parser_Type, default_XML_parser, current_XML_parser )
 from datetime import datetime
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, mktemp
 from irods.test.helpers import (unique_name, my_function_name)
 from irods.ticket import Ticket
 import irods.parallel
@@ -745,7 +745,7 @@ class TestDataObjOps(unittest.TestCase):
         self._skip_unless_connected_to_this_computer_by_other_than_localhost_synonym()
         if self.sess.server_version < (4, 3, 1):
             self.skipTest('Expects iRODS server version 4.3.1')
-        LOCAL_FILE = '/tmp/local_copy'
+        LOCAL_FILE = mktemp()
         filename = ''
         try:
             with self.create_simple_resc(hostname = 'localhost') as rescName:
