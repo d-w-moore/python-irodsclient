@@ -675,13 +675,12 @@ class TestDataObjOps(unittest.TestCase):
             with obj.open('r') as f:
                 self.assertEqual(f.read().decode(), obj.path)
 
-    def _skip_unless_connected_to_this_computer_by_other_than_localhost_synonym(self):
-        #import pdb
-        #from pdb import set_trace as b
-        #b()
-        if is_localhost_synonym(self.sess.host):
+    #
+    # To run these tests, we require a local iRODS connection but not one with a localhost-equivalent hostname.
+    #
+    def _skip_unless_connected_to_local_computer_by_other_than_localhost_synonym(self):
+        if self.sess.host != socket.gethostname() or is_localhost_synonym(self.sess.host):
             self.skipTest('This test requires being connected to a local server, but not via "localhost" or a synonym.')
-        1;
 
     class WrongUserType(RuntimeError): pass
 
@@ -759,7 +758,7 @@ class TestDataObjOps(unittest.TestCase):
                 self._test_redirect_in_data_object_put_and_get__issue_452(content,data_ctx)
 
     def _test_redirect_in_data_object_put_and_get__issue_452(self, content, data_ctx):
-        self._skip_unless_connected_to_this_computer_by_other_than_localhost_synonym()
+        self._skip_unless_connected_to_local_computer_by_other_than_localhost_synonym()
         if self.sess.server_version < (4, 3, 1):
             self.skipTest('Expects iRODS server version 4.3.1')
         LOCAL_FILE = mktemp()
@@ -819,7 +818,7 @@ class TestDataObjOps(unittest.TestCase):
                 os.unlink(filename)
 
     def test_redirect_in_data_object_open__issue_452(self):
-        self._skip_unless_connected_to_this_computer_by_other_than_localhost_synonym()
+        self._skip_unless_connected_to_local_computer_by_other_than_localhost_synonym()
         if self.sess.server_version < (4, 3, 1):
             self.skipTest('Expects iRODS server version 4.3.1')
         sess = self.sess
