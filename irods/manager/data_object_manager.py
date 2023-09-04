@@ -20,6 +20,12 @@ import ast
 import json
 import logging
 
+x = 0
+def print_debug(y = 10):
+    global x
+    x += 1
+    if x < y: print ("(*D {}*)".format(x))
+
 MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE = 32 * ( 1024 ** 2)
 
 DEFAULT_NUMBER_OF_THREADS = 0   # Defaults for reasonable number of threads -- optimized to be
@@ -351,6 +357,7 @@ class DataObjectManager(Manager):
         use_get_rescinfo_apis = False
 
         if allow_redirect and conn.server_version >= (4,3,1):
+            print_debug()
             key = 'CREATE' if mode[0] in ('w','a') else 'OPEN'
             message = iRODSMessage('RODS_API_REQ',
                                    msg=make_FileOpenRequest(**{kw.GET_RESOURCE_INFO_OP_TYPE_KW:key}),
