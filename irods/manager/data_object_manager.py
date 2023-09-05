@@ -343,8 +343,7 @@ class DataObjectManager(Manager):
                 KeyValPair_PI=StringStringMap(options_),
             )
 
-        # preserve RESC HIER but do not pass through GET_HOST_FOR_* call
-        requested_hierarchy = options.pop(kw.RESC_HIER_STR_KW, None)
+        requested_hierarchy = options.get(kw.RESC_HIER_STR_KW, None)
 
         conn = self.sess.pool.get_connection()
         redirected_host = ''
