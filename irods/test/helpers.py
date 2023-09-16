@@ -7,6 +7,7 @@ import contextlib
 import shutil
 import hashlib
 import base64
+import logging
 import math
 import socket
 import inspect
@@ -15,10 +16,19 @@ import random
 import datetime
 import json
 import sys
+import irods.client_configuration as config
 from irods.session import iRODSSession
 from irods.message import (iRODSMessage, IRODS_VERSION)
 from irods.password_obfuscation import encode
 from six.moves import range
+
+
+def configuration_file_exists():
+    try:
+        config.load(failure_modes = (config.NoConfigError,), logging_level = logging.DEBUG)
+    except config.NoConfigError:
+        return False
+    return True
 
 
 class StopTestsException(Exception):
@@ -270,14 +280,34 @@ def remove_unused_metadata(session):
 
 
 @contextlib.contextmanager
-def file_backed_up(filename):
-    with tempfile.NamedTemporaryFile(prefix=os.path.basename(filename)) as f:
-        shutil.copyfile(filename, f.name)
+def file_backed_up(filename, require_that_file_exists = True):
+    _basename = os.path.basename(filename) if os.path.exists(filename) else None
+    if _basename is None and require_that_file_exists:
+        err = RuntimeError("Attempted to back up a file which doesn't exist: %r" % (filename,))
+        raise err
+    with tempfile.NamedTemporaryFile(prefix=_basename) as f:
         try:
+            if _basename is not None:
+                shutil.copyfile(filename, f.name)
             yield filename
         finally:
-            shutil.copyfile(f.name, filename)
+            if _basename is None:
+                # Restore the condition of the file being absent.
+                if os.path.exists(filename):
+                    os.unlink(filename)
+            else:
+                # Restore the file's contents as they were originally.
+                shutil.copyfile(f.name, filename)
 
+@contextlib.contextmanager
+def environment_variable_backed_up(var):
+    old_value = os.environ.get(var)
+    try:
+        yield var
+    finally:
+        os.environ.pop(var,None)
+        if old_value is not None:
+            os.environ[var] = old_value
 
 def irods_session_host_local (sess):
     return socket.gethostbyname(sess.host) == \
