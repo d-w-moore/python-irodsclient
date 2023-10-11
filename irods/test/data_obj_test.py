@@ -1738,7 +1738,7 @@ class TestDataObjOps(unittest.TestCase):
         self.assertEqual(test_output, str(truth))
 
     def test_settings_load_and_save_471(self):
-        from .. import settings_path_environment_variable, get_settings_path, DEFAULT_CONFIG_PATH
+        from irods import settings_path_environment_variable, get_settings_path, DEFAULT_CONFIG_PATH
         settings_path = get_settings_path()
         with helpers.file_backed_up(settings_path, require_that_file_exists = False):
 
