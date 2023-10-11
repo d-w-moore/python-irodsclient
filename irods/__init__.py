@@ -2,7 +2,6 @@ from .version import __version__
 
 import logging
 import os
-import six
 
 # This has no effect if basicConfig() was previously called.
 logging.basicConfig()

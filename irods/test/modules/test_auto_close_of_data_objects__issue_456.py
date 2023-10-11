@@ -10,7 +10,7 @@ from __future__ import print_function
 import contextlib
 try:
     import irods.client_configuration as config
-except:
+except ImportError:
     pass
 from datetime import datetime
 import os

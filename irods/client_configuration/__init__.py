@@ -8,6 +8,7 @@ import re
 import sys
 import types
 
+# Duplicate here for convenience
 from .. import DEFAULT_CONFIG_PATH
 
 logger = logging.Logger(__name__)
@@ -140,7 +141,6 @@ class _ConfigLoadError:
     Exceptions that subclass this type can be thrown by the load() function if
     their classes are listed in the failure_modes parameter of that function.
     """
-    pass
 
 class NoConfigError(Exception, _ConfigLoadError): pass
 class BadConfigError(Exception, _ConfigLoadError): pass

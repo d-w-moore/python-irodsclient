@@ -31,7 +31,7 @@ from irods.manager import data_object_manager
 from irods.message import RErrorStack
 from irods.message import ( ET, XML_Parser_Type, default_XML_parser, current_XML_parser )
 from datetime import datetime
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, gettempdir
 from irods.test.helpers import (unique_name, my_function_name)
 import irods.parallel
 from irods.manager.data_object_manager import Server_Checksum_Warning
@@ -1746,7 +1746,7 @@ class TestDataObjOps(unittest.TestCase):
             config.data_objects.auto_close = RANDOM_VALUE
 
             # Create empty settings file.
-            with open(settings_path,'w') as f:
+            with open(settings_path,'w'):
                 pass
 
             # For "silent" loading.
@@ -1764,7 +1764,8 @@ class TestDataObjOps(unittest.TestCase):
 
             with helpers.environment_variable_backed_up(settings_path_environment_variable):
                 os.environ.pop(settings_path_environment_variable,None)
-                for i, test_path in enumerate([None, '', '/tmp/.prc']):
+                tmp_path = os.path.join(gettempdir(),'.prc')
+                for i, test_path in enumerate([None, '', tmp_path]):
                     if test_path is not None:
                         os.environ[settings_path_environment_variable] = test_path
                     # Check that load and save work as expected.
