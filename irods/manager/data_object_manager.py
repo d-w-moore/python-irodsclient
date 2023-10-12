@@ -1,3 +1,4 @@
+from __future__ import print_function
 from __future__ import absolute_import
 import os
 import io
@@ -21,7 +22,13 @@ import ast
 import json
 import logging
 
-
+x = 0
+def print_if_redirecting():
+ import sys
+ global x
+ x += 1
+ if x == 1:
+  print('*** DWM _ REDIRECTING',file = sys.stderr);
 
 def call___del__if_exists(super_):
     """
@@ -379,6 +386,7 @@ class DataObjectManager(Manager):
         use_get_rescinfo_apis = False
 
         if allow_redirect and conn.server_version >= (4,3,1):
+            print_if_redirecting()
             key = 'CREATE' if mode[0] in ('w','a') else 'OPEN'
             message = iRODSMessage('RODS_API_REQ',
                                    msg=make_FileOpenRequest(**{kw.GET_RESOURCE_INFO_OP_TYPE_KW:key}),
