@@ -70,3 +70,4 @@ client_configuration.preserve_defaults()
 # If the settings path variable is not set in the environment, a value of None is passed,
 # and thus no settings file is auto-loaded.
 client_configuration.autoload(_file_to_load = os.environ.get(settings_path_environment_variable))
+logging.warning("DWM:read - auto-close = %r",client_configuration.data_objects.auto_close)
