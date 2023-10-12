@@ -323,8 +323,12 @@ class DataObjectManager(Manager):
                                kw.RESC_HIER_STR_KW
                            ))
 
-    def open(self, path, mode, create = True, finalize_on_close = True, auto_close = client_config.getter('data_objects','auto_close'),
-             **options):
+    def open(self, path, mode, 
+                   create = True,             # (Dis-)allow object creation.
+                   finalize_on_close = True,  # For PRC internal use.
+                   auto_close = client_config.getter('data_objects','auto_close'), # The default value will be a lambda returning the
+                                                                                   # global setting. Use True or False as an override.
+                   **options):
         _raw_fd_holder =  options.get('_raw_fd_holder',[])
         # If no keywords are used that would influence the server as to the choice of a storage resource,
         # then use the default resource in the client configuration.
