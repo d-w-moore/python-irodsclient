@@ -322,7 +322,7 @@ def file_backed_up(filename, require_that_file_exists = True):
     if _basename is None and require_that_file_exists:
         err = RuntimeError("Attempted to back up a file which doesn't exist: %r" % (filename,))
         raise err
-    with tempfile.NamedTemporaryFile(prefix=_basename) as f:
+    with tempfile.NamedTemporaryFile(prefix=('tmp' if not _basename else _basename)) as f:
         try:
             if _basename is not None:
                 shutil.copyfile(filename, f.name)
