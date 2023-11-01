@@ -119,9 +119,9 @@ def _var_items(root, leaf_flag = False):
 # Recurses through an entire configuration hierarchy:
 def _var_items_as_generator(root = sys.modules[__name__], dotted=''):
     _v = _var_items(root, leaf_flag = True)
-    for name,sub_node,is_config in _v:
+    for name, sub_node, is_config in _v:
         dn = (dotted + ('.' if dotted else '') + name)
-        yield dotted, root, is_config
+        yield dn, sub_node, is_config
         # Python3 has "yield from" which is simpler and better construction than what follows:
         for _dotted, _root, _is_config in _var_items_as_generator(root = sub_node, dotted = dn):
             yield _dotted, _root, _is_config
