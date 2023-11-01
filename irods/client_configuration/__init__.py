@@ -1,5 +1,6 @@
 from __future__ import print_function
 import ast
+import collections
 import copy
 import io
 import logging
@@ -97,14 +98,39 @@ class DataObjects(iRODSConfiguration):
 
 data_objects = DataObjects()
 
-def _var_items(root):
+# Exposes the significant settable attributes of an iRODSConfiguration object:
+def _config_names(root):
+    slots = getattr(root,'__slots__',())
+    properties = getattr(root,'writeable_properties',())
+    return tuple(slots) + tuple(properties)
+
+# Exposes one level of the configuration hierarchy from the given ("root") node:
+def _var_items(root, leaf_flag = False):
+    if leaf_flag: 
+        flag = lambda _:(_,)
+    else:
+        flag = lambda _:()
     if isinstance(root,types.ModuleType):
-        return [(i,v) for i,v in vars(root).items()
-                if isinstance(v,iRODSConfiguration)]
+        return [((i,v) + flag(False)) for i,v in vars(root).items() if isinstance(v,iRODSConfiguration)]
     if isinstance(root,iRODSConfiguration):
-        return [(i, getattr(root,i)) for i in
-                root.__slots__ + getattr(root,'writeable_properties',())]
+        return [(i, getattr(root,i)) + flag(True) for i in _config_names(root)]
     return []
+
+# Recurses through an entire configuration hierarchy:
+def _var_items_as_generator(root = sys.modules[__name__], dotted=''):
+    _v = _var_items(root, leaf_flag = True)
+    for name,sub_node,is_config in _v:
+        dn = (dotted + ('.' if dotted else '') + name)
+        yield dotted, root, is_config
+        # Python3 has "yield from" which is simpler and better construction than what follows:
+        for _dotted, _root, _is_config in _var_items_as_generator(root = sub_node, dotted = dn):
+            yield _dotted, _root, _is_config
+
+VarItemTuple = collections.namedtuple('VarItemTuple',['dotted','root','is_config'])
+
+def _var_item_tuples_as_generator(root = sys.modules[__name__]):
+    for _ in _var_items_as_generator(root):
+        return VarItemTuple(*_)
 
 def save(root = None, string='', file = ''):
     """Save the current configuration.
