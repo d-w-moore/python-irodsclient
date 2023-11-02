@@ -130,7 +130,7 @@ VarItemTuple = collections.namedtuple('VarItemTuple',['dotted','root','is_config
 
 def _var_item_tuples_as_generator(root = sys.modules[__name__]):
     for _ in _var_items_as_generator(root):
-        return VarItemTuple(*_)
+        yield VarItemTuple(*_)
 
 def save(root = None, string='', file = ''):
     """Save the current configuration.
@@ -282,3 +282,11 @@ def new_default_config():
     module = types.ModuleType('_')
     module.__dict__.update(default_config_dict)
     return module
+
+def overriding_environment_variables():
+    uppercase_and_dot_split = lambda _:_.upper().split('.')
+    return { _tuple.dotted: '__'.join(['PYTHON_IRODSCLIENT','CONFIG']+uppercase_and_dot_split(_tuple.dotted))
+                            for _tuple in _var_item_tuples_as_generator() if _tuple.is_config }
+
+def _calculate_environment_variables(memo_dict = overriding_environment_variables()):
+    return memo_dict
