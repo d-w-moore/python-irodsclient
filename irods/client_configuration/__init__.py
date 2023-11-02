@@ -52,7 +52,7 @@ class Demo(six.with_metaclass(iRODSConfigAliasMetaclass,object)):
         print('setter')
         self.i=j*2
 
-class MiscProperties(six.with_metaclass(iRODSConfigAliasMetaclass,iRODSConfiguration)):
+class ConnectionProperties(six.with_metaclass(iRODSConfigAliasMetaclass,iRODSConfiguration)):
     @property
     def xml_parser_default(self):
         from irods.message import get_default_XML_by_name
@@ -62,7 +62,7 @@ class MiscProperties(six.with_metaclass(iRODSConfigAliasMetaclass,iRODSConfigura
         from irods.message import set_default_XML_by_name
         return set_default_XML_by_name(str_value)
 
-misc = MiscProperties()
+connection = ConnectionProperties()
 
 # #############################################################################
 #
