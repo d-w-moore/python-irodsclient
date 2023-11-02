@@ -206,7 +206,9 @@ class _ConfigLoadError:
 class NoConfigError(Exception, _ConfigLoadError): pass
 class BadConfigError(Exception, _ConfigLoadError): pass
 
-def load(root = None, file = '', failure_modes = (), logging_level = logging.WARNING):
+def load(root = None, file = '', failure_modes = (),
+         logging_level = logging.WARNING, use_environment_variables = False):
+
     """Load the current configuration.
 
     An example of a valid line in a configuration file is this:
@@ -265,6 +267,12 @@ def load(root = None, file = '', failure_modes = (), logging_level = logging.WAR
                         raise BadConfigError(message)
                 continue
             _load_config_line(root, match.group('key'), match.group('value'))
+
+        if use_environment_variables:
+            for key, variable in _calculate_overriding_environment_variables().items():
+                value = os.environ.get(variable)
+                if value is not None:
+                    _load_config_line(root, key, value)
     finally:
         if _file:
             _file.close()
@@ -276,7 +284,7 @@ def preserve_defaults():
 
 def autoload(_file_to_load):
     if _file_to_load is not None:
-        load(file = _file_to_load)
+        load(file = _file_to_load, use_environment_variables = True)
 
 def new_default_config():
     module = types.ModuleType('_')
@@ -288,5 +296,7 @@ def overriding_environment_variables():
     return { _tuple.dotted: '__'.join(['PYTHON_IRODSCLIENT','CONFIG']+uppercase_and_dot_split(_tuple.dotted))
                             for _tuple in _var_item_tuples_as_generator() if _tuple.is_config }
 
-def _calculate_environment_variables(memo_dict = overriding_environment_variables()):
-    return memo_dict
+def _calculate_overriding_environment_variables(memo = overriding_environment_variables()):
+  # import pprint
+  # pprint.pprint(memo)
+    return memo
