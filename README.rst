@@ -346,12 +346,15 @@ module.  Each of these functions accepts an optional :code:`file` parameter whic
 the settings file path currently "in force" (i.e., the CONFIG_DEFAULT_PATH, as optionally overridden by the environment variable
 PYTHON_IRODSCLIENT_CONFIGURATION_PATH).
 
+Configuration settings may also be individually overridden as shown below, using environment variables:
 .. code-block:: bash
 
    $ PYTHON_IRODSCLIENT_CONFIGURATION_PATH="" \
      PYTHON_IRODSCLIENT_CONFIG__CONNECTIONS__XML_PARSER_DEFAULT="'SECURE_XML'" \
      python -c "import irods.message, irods.client_configuration as c; print (irods.message.default_XML_parser())"
    XML_Parser_Type.SECURE_XML
+
+The table below gives relevant details for each configurable setting.
 
 +--------------------------------+---------+----------------+-----------------------------------------------------------+
 |                Setting         |   Type  | Default Value  | Environment Variable                                      |
