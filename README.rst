@@ -336,7 +336,7 @@ to a globally set value which the PRC routinely checks when performing the affec
 
 The use of a settings file can be indicated, and the path to that file determined, by setting the environment variable:
 :code:`PYTHON_IRODSCLIENT_CONFIGURATION_PATH`.  If this variable is present but empty, this denotes use of a default settings
-file path of :code:~/.python-irodsclient`;  if the variable's value is of nonzero length, the value should be an absolute path
+file path of :code:`~/.python-irodsclient`;  if the variable's value is of nonzero length, the value should be an absolute path
 to the settings file whose use is desired.  Also, if the variable is set, auto-load of settings will be performed, meaning
 that the act of importing :code:`irods` or any of its submodules will cause the automatic loading the settings from the
 settings file, assuming it exists.  (Failure to find the file at the indicated path will be logged as a warning.)
