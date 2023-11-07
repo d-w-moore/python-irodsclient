@@ -346,15 +346,8 @@ module.  Each of these functions accepts an optional :code:`file` parameter whic
 the settings file path currently "in force" (i.e., the CONFIG_DEFAULT_PATH, as optionally overridden by the environment variable
 PYTHON_IRODSCLIENT_CONFIGURATION_PATH).
 
-Configuration settings may also be individually overridden as shown below, using environment variables:
-.. code-block:: bash
-
-   $ PYTHON_IRODSCLIENT_CONFIGURATION_PATH="" \
-     PYTHON_IRODSCLIENT_CONFIG__CONNECTIONS__XML_PARSER_DEFAULT="'SECURE_XML'" \
-     python -c "import irods.message, irods.client_configuration as c; print (irods.message.default_XML_parser())"
-   XML_Parser_Type.SECURE_XML
-
-The table below gives relevant details for each configurable setting.
+Configuration settings may also be individually overridden by defining certain environment variables.  The following table details relevant
+information for each setting, including the names of the environment variables serving as overrides.
 
 +--------------------------------+---------+----------------+-----------------------------------------------------------+
 |                Setting         |   Type  | Default Value  | Environment Variable                                      |
@@ -362,6 +355,20 @@ The table below gives relevant details for each configurable setting.
 | data_objects.auto_close        | boolean | False          | PYTHON_IRODSCLIENT_CONFIG__DATA_OBJECTS__AUTO_CLOSE       |
 | connections.xml_parser_default | string  | "STANDARD_XML" | PYTHON_IRODSCLIENT_CONFIG__CONNECTIONS_XML_PARSER_DEFAULT |
 +--------------------------------+---------+----------------+-----------------------------------------------------------+
+
+If :code:`~/python_irodsclient` contains the line `connections.xml_parser_default "QUASI_XML"`, the example below illustrates
+the effect of defining the appropriate environment variable.  Note the value stored in the variable must be a valid input
+for :code:`ast.literal_eval()`; that is, a primitive Pythonic value - and quoted, for instance, if a string.
+
+.. code-block:: bash
+
+   $ PYTHON_IRODSCLIENT_CONFIGURATION_PATH="" \
+     PYTHON_IRODSCLIENT_CONFIG__CONNECTIONS__XML_PARSER_DEFAULT="'SECURE_XML'" \
+     python -c "import irods.message, irods.client_configuration as c; print (irods.message.default_XML_parser())"
+   XML_Parser_Type.SECURE_XML
+   $ PYTHON_IRODSCLIENT_CONFIGURATION_PATH="" \
+     python -c "import irods.message, irods.client_configuration as c; print (irods.message.default_XML_parser())"
+   XML_Parser_Type.QUASI_XML
 
 
 Computing and Retrieving Checksums
