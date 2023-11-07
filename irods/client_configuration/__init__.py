@@ -52,7 +52,7 @@ class Demo(six.with_metaclass(iRODSConfigAliasMetaclass,object)):
         print('setter')
         self.i=j*2
 
-class ConnectionProperties(six.with_metaclass(iRODSConfigAliasMetaclass,iRODSConfiguration)):
+class ConnectionsProperties(six.with_metaclass(iRODSConfigAliasMetaclass,iRODSConfiguration)):
     @property
     def xml_parser_default(self):
         from irods.message import get_default_XML_by_name
@@ -62,7 +62,7 @@ class ConnectionProperties(six.with_metaclass(iRODSConfigAliasMetaclass,iRODSCon
         from irods.message import set_default_XML_by_name
         return set_default_XML_by_name(str_value)
 
-connection = ConnectionProperties()
+connections = ConnectionsProperties()
 
 # #############################################################################
 #
@@ -293,7 +293,7 @@ def new_default_config():
 
 def overriding_environment_variables():
     uppercase_and_dot_split = lambda _:_.upper().split('.')
-    return { _tuple.dotted: '__'.join(['PYTHON_IRODSCLIENT','CONFIG']+uppercase_and_dot_split(_tuple.dotted))
+    return { _tuple.dotted: '__'.join(['PYTHON_IRODSCLIENT_CONFIG']+uppercase_and_dot_split(_tuple.dotted))
                             for _tuple in _var_item_tuples_as_generator() if _tuple.is_config }
 
 def _calculate_overriding_environment_variables(memo = overriding_environment_variables()):
