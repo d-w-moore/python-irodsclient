@@ -356,8 +356,12 @@ information for each setting, including the names of the environment variables s
 | connections.xml_parser_default | string  | "STANDARD_XML" | PYTHON_IRODSCLIENT_CONFIG__CONNECTIONS_XML_PARSER_DEFAULT |
 +--------------------------------+---------+----------------+-----------------------------------------------------------+
 
-If :code:`~/python_irodsclient` contains the line `connections.xml_parser_default "QUASI_XML"`, the example below illustrates
-the effect of defining the appropriate environment variable.  Note the value stored in the variable must be a valid input
+If :code:`~/python_irodsclient` contains the line 
+:: 
+
+  connections.xml_parser_default        "QUASI_XML"`
+ 
+then the example below illustrates the effect of defining the appropriate environment variable.  Note the value stored in the variable must be a valid input
 for :code:`ast.literal_eval()`; that is, a primitive Pythonic value - and quoted, for instance, if a string.
 
 .. code-block:: bash
