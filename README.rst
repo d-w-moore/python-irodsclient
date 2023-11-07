@@ -348,7 +348,7 @@ PYTHON_IRODSCLIENT_CONFIGURATION_PATH).
 
 +--------------------------------+---------+----------------+-----------------------------------------------------------+
 |                Setting         |   Type  | Default Value  | Environment Variable                                      |
-=========================================================================================================================
++================================+=========+================+===========================================================+
 | data_objects.auto_close        | boolean | False          | PYTHON_IRODSCLIENT_CONFIG__DATA_OBJECTS__AUTO_CLOSE       |
 | connections.xml_parser_default | string  | "STANDARD_XML" | PYTHON_IRODSCLIENT_CONFIG__CONNECTIONS_XML_PARSER_DEFAULT |
 +--------------------------------+---------+----------------+-----------------------------------------------------------+
