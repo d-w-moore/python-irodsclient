@@ -334,7 +334,7 @@ class DataObjectManager(Manager):
                    returned_values = None,    # Used to update session reference, for forging more conns to same host, in irods.parallel.io_main
                    allow_redirect = True,     # This may be set to False to disallow the client redirect-to-resource.
                    **options):
-        _buffering = options.pop('_buffering',-1)
+        _buffering = options.pop('_buffering', -1)
         _raw_fd_holder =  options.get('_raw_fd_holder',[])
         # If no keywords are used that would influence the server as to the choice of a storage resource,
         # then use the default resource in the client configuration.
@@ -442,7 +442,7 @@ class DataObjectManager(Manager):
         if auto_close:
             return ManagedBufferedRandom(raw, _session = self.sess, **bufopt)
 
-        return io.BufferedRandom(raw,**bufopt)
+        return io.BufferedRandom(raw, **bufopt)
 
     def trim(self, path, **options):
 
