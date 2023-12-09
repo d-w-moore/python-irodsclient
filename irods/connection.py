@@ -67,7 +67,7 @@ class Connection(object):
         scheme = self.account._original_authentication_scheme
         auth_type = ''
 
-        if self.server_version >= (4,3,0):  ## TODO - a setting is needed, eg. "auth.use_login_modules"
+        if self.server_version >= (4,3,0):
             # use client side "plugin" module: irods.login.<scheme>
             irods.login.load_plugins(subset=[scheme])
             auth_module = getattr(irods.login, scheme, None)

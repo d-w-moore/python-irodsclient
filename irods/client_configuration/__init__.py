@@ -1,5 +1,6 @@
 from __future__ import print_function
 import ast
+import contextlib
 import copy
 import io
 import logging
@@ -124,7 +125,38 @@ def save(root = None, string='', file = ''):
         if _file and auto_close_settings:
             _file.close()
 
-def _load_config_line(root, setting, value):
+@contextlib.contextmanager
+def loadlines(entries, common_root = sys.modules[__name__]):
+    root_item = [('root',common_root)]
+    entries_ = copy.deepcopy(entries)
+    identity = lambda _:_
+    try:
+        # Load config values.
+        entries_ = []
+        for e in entries:
+            e_ = dict(root_item + list(e.items()))
+            L = []
+            _load_config_line(eval_func = identity, return_old = L, **e_)
+            e_['value'] = L[0]
+            entries_.append(e_)
+        yield
+    finally:
+        # Restore old values.
+        for e_ in entries_:
+            _load_config_line(eval_func = identity, **e_)
+
+
+# TODO remove this test
+def test_it():
+    with loadlines(entries=(
+        dict(setting='data_objects.auto_close',value=True),
+    )):
+        print('dac (during) =',data_objects.auto_close)
+        pass
+    print('dac (after) =',data_objects.auto_close)
+    1
+
+def _load_config_line(root, setting, value, return_old=(), eval_func = ast.literal_eval):
     arr = [_.strip() for _ in setting.split('.')]
     # Compute the object referred to by the dotted name.
     attr = ''
@@ -135,9 +167,13 @@ def _load_config_line(root, setting, value):
     # Assign into the current setting of the dotted name (effectively <root>.<attr>)
     # using the loaded value.
     if attr:
-        return setattr(root, attr, ast.literal_eval(value))
+        # Get the old value of the setting for later restoration.  (Useful for tests.)
+        if return_old == []:
+            return_old.append(getattr(root,attr))
+        return setattr(root, attr, eval_func(value))
     error_message = 'Bad setting: root = {root!r}, setting = {setting!r}, value = {value!r}'.format(**locals())
     raise RuntimeError (error_message)
+
 
 # The following regular expression is used to match a configuration file line of the form:
 # ---------------------------------------------------------------
