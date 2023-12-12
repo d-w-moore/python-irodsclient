@@ -63,6 +63,19 @@ class DataObjects(iRODSConfiguration):
 
 data_objects = DataObjects()
 
+class LegacyAuth(iRODSConfiguration):
+    __slots__=('pam',)
+    class Pam(iRODSConfiguration):
+        __slots__=('time_to_live_in_hours','auto_renew_password',)
+        def __init__(self):
+            self.time_to_live_in_hours = 60
+            self.auto_renew_password = ''
+    def __init__(self):
+        self.pam = self.Pam()
+
+legacy_auth = LegacyAuth()
+
+
 def _var_items(root):
     if isinstance(root,types.ModuleType):
         return [(i,v) for i,v in vars(root).items()
