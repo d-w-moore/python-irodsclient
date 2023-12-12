@@ -465,21 +465,18 @@ class Connection(object):
                 self._login_native(password = pam_password)
                 pass
             except (ex.CAT_PASSWORD_EXPIRED, ex.CAT_INVALID_USER, ex.CAT_INVALID_AUTHENTICATION):
-                # Fall through and retry the native login later, after creating a new PAM password
-                pass
+                import irods.client_configuration as cfg
+                time_to_live_in_seconds = cfg.legacy_auth.pam.time_to_live_in_hours
+                if cfg.legacy_auth.pam.auto_renew_password:
+                    pam_password = cfg.legacy_auth.pam.auto_renew_password
+                    # Fall through and retry the native login later, after creating a new PAM password
+                else:
+                    message = ('Time To Live has expired for the native-encoded pam password, and no password is defined in ' +
+                               'legacy_auth.pam.auto_renew_password for auto-renewal.  Please run iinit.')
+                    raise RuntimeError(message)
             else:
                 # Login succeeded, we're within the time-to-live.
                 return
-
-            #TODO: 1. move this to fall-through section above
-            #      2. create setting: auth.pam.time_to_live
-            #      3. create setting: auth.pam.reinit_password
-            _pam_pw_override = os.environ.get('PAM_PW')
-            if _pam_pw_override != None:
-                pam_password = _pam_pw_override
-            else:
-                raise RuntimeError('WRONG_PASSWORD_FIELD')
-
 
         ctx_user = '%s=%s' % (AUTH_USER_KEY, self.account.client_user)
         ctx_pwd = '%s=%s' % (AUTH_PWD_KEY, pam_password)
