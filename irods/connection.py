@@ -462,8 +462,7 @@ class Connection(object):
         pam_password = PAM_PW_ESC_PATTERN.sub(lambda m: '\\'+m.group(1), self.account.password)
         if not inline_password:
             try:
-                self._login_native(password = pam_password)
-                pass
+                self._login_native()
             except (ex.CAT_PASSWORD_EXPIRED, ex.CAT_INVALID_USER, ex.CAT_INVALID_AUTHENTICATION):
                 import irods.client_configuration as cfg
                 time_to_live_in_seconds = cfg.legacy_auth.pam.time_to_live_in_hours
