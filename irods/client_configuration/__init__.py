@@ -65,12 +65,13 @@ class DataObjects(iRODSConfiguration):
 data_objects = DataObjects()
 
 class LegacyAuth(iRODSConfiguration):
-    __slots__=('pam',)
+    __slots__ = ('pam',)
     class Pam(iRODSConfiguration):
-        __slots__=('time_to_live_in_hours','auto_renew_password',)
+        __slots__ = ('time_to_live_in_hours', 'auto_renew_password', 'store_password_to_environment')
         def __init__(self):
             self.time_to_live_in_hours = 60
             self.auto_renew_password = ''
+            self.store_password_to_environment = False
     def __init__(self):
         self.pam = self.Pam()
 

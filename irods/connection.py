@@ -456,30 +456,31 @@ class Connection(object):
 
     def _login_pam(self):
 
+        import irods.client_configuration as cfg
         inline_password = (self.account.authentication_scheme == self.account._original_authentication_scheme)
-        #TODO: 1. make TTL configurable (auth.pam.time_to_live)
-        time_to_live_in_seconds = 60
-        pam_password = PAM_PW_ESC_PATTERN.sub(lambda m: '\\'+m.group(1), self.account.password)
+        time_to_live_in_hours = 60
+        new_pam_password = PAM_PW_ESC_PATTERN.sub(lambda m: '\\'+m.group(1), self.account.password)
         if not inline_password:
+            # Login in using PAM password from .irodsA
             try:
                 self._login_native()
             except (ex.CAT_PASSWORD_EXPIRED, ex.CAT_INVALID_USER, ex.CAT_INVALID_AUTHENTICATION):
-                import irods.client_configuration as cfg
-                time_to_live_in_seconds = cfg.legacy_auth.pam.time_to_live_in_hours
+                time_to_live_in_hours = cfg.legacy_auth.pam.time_to_live_in_hours # default is 60.  TODO: document setting.
                 if cfg.legacy_auth.pam.auto_renew_password:
-                    pam_password = cfg.legacy_auth.pam.auto_renew_password
+                    new_pam_password = cfg.legacy_auth.pam.auto_renew_password
                     # Fall through and retry the native login later, after creating a new PAM password
                 else:
-                    message = ('Time To Live has expired for the native-encoded pam password, and no password is defined in ' +
+                    message = ('Time To Live has expired for the PAM password, and no new password is given in ' +
                                'legacy_auth.pam.auto_renew_password for auto-renewal.  Please run iinit.')
                     raise RuntimeError(message)
             else:
-                # Login succeeded, we're within the time-to-live.
+                # Login succeeded, so we're within the time-to-live and can return without error.
                 return
 
+        # Generate a new PAM password.
         ctx_user = '%s=%s' % (AUTH_USER_KEY, self.account.client_user)
-        ctx_pwd = '%s=%s' % (AUTH_PWD_KEY, pam_password)
-        ctx_ttl = '%s=%s' % (AUTH_TTL_KEY, str(time_to_live_in_seconds))
+        ctx_pwd = '%s=%s' % (AUTH_PWD_KEY, new_pam_password)
+        ctx_ttl = '%s=%s' % (AUTH_TTL_KEY, str(time_to_live_in_hours))
 
         ctx = ";".join([ctx_user, ctx_pwd, ctx_ttl])
 
@@ -491,15 +492,14 @@ class Connection(object):
 
         if Pam_Long_Tokens:
 
-            message_body = PamAuthRequest(
-                pamUser=self.account.client_user,
-                pamPassword=pam_password,
-                timeToLive=time_to_live_in_seconds)
+            message_body = PamAuthRequest( pamUser = self.account.client_user,
+                                           pamPassword = new_pam_password,
+                                           timeToLive = time_to_live_in_hours)
         else:
 
-            message_body = PluginAuthMessage(
-                auth_scheme_ = PAM_AUTH_SCHEME, # don't use "pam_password" here ;)
-                context_ = ctx)
+            message_body = PluginAuthMessage( auth_scheme_ = PAM_AUTH_SCHEME,  # divert to old 'PAM' scheme - TODO make issue, need client-side state
+                                                                               # machine and full emulation of client part of pam_password scheme
+                                              context_ = ctx)
 
         auth_req = iRODSMessage(
             msg_type='RODS_API_REQ',
@@ -509,7 +509,12 @@ class Connection(object):
 
         self.send(auth_req)
         # Getting the new password
-        output_message = self.recv()
+        try:
+            output_message = self.recv()
+        # TODO: if TTL setting is <=0 , investigate removing TTL spec in client call & conceivably avoid this exception
+        except irods.exception.PAM_AUTH_PASSWORD_INVALID_TTL as exc:
+            # TODO (#480): raise <new_exception> from <causing_exception> for more succinct error messages
+            raise RuntimeError('Client-configured TTL is outside server parameters (password min and max times)')
 
         Pam_Response_Class = (PamAuthRequestOut if Pam_Long_Tokens
                          else AuthPluginOut)
@@ -527,10 +532,10 @@ class Connection(object):
         self._login_native(password = auth_out.result_)
 
         # Store new password in .irodsA if requested.
-        if self.account._auth_file:
+        if self.account._auth_file and cfg.legacy_auth.pam.store_password_to_environment:
             with open(self.account._auth_file,'w') as f:
                 f.write(obf.encode(auth_out.result_))
-                print('new PAM pw write succeeded')
+                logger.info('new PAM pw write succeeded')
 
         logger.info("PAM authorization validated")
 
