@@ -458,14 +458,15 @@ class Connection(object):
 
         import irods.client_configuration as cfg
         inline_password = (self.account.authentication_scheme == self.account._original_authentication_scheme)
-        time_to_live_in_hours = 60
+        # By default, let server determine the TTL.
+        time_to_live_in_hours = 0
         new_pam_password = PAM_PW_ESC_PATTERN.sub(lambda m: '\\'+m.group(1), self.account.password)
         if not inline_password:
             # Login in using PAM password from .irodsA
             try:
                 self._login_native()
             except (ex.CAT_PASSWORD_EXPIRED, ex.CAT_INVALID_USER, ex.CAT_INVALID_AUTHENTICATION):
-                time_to_live_in_hours = cfg.legacy_auth.pam.time_to_live_in_hours # default is 60.  TODO: document setting.
+                time_to_live_in_hours = cfg.legacy_auth.pam.time_to_live_in_hours # TODO: document setting.
                 if cfg.legacy_auth.pam.auto_renew_password:
                     new_pam_password = cfg.legacy_auth.pam.auto_renew_password
                     # Fall through and retry the native login later, after creating a new PAM password

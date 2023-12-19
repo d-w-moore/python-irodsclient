@@ -69,7 +69,7 @@ class LegacyAuth(iRODSConfiguration):
     class Pam(iRODSConfiguration):
         __slots__ = ('time_to_live_in_hours', 'auto_renew_password', 'store_password_to_environment')
         def __init__(self):
-            self.time_to_live_in_hours = 60
+            self.time_to_live_in_hours = 0 # -> We default to the server's TTL preference.
             self.auto_renew_password = ''
             self.store_password_to_environment = False
     def __init__(self):
