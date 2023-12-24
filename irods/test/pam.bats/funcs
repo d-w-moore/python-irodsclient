@@ -1,0 +1,89 @@
+dot_to_space() {
+  sed 's/\./ /g'<<<"$1"
+}
+
+GT() { (return 1); echo $?; }
+LT() { (return -1); echo $?; }
+EQ() { (return 0); echo $?; }
+
+compare_int_tuple() {
+    local x=($1) y=($2)
+    local lx=${#x[@]} ly=${#y[@]}
+    local i maxlen=$((lx > ly ? lx : ly))
+    for ((i=0;i<maxlen;i++)) {
+        if [ $i -ge $lx ]; then return `LT`; fi
+        if [ $i -ge $ly ]; then return `GT`; fi
+        if [ ${x[$i]} -lt ${y[$i]} ]; then return `LT`; fi
+        if [ ${x[$i]} -gt ${y[$i]} ]; then return `GT`; fi
+    }
+    return `EQ`
+}
+
+irods_version()
+{
+  local X=''
+  [[ `ihelp -h|tail -1` =~ [0-9]+(\.[0-9]+)+ ]] && X=${BASH_REMATCH[0]}
+  echo "$X"
+}
+
+pam_test_takes_too_long()
+{
+    compare_int_tuple "$(dot_to_space `irods_version`)" "$(dot_to_space 4.3.1)"
+    [ $? = `LT` ]
+}
+
+gap () { iadmin get_grid_configuration authentication $1; }
+
+with_change_auth_params_for_test() 
+{
+  local restore_cmd=""
+  while [ $# -ge 2 ]; do 
+    local reset_value=$(iadmin get_grid_configuration authentication $1)
+    restore_cmd+=$'\n'"iadmin set_grid_configuration authentication $1 $reset_value"
+    iadmin set_grid_configuration authentication $1 $2
+    shift 2
+  done
+  if [ "$(trap -p EXIT)" = "" ]; then
+      trap "$restore_cmd" EXIT
+  fi 
+}
+
+_begin_pam_environment_and_password() {
+    local ENV='{
+    "irods_host": "localhost",
+    "irods_zone_name": "tempZone",
+    "irods_port": 1247,
+    "irods_user_name": "alice",
+    "irods_authentication_scheme": "pam_password",
+    "irods_client_server_negotiation": "request_server_negotiation",
+    "irods_client_server_policy": "CS_NEG_REQUIRE",
+    "irods_ssl_ca_certificate_file": "/etc/irods/ssl/irods.crt",
+    "irods_ssl_verify_server": "cert",
+    "irods_encryption_key_size": 16,
+    "irods_encryption_salt_size": 8,
+    "irods_encryption_num_hash_rounds": 16,
+    "irods_encryption_algorithm": "AES-256-CBC"
+    }'
+    rm -fr .irods.$$
+    mv ~/.irods ~/.irods.$$
+    echo "$ENV" > ~/.irods/irods_environment.json
+    iinit <<<"$1" 2>/dev/tty
+}
+
+
+_end_pam_environment_and_password() {
+    rm -fr .irods
+    mv ~/.irods.$$ ~/.irods
+}
+
+setup_pam_login_for_alice() {
+    sudo useradd alice --create-home
+    local PASSWD=${1-:test123}
+    chpasswd "alice:$PASSWD"
+    _begin_pam_environment_and_password "$PASSWD"
+}
+
+finalize_pam_login_for_alice() {
+    _end_pam_environment_and_password
+    sudo userdel alice --remove
+}
