@@ -32,7 +32,7 @@ pam_test_takes_too_long()
     [ $? = `LT` ]
 }
 
-gap () { iadmin get_grid_configuration authentication $1; }
+get_auth_param () { iadmin get_grid_configuration authentication $1; }
 
 with_change_auth_params_for_test() 
 {
