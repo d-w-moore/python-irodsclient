@@ -26,7 +26,7 @@ irods_version()
   echo "$X"
 }
 
-pam_test_takes_too_long()
+pam_test_would_take_too_long()
 {
     compare_int_tuple "$(dot_to_space `irods_version`)" "$(dot_to_space 4.3.1)"
     [ $? = `LT` ]
