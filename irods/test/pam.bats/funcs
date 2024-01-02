@@ -64,22 +64,23 @@ _begin_pam_environment_and_password() {
     "irods_encryption_num_hash_rounds": 16,
     "irods_encryption_algorithm": "AES-256-CBC"
     }'
-    rm -fr .irods.$$
+    rm -fr ~/.irods.$$
     mv ~/.irods ~/.irods.$$
+    mkdir ~/.irods
     echo "$ENV" > ~/.irods/irods_environment.json
     iinit <<<"$1" 2>/dev/tty
 }
 
-
 _end_pam_environment_and_password() {
-    rm -fr .irods
+    rm -fr ~/.irods
     mv ~/.irods.$$ ~/.irods
 }
 
+
 setup_pam_login_for_alice() {
     sudo useradd alice --create-home
-    local PASSWD=${1-:test123}
-    chpasswd "alice:$PASSWD"
+    local PASSWD=${1:-test123}
+    sudo chpasswd <<<"alice:$PASSWD"
     _begin_pam_environment_and_password "$PASSWD"
 }
 
