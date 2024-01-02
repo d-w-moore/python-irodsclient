@@ -1,6 +1,11 @@
 #!/usr/bin/env bats
 
 . "$BATS_TEST_DIRNAME"/funcs
+#
+
+# requirements same as login_auth_test
+# ubuntu user with sudo; python_irodsclient must be installed (can use a virtualenv)
+#
 
 PASSWD=test123
 
