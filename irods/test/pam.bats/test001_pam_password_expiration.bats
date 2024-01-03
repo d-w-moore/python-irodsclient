@@ -35,7 +35,7 @@ teardown()
 [[ $OUTPUT =~ ^env_auth_scheme=pam_password$ ]]
 
     with_change_auth_params_for_test password_min_time 5 \
-                                     password_min_time 6
+                                     password_max_time 6
 
     iinit <<<"$PASSWD"
     # Wait til password expires.
