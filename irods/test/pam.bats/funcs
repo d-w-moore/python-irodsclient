@@ -37,15 +37,25 @@ get_auth_param () { iadmin get_grid_configuration authentication $1; }
 with_change_auth_params_for_test() 
 {
   local restore_cmd=""
+
+  # Use saved environment (must be rodsadmin).
+  if [ -e ~/.irods.$$ ]; then
+      export IRODS_ENVIRONMENT_FILE=~/.irods.$$/irods_environment.json
+      export IRODS_AUTHENTICATION_FILE=~/.irods.$$/.irodsA
+  fi
+
   while [ $# -ge 2 ]; do 
     local reset_value=$(iadmin get_grid_configuration authentication $1)
     restore_cmd+=$'\n'"iadmin set_grid_configuration authentication $1 $reset_value"
     [ -n "$2" ] && iadmin set_grid_configuration authentication $1 $2
     shift 2
   done
+
+  unset IRODS_ENVIRONMENT_FILE IRODS_AUTHENTICATION_FILE
+
   if [ "$(trap -p EXIT)" = "" ]; then
       trap "$restore_cmd" EXIT
-  fi 
+  fi
 }
 
 _begin_pam_environment_and_password() {
@@ -64,6 +74,7 @@ _begin_pam_environment_and_password() {
     "irods_encryption_num_hash_rounds": 16,
     "irods_encryption_algorithm": "AES-256-CBC"
     }'
+
     rm -fr ~/.irods.$$
     mv ~/.irods ~/.irods.$$
     mkdir ~/.irods
@@ -75,7 +86,6 @@ _end_pam_environment_and_password() {
     rm -fr ~/.irods
     mv ~/.irods.$$ ~/.irods
 }
-
 
 setup_pam_login_for_alice() {
     sudo useradd alice --create-home
