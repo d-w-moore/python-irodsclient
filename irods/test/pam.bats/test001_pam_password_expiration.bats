@@ -18,11 +18,11 @@ teardown()
 {
     finalize_pam_login_for_alice
 }
- 
+
 @test f001 {
 
     local S="[[:space:]]" SCRIPT
-    
+
     # Define core script to be run.
 
     local SCRIPT="
@@ -31,7 +31,7 @@ ses = h.make_session()
 ses.collections.get(h.home_collection(ses))
 print ('env_auth_scheme=%s' % ses.pool.account._original_authentication_scheme)
 "
- 
+
     # Test that the first run of the code in $SCRIPT allows normal authenticated operations to proceed normally.
     # (If authentication fails ses.collections.get will raise an exception.)
 
@@ -41,7 +41,7 @@ print ('env_auth_scheme=%s' % ses.pool.account._original_authentication_scheme)
 
     with_change_auth_params_for_test password_min_time 1 \
                                      password_max_time 1
- 
+
      # Test that running the $SCRIPT raises an exception if the PAM password has expired.
 
     iinit <<<"$PASSWD"
@@ -50,7 +50,7 @@ print ('env_auth_scheme=%s' % ses.pool.account._original_authentication_scheme)
     echo "Running PYTHON script" >/dev/tty
     OUTPUT=$($PYTHON -c "$SCRIPT" 2>&1 >/dev/null || true)
     grep 'RuntimeError: Time To Live' <<<"$OUTPUT"
-    
+
     # Test that the $SCRIPT, when run with proper settings, can successfully reset the password.
 
     with_change_auth_params_for_test password_max_time 3600

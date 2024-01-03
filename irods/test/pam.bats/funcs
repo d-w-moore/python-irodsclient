@@ -34,7 +34,7 @@ pam_test_would_take_too_long()
 
 get_auth_param () { iadmin get_grid_configuration authentication $1; }
 
-with_change_auth_params_for_test() 
+with_change_auth_params_for_test()
 {
   local restore_cmd=""
 
@@ -44,7 +44,7 @@ with_change_auth_params_for_test()
       export IRODS_AUTHENTICATION_FILE=~/.irods.$$/.irodsA
   fi
 
-  while [ $# -ge 2 ]; do 
+  while [ $# -ge 2 ]; do
     local reset_value=$(iadmin get_grid_configuration authentication $1)
     restore_cmd+=$'\n'"iadmin set_grid_configuration authentication $1 $reset_value"
     [ -n "$2" ] && iadmin set_grid_configuration authentication $1 $2
