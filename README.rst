@@ -1254,10 +1254,9 @@ or per user, prior to iRODS 4.3.0::
 
 (The default for the resource parameter is "total", denoting a general quota usage not bound to a particular resource.)
 
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx::
+xxxxxxxxxxxxxxxx::
 
-    #some code here
-    x = 5
+    some code here 1
 
 
 Managing users
