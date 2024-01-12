@@ -1254,7 +1254,7 @@ or per user, prior to iRODS 4.3.0::
 
 (The default for the resource parameter is "total", denoting a general quota usage not bound to a particular resource.)
 
-The Quota model is also available for queries.  So, to determine the space remaining for a certain group on a given resource::
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx::
 
     #some code here
     x = 5
