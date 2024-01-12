@@ -1248,6 +1248,10 @@ Quotas may be set for a group::
 
     session.groups.set_quota('my_group', 50000, resource = 'my_limited_resource')
 
+or per user, prior to iRODS 4.3.0::
+
+    session.users.set_quota('alice', 100000)
+
 
 Managing users
 --------------
