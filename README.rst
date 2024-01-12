@@ -1252,6 +1252,10 @@ or per user, prior to iRODS 4.3.0::
 
     session.users.set_quota('alice', 100000)
 
+(The default for the resource parameter is "total", denoting a general quota usage not bound to a particular resource.)
+
+The Quota model is also available for queries.  So, to determine the space remaining for a certain group on a given resource:
+
 
 Managing users
 --------------
