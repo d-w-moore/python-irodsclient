@@ -1258,6 +1258,10 @@ xxxxxxxxxxxxxxxx::
 
     some code here 1
 
+xxxxxxxxxxxxxxxx::
+
+    some code here 2
+
 
 Managing users
 --------------
