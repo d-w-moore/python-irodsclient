@@ -1132,33 +1132,39 @@ achieves the move via a replication of the data objects found to the destination
 resource , followed by a trimming of each replica from the source.  We assume for our current
 purposed that all replicas are "good", ie have a status of "1" ::
 
+  import pprint, sys
   from irods.resource import iRODSResource
+  import irods.keywords as kw, irods.exception as ex, irods.test.helpers as h
   from irods.collection import iRODSCollection
   from irods.data_object import iRODSDataObject
   from irods.models import Resource,Collection,DataObject
-  def repl_and_trim (srcRescName, dstRescName = '', verbose = False):
+  def repl_and_trim (srcRescName, dstRescName = '', verbose = False, n_copies = 1, session = h.make_session()):
       objects_trimmed = 0
       q = session.query(Resource).filter(Resource.name == srcRescName)
       srcResc = iRODSResource( session.resources, q.one())
       # loop over data objects found on srcResc
       for q_row in session.query(Collection,DataObject) \
                           .filter(DataObject.resc_id == srcResc.id):
-          collection =  iRODSCollection (session.collections, result = q_row)
-          data_object = iRODSDataObject (session.data_objects, parent = collection, results = (q_row,))
-          objects_trimmed += 1
+          collection =  iRODSCollection(session.collections, result = q_row)
+          data_object = iRODSDataObject(session.data_objects, parent = collection, results = (q_row,))
           if verbose :
-              import pprint
               print( '--------', data_object.name, '--------')
               pprint.pprint( [vars(r) for r in data_object.replicas if
                               r.resource_name == srcRescName] )
           if dstRescName:
-              objects_trimmed += 1
               data_object.replicate(dstRescName)
-              for replica_number in [r.number for r in data_object.replicas]:
-                  options = { kw.DATA_REPL_KW: replica_number }
-                  data_object.unlink( **options )
+              repl_number_to_trim = [r.number for r in data_object.replicas if r.resource_name == srcRescName]
+              if repl_number_to_trim:
+                  options = { kw.REPL_NUM_KW: repl_number_to_trim[0], kw.COPIES_KW: n_copies }
+                  try:
+                      data_object.trim(**options)
+                      objects_trimmed += 1
+                  except ex.USER_INCOMPATIBLE_PARAMS as exc:
+                      print("repl_and_trim: Cannot process {data_object.name!r}: {exc!r}".format(**locals()), file=sys.stderr)
       return objects_trimmed
 
+if __name__ == '__main__':
+    print(repl_and_trim('demoResc','myresc',verbose=1))
 
 Listing Users and Groups ; calculating Group Membership
 -------------------------------------------------------
