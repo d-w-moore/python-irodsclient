@@ -328,7 +328,7 @@ class TestLogins(unittest.TestCase):
         self.tst0 ( ssl_opt = False, auth_opt = 'native' , env_opt = True, make_irods_pw = True)
 
     # == test explicit scheme 'pam'
-    
+
     def test_5(self):
         self.tst0 ( ssl_opt = True,  auth_opt = 'pam'    , env_opt = False )
 
@@ -513,15 +513,12 @@ class TestWithSSL(unittest.TestCase):
             with open(env_file) as env_file_handle:
                 env = json.load( env_file_handle )
             my_ssl_directory = os.path.expanduser("~/some")
-            create_ssl_dir(ssl_dir = my_ssl_directory)
+            # Elect for efficiency in DH param generation, eg. when setting up for testing.
+            create_ssl_dir(ssl_dir = my_ssl_directory, use_strong_primes_for_dh_generation = False)
             keys_to_update = {key:value.replace("/etc/irods/ssl",my_ssl_directory)
                               for key,value in env.items() if type(value) is str and value.startswith("/etc/irods/ssl")}
             keys_to_update["irods_ssl_verify_server"] = "none"
             env.update( keys_to_update )
-            # --- TODO: remove these lines
-            import pprint
-            print ("Updated = \n", pprint.pformat(env))
-            # ---
             with open(env_file,'w') as f:
                 json.dump(env,f)
             with helpers.make_session() as session:
