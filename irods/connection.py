@@ -458,7 +458,6 @@ class Connection(object):
         logger.info("GSI authorization validated")
 
     def _login_pam(self):
-
         import irods.client_configuration as cfg
         inline_password = (self.account.authentication_scheme == self.account._original_authentication_scheme)
         # By default, let server determine the TTL.
@@ -532,8 +531,9 @@ class Connection(object):
         self._login_native(password = auth_out.result_)
 
         # Store new password in .irodsA if requested.
-        if self.account._auth_file and cfg.legacy_auth.pam.store_password_to_environment:
-            with open(self.account._auth_file,'w') as f:
+        auth_file = (self.account._auth_file or self.account.derived_auth_file)
+        if auth_file and cfg.legacy_auth.pam.store_password_to_environment:
+            with open(auth_file,'w') as f:
                 f.write(obf.encode(auth_out.result_))
                 logger.debug('new PAM pw write succeeded')
 
