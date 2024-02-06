@@ -5,3 +5,4 @@ RUN for phase in initialize install-essential-packages add-package-repo; do \
     done
 RUN /install.sh 4
 COPY start_postgresql_and_irods.sh /
+CMD bash /start_postgresql_and_irods.sh

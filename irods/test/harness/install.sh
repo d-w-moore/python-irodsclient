@@ -1,12 +1,5 @@
 #!/bin/bash
 
-: ${APT_INSTALL:=0}
-
-##
-## bionic part must be computed
-##
-
-: ${IRODS_VSN:=4.3.1-0~bionic}
 IRODS_HOME=/var/lib/irods
 DEV_HOME="$HOME"
 : ${DEV_REPOS:="$DEV_HOME/github"}
@@ -23,6 +16,10 @@ add_package_repo()
       sudo apt update
 }
 
+DIST_NAME=$(lsb_release -sc)
+
+: ${IRODS_VSN:=4.3.1-0~$DIST_NAME}
+
 while [[ "$1" = -* ]]; do
   ARG="$1"
   shift
@@ -33,7 +30,6 @@ while [[ "$1" = -* ]]; do
     -v) VERBOSE=1;;
   esac
 done
-
 
 
 run_phase() {

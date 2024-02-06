@@ -13,3 +13,8 @@ if ! id -u irods >/dev/null 2>&1 ; then
     IRODS_VSN=$(jq -r '.irods_version' $VERSION_file) /install.sh 5
 fi
 su - irods -c '~/irodsctl restart'
+pgrep irodsServer
+STATUS=$?
+echo "($STATUS)" >/tmp/irods_status
+[ $STATUS -eq 0 ] || exit 120
+tail -f /dev/null

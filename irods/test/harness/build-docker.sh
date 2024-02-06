@@ -9,6 +9,5 @@ DOCKER=docker
 for dockerfile in [0-9]*.Dockerfile; do 
     image_name=${dockerfile#[0-9]*_}
     image_name=${image_name%.Dockerfile}
-    $DOCKER build -f $dockerfile -t $image_name . || exit
+    $DOCKER build -f $dockerfile -t $image_name . ${NO_CACHE+"--no-cache"} || exit
 done
-
