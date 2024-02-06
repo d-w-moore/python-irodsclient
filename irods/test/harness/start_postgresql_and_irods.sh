@@ -8,12 +8,8 @@ do
 done
 [ -z "$x" ] || { echo >&2 "Error -- database didn't start" ; exit 1; }
 if ! id -u irods >/dev/null 2>&1 ; then
-    if [ -f "${ICAT_DEFERRED_CREATEDB}" ] ; then
-        ~/ubuntu_irods_installer/install.sh --w=create-db 0
-        rm -f "${ICAT_DEFERRED_CREATEDB}"
-    fi
+    /install.sh --w=create-db 0
     VERSION_file=$(ls /var/lib/irods/{VERSION,version}.json.dist 2>/dev/null)
-    IRODS_VSN=$(jq -r '.irods_version' $VERSION_file) ~/ubuntu_irods_installer/install.sh 5
-else
-    su - irods -c '~/irodsctl start'
+    IRODS_VSN=$(jq -r '.irods_version' $VERSION_file) /install.sh 5
 fi
+su - irods -c '~/irodsctl restart'

@@ -1,24 +1,7 @@
-ARG linux_vsn="ubuntu:18.04"
-FROM ${linux_vsn}
-ARG irods_vsn="4.3.1-0~bionic"
-
-ARG createdb=""
-ENV ICAT_DEFERRED_CREATEDB /tmp/icat_deferred_createdb
-
-RUN apt update
-RUN apt install -y sudo git
-WORKDIR /root
-RUN git clone http://github.com/d-w-moore/ubuntu_irods_installer
-RUN if [ -n "${createdb}" ]; then \
-        /root/ubuntu_irods_installer/install.sh --w="config-essentials create-db" 0 ;\
-    else \
-        /root/ubuntu_irods_installer/install.sh --w="config-essentials" 0 ;\
-        touch "${ICAT_DEFERRED_CREATEDB}" ;\
-    fi
-RUN /root/ubuntu_irods_installer/install.sh --w="add-package-repo" 0
-RUN /root/ubuntu_irods_installer/install.sh --i=${irods_vsn} -r 4
-# --- set up script for command line iRODS install ---
-
+FROM ubuntu:18.04
+COPY install.sh /
+RUN for phase in initialize install-essential-packages add-package-repo; do \
+        bash /install.sh --w=$phase 0; \
+    done
+RUN /install.sh 4
 COPY start_postgresql_and_irods.sh /
-RUN chmod +x /start_postgresql_and_irods.sh
-RUN apt update && apt install vim iputils-ping -y
