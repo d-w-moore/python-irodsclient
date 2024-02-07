@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
+testscript=${1}
+testscript_abspath=$(realpath "$testscript")
 DIR=$(dirname $0)
 cd $DIR
-testscript=${1}
 
 declare -A images=(
     [test_1.sh]=install-irods
     [test_2.sh]=bats-python3
+    [test_3.bats]=bats-python3
 )
 image=${images[$(basename $testscript)]}
 reporoot=$(realpath ./tests/repo)
@@ -26,4 +28,4 @@ while :; do
     break
 done
 
-docker exec $C $INNER_MOUNT/$(realpath --relative-to $reporoot $testscript)
+docker exec $C $INNER_MOUNT/$(realpath --relative-to $reporoot "$testscript_abspath")
