@@ -25,7 +25,7 @@ while [[ "$1" = -* ]]; do
   shift
   case $ARG in
     --i=* | --irods=* |\
-    --irods-version=*) IRODS_VSN=${ARG#*=};;
+    --irods-version=*) IRODS_PACKAGE_VERSION=${ARG#*=};;
     --w=* | --with=* | --with-options=* ) withopts=${ARG#*=} ;;
     -v) VERBOSE=1;;
   esac
@@ -101,11 +101,12 @@ ________"
     ;;
 
  4)
-   sudo apt install -y irods-{dev,runtime}${IRODS_VSN:+"=$IRODS_VSN"}
+   sudo apt install -y irods-{dev,runtime}${IRODS_PACKAGE_VERSION:+"=$IRODS_PACKAGE_VERSION"}
    if [[ $with_opts != *\ basic\ * ]]; then
-     sudo apt install -y irods-{icommands,server,database-plugin-postgres}${IRODS_VSN:+"=$IRODS_VSN"}
+     sudo apt install -y irods-{icommands,server,database-plugin-postgres}${IRODS_PACKAGE_VERSION:+"=$IRODS_PACKAGE_VERSION"}
    fi
  ;;
+
  5)
  if [ ! "$IRODS_VSN" '<' "4.3" ]; then
     PYTHON=python3
