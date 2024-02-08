@@ -38,7 +38,9 @@ def create_ssl_dir(irods_key_path = 'irods.key'):
         with open("/dev/null","wb") as dev_null:
             if 0 == create_server_cert(process_output = dev_null, irods_key_path = irods_key_path):
                 if not keep_old:
-                    Popen('openssl dhparam -2 -out dhparams.pem',**silent_run).communicate()
+                    # TODO : verify SSL still works ok in iRODS with -dsaparam
+                    # TODO : possibly drive use of -dsaparam from a global command switch eg. --params-for-test-only
+                    Popen('openssl dhparam -dsaparam -out dhparams.pem 4096',**silent_run).communicate()
         return os.listdir(".")
     finally:
         os.chdir(save_cwd)
