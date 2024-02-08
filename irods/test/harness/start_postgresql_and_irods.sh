@@ -16,5 +16,5 @@ su - irods -c '~/irodsctl restart'
 pgrep irodsServer
 STATUS=$?
 echo "($STATUS)" >/tmp/irods_status
-[ $STATUS -eq 0 ] || exit 120
+[ $STATUS -eq 0 ] || exit 125
 tail -f /dev/null
