@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Start containers
-        run: docker compose -f "harness-docker-compose.yml" up -d --build
+        run: docker compose -f "docker-testing/harness-docker-compose.yml" up -d --build
       
       - name: Run tests
         run: python run_the_tests.py
