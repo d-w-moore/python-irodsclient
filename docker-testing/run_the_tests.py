@@ -1,3 +1,5 @@
+import irods
+
 print('the tests have begun')
 
 print('the tests are complete')
