@@ -1,0 +1,35 @@
+name: run-the-tests
+
+on: [push, pull_request]
+
+jobs:
+  tests:
+    timeout-minutes: 20
+
+    name: ${{ matrix.python }}
+    runs-on: ubuntu-latest
+#    container: ${{ matrix.os }}
+    strategy:
+      matrix:
+#        python: ['2.7','3.4','3.6','3.7','3.8','3.9','3.10','3.11','3.12']
+        python: ['2.7','3.4']
+#        os: ['ubuntu:20.04','ubuntu:22.04']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start containers
+        run: docker compose -f docker-testing/harness-docker-compose.yml up -d --build
+
+      - name: Get Python prerequisites      
+        run: |
+             python -m pip install --upgrade pip
+             pip install python-irodsclient
+
+      - name: Run tests
+        run: python docker-testing/run_the_tests.py
+
+      - name: Stop containers
+        if: always()
+        run: docker compose -f docker-testing/harness-docker-compose.yml down
