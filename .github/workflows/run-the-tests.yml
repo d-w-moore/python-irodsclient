@@ -1,0 +1,22 @@
+name: run-the-tests
+
+on: [push, pull_request]
+
+jobs:
+  tests:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start containers
+        run: docker compose -f "harness-docker-compose.yml" up -d --build
+      
+      - name: Run tests
+        run: python run_the_tests.py
+
+      - name: Stop containers
+        if: always()
+        run: docker compose -f "harness-docker-compose.yml" down
