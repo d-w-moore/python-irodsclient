@@ -5,7 +5,13 @@ on: [push, pull_request]
 jobs:
   tests:
     timeout-minutes: 20
-    runs-on: ubuntu-latest
+
+    name: ${{ matrix.os }}-${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python: ['2.7','3.4','3.6','3.7','3.8','3.9','3.10','3.11','3.12']
+        os: ['ubuntu:20.04','ubuntu:22.04']
 
     steps:
       - name: Checkout
@@ -13,7 +19,6 @@ jobs:
 
       - name: Start containers
         run: docker compose -f docker-testing/harness-docker-compose.yml up -d --build
-
 
       - name: Get Python prerequisites      
         run: |
