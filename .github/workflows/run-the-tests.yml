@@ -21,12 +21,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Start containers
-        run: ./start_containers.sh
+        run: ./start_containers.sh "${{ matrix.python }}"
 
       - name: run test
         run: |
           client_container=$(docker ps --format "{{.Names}}"|grep python.client)
-          docker exec -it "$(client_container)" /repo/docker-testing/run_tests.sh
+          docker exec -it "$(client_container)" /repo_root/docker-testing/run_tests.sh
 
       - name: Stop containers
         if: always()

@@ -14,13 +14,12 @@ services:
     python-client:
         args:
             - python_version
-            - repo_external
         build:
             context: python_client
         command:
             tail -f /dev/null
         volumes:
-            ${repo_external}:/repo:ro
+            ${repo_external}:/repo_root:ro
 
     irods-catalog-provider:
         build:

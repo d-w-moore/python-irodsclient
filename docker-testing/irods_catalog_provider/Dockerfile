@@ -25,6 +25,7 @@ RUN apt-get update && \
         python3-requests \
         rsyslog \
         unixodbc \
+        gawk \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/*
