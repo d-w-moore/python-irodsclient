@@ -19,7 +19,7 @@ services:
         command:
             tail -f /dev/null
         volumes:
-            ${repo_external}:/repo_root:ro
+            - ${repo_external}:/repo_root:ro
 
     irods-catalog-provider:
         build:
