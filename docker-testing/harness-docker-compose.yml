@@ -11,6 +11,17 @@ services:
         environment:
             - POSTGRES_PASSWORD=testpassword
 
+    python-client:
+        args:
+            - python_version
+            - repo_external
+        build:
+            context: python_client
+        command:
+            tail -f /dev/null
+        volumes:
+            ${repo_external}:/repo:ro
+
     irods-catalog-provider:
         build:
             context: irods_catalog_provider

@@ -23,3 +23,5 @@ echo "Starting server"
 
 cd /usr/sbin
 su irods -c 'bash -c "./irodsServer -u"'
+
+env PORT=8888 command "$(dirname "$0")"/send_oneshot
