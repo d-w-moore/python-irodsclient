@@ -21,7 +21,16 @@ fi
 
 echo "Starting server"
 
+# After successful launch of server (per ils success), signal the client container we are ready
+{
+    while :; do
+        ils >/dev/null 2>&1 && exit
+        sleep 1
+    done
+    chown -R irods:irods /irods_shared
+    env PORT=8888 command "$(dirname "$0")"/send_oneshot
+} &
+
 cd /usr/sbin
 su irods -c 'bash -c "./irodsServer -u"'
 
-env PORT=8888 command "$(dirname "$0")"/send_oneshot
