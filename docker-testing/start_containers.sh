@@ -1,4 +1,5 @@
 #!/bin/bash
+[ -n "$1" ] || { echo >&2 "requires python_version as argument"; exit 1; }
 set -e
 DIR=$(dirname "$0")
 cd "${DIR}"

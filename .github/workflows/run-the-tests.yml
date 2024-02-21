@@ -31,7 +31,7 @@ jobs:
             sleep 1
           done
           echo "client_container = [$client_container]"
-          docker exec -it "$(client_container)" /repo_root/docker-testing/run_tests.sh
+          docker exec -it "${client_container}" /repo_root/docker-testing/run_tests.sh
 
       - name: Stop containers
         if: always()
