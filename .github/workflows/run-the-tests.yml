@@ -25,9 +25,13 @@ jobs:
 
       - name: run test
         run: |
-          client_container=$(docker ps --format "{{.Names}}")
-          echo "list of client containers = [$client_container]"
-          #docker exec -it "$(client_container)" /repo_root/docker-testing/run_tests.sh
+          while :; do
+            client_container=$(docker ps --format "{{.Names}}"|grep python.client)
+            [ -n "$client_container" ] && break
+            sleep 1
+          done
+          echo "client_container = [$client_container]"
+          docker exec -it "$(client_container)" /repo_root/docker-testing/run_tests.sh
 
       - name: Stop containers
         if: always()
