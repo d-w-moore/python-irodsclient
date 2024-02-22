@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -e -x
 DIR=$(dirname "$0")
 cd "$DIR"
 ./recv_oneshot -h irods-provider -p 8888 -t 360
