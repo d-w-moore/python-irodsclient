@@ -24,7 +24,7 @@ echo "Starting server"
 # After successful launch of server (per ils success), signal the client container we are ready
 {
     while :; do
-        ils >/dev/null 2>&1 && exit
+        ils >/dev/null 2>&1 && break
         sleep 1
     done
     chown -R irods:irods /irods_shared
