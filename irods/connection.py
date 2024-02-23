@@ -65,31 +65,37 @@ class Connection(object):
         self._disconnected = False
 
         scheme = self.account._original_authentication_scheme
-        auth_type = ''
+
+        # These variables are just useful diagnostics.  The login_XYZ() methods should fail by
+        # raising exceptions if they encounter authentication errors.
+        auth_module = auth_type = ''
 
         if self.server_version >= (4,3,0):
+            auth_module = None
             # use client side "plugin" module: irods.auth.<scheme>
             irods.auth.load_plugins(subset=[scheme])
             auth_module = getattr(irods.auth, scheme, None)
+
+            # TODO (#518 unrelated): gsi module that also sets _client_ctx?
+
             if auth_module:
                 auth_module.login(self)
                 auth_type = auth_module.__name__
         else:
             # use legacy (iRODS pre-4.3 style) authentication
             auth_type = scheme
-            try:
-                if scheme == NATIVE_AUTH_SCHEME:
-                    self._login_native()
-                elif scheme == GSI_AUTH_SCHEME:
-                    self.client_ctx = None
-                    self._login_gsi()
-                elif scheme == PAM_AUTH_SCHEME:
-                    self._login_pam()
-            except:
+            if scheme == NATIVE_AUTH_SCHEME:
+                self._login_native()
+            elif scheme == GSI_AUTH_SCHEME:
+                self.client_ctx = None
+                self._login_gsi()
+            elif scheme == PAM_AUTH_SCHEME:
+                self._login_pam()
+            else:
                 auth_type = None
 
         if not auth_type:
-            msg = "Authentication failed: scheme = {scheme!r}, auth_type = {auth_type!r}".format(**locals())
+            msg = "Authentication failed: scheme = {scheme!r}, auth_type = {auth_type!r}, auth_module = {auth_module!r}, ".format(**locals())
             raise ValueError(msg)
 
         self.create_time = datetime.datetime.now()
