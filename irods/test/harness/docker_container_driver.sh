@@ -9,6 +9,8 @@ declare -A images=(
     [test_1.sh]=install-irods
     [test_2.sh]=bats-python3
     [test_3.bats]=bats-python3
+
+    [experiment.sh]=ssl-and-pam
 )
 image=${images[$(basename $testscript)]}
 reporoot=$(realpath ./tests/repo)
