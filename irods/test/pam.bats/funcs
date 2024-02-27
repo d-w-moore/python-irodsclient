@@ -1,3 +1,14 @@
+up_from_script_dir() {
+  local x incr=""
+  for ((x=0;x<${1:-0};x++)); do incr+="/.."; done
+  echo $(realpath "$(dirname ${BASH_SOURCE[0]})""$incr")
+}
+
+set_up_ssl() {
+  local SUDO=${1:-""}
+  $SUDO su - irods  -c "$(up_from_script_dir 1)/setupssl.py"
+}
+
 dot_to_space() {
   sed 's/\./ /g'<<<"$1"
 }
