@@ -7,4 +7,6 @@ RUN for phase in initialize install-essential-packages add-package-repo; do \
     done
 RUN /install.sh 4
 COPY start_postgresql_and_irods.sh /
+RUN useradd -ms/bin/bash user
+RUN apt install -y faketime
 CMD bash /start_postgresql_and_irods.sh
