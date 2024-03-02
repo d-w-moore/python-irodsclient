@@ -61,7 +61,7 @@ def test(options, args=()):
             shutil.rmtree(IRODS_SSL_DIR,ignore_errors=True)
         print("Generating new '{}'. This may take a while.".format(IRODS_SSL_DIR), file=sys.stderr)
         ssl_dir_files = create_ssl_dir()
-        print('ssl_dir_files=', ssl_dir_files)
+        print('ssl_dir_files=', ssl_dir_files,file=sys.stderr)
     
 if __name__ == '__main__':
     import getopt
