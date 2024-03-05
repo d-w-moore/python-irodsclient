@@ -117,3 +117,14 @@ finalize_pam_login_for_alice() {
 test_specific_cleanup() {
   eval "$CLEANUP"
 }
+
+# PostgreSQL only
+age_out_pam_password() {
+  local id=$(iquest %s "select USER_ID where USER_NAME = '$1'")
+  local offset=$(sudo su - postgres -c "psql -t ICAT -c 'select pass_expiry_ts from r_user_password where user_id = $id'")
+  local mtime=$(sudo su - postgres -c "psql -t ICAT -c 'select modify_ts from r_user_password where user_id = $id'")
+  mtime=$(sed 's/^\s*0//' <<<"$mtime")
+  ((offset+=1))
+  local new_time=$((mtime - offset))
+  sudo su - postgres -c "psql ICAT -c 'update r_user_password set create_ts=$new_time, modify_ts=$new_time where user_id=$id'"
+}
