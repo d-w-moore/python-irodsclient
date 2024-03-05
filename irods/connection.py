@@ -472,15 +472,13 @@ class Connection(object):
             # Login using PAM password from .irodsA
             try:
                 self._login_native()
-            except (ex.CAT_PASSWORD_EXPIRED, ex.CAT_INVALID_USER, ex.CAT_INVALID_AUTHENTICATION):
+            except (ex.CAT_PASSWORD_EXPIRED, ex.CAT_INVALID_USER, ex.CAT_INVALID_AUTHENTICATION) as exc:
                 time_to_live_in_hours = cfg.legacy_auth.pam.time_to_live_in_hours
                 if cfg.legacy_auth.pam.password_for_auto_renew:
                     new_pam_password = cfg.legacy_auth.pam.password_for_auto_renew
                     # Fall through and retry the native login later, after creating a new PAM password
                 else:
-                    message = ('Time To Live has expired for the PAM password, and no new password is given in ' +
-                               'legacy_auth.pam.password_for_auto_renew.  Please run iinit.')
-                    raise RuntimeError(message)
+                    raise exc
             else:
                 # Login succeeded, so we're within the time-to-live and can return without error.
                 return
