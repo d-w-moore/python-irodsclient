@@ -19,7 +19,7 @@ Examples of options in driver script
 ------------------------------------
 
   1. To start container and run test script:
-     C=$(  ./docker_container_driver.sh -c -L -u testuser  ../pam.bats/experiment.sh )
+     C=$(  ./docker_container_driver.sh -c -L -u testuser  ../scripts/experiment.sh )
 
   2. To manually examine results afterward:
      docker exec -it $C bash 
