@@ -3,7 +3,7 @@ set -e -x
 DIR=$(dirname "$0")
 cd "$DIR"
 ./recv_oneshot -h irods-catalog-provider -p 8888 -t 360
-REPO="$(realpath ./repo)"
+REPO="$(./print_repo_root_location)"
 python -m pip install "$REPO[tests]"
 ./iinit.py \
     host irods-catalog-provider \
