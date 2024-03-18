@@ -23,6 +23,8 @@ logger.addHandler(h)
 
 # Load all tests in the current directory and run them
 if __name__ == "__main__":
+    # change to script directory so tests will be discovered
+    os.chdir(os.path.dirname(sys.argv[0]))
     # must set the path for the imported tests
     sys.path.insert(0, os.path.abspath('../..'))
 
