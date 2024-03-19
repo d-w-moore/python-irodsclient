@@ -15,5 +15,15 @@ $PYTHON ./iinit.py \
     user rods \
     password rods \
     zone tempZone
-cd ~
-python "$REPO"/irods/test/runner.py
+
+if [ -d /irods_shared ]; then
+    groupadd -o irods $(stat -c%g /irods_shared)  # Appropriate the integer codes for irods group ...
+    useradd irods $(stat -c%u /irods_shared)   # ... and user.
+    mkdir /irods_shared/{tmp,reg_resc}
+    chown irods.irods /irods_shared/{tmp,reg_resc}
+    chmod 777 /irods_shared/reg_resc
+    chmod g+ws /irods_shared/tmp
+    useradd user -o -G irods -m -s/bin/bash
+fi
+
+su - user -c "$PYTHON '$REPO'/irods/test/runner.py"

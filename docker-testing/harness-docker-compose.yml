@@ -20,11 +20,11 @@ services:
             tail -f /dev/null
         volumes:
             - ${repo_external}:/repo_root:ro
-            - /tmp/irods-client-share:/irods_shared
+            - /tmp/irods-client-share-py${python_version}:/irods_shared
 
     irods-catalog-provider:
         volumes:
-            - /tmp/irods-client-share:/irods_shared
+            - /tmp/irods-client-share-py${python_version}:/irods_shared
         build:
             context: irods_catalog_provider
         shm_size: 500mb
