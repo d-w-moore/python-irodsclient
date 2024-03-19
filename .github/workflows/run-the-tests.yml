@@ -36,4 +36,4 @@ jobs:
 
       - name: Stop containers
         if: always()
-        run: docker-compose -f harness-docker-compose.yml down
+        run: docker compose -f harness-docker-compose.yml down
