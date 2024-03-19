@@ -11,4 +11,5 @@ python -m pip install "$REPO[tests]"
     user rods \
     password rods \
     zone tempZone
+cd ~
 python "$REPO"/irods/test/runner.py
