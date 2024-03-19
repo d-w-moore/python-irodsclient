@@ -7,6 +7,7 @@ DIR=$(dirname "$0")
 cd "${DIR}"
 echo "python_version=${PYTHON_VERSION}" >.env
 echo "repo_external=$(./print_repo_root_location)" >>.env
+echo "parent_pid=$$" >>.env
 
 docker compose -f harness-docker-compose.yml build $*
 docker compose -f harness-docker-compose.yml up -d
