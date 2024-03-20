@@ -27,4 +27,4 @@ $PYTHON '$DIR'/iinit.py \
     user rods \
     password rods \
     zone tempZone
-$PYTHON '$REPO'/irods/test/runner.py" $*"
+$PYTHON '$REPO'/irods/test/runner.py $*"
