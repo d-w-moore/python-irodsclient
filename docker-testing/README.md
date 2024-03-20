@@ -21,3 +21,22 @@ The tests suite can also be run on any workstation with "docker compose" install
       You'll see the test output displayed on the console.  At completion, xmlrunner outputs are in /tmp.
 
    4. use `docker logs -f` with the provider instance name to tail the irods server log output
+
+DEBUGGING
+---------
+We can also to run a specific test that we specify by name:
+
+```
+$ docker exec -it <name-of-python-client-container> /repo_root/docker_testing/run_tests.sh irods.test.<module>.<class>.<method>
+```
+
+Optionally we can also enter the PDB command-line debugger at a place of our choosing in the source code, by stopping on a breakpoint,
+and then stepping through code.
+
+The breakpoint can be placed by adding the line
+
+```
+import pdb;pdb.set_trace()
+```
+
+immediately before the source line in the test code at which we wish to enter the debugger.
