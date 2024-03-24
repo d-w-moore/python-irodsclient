@@ -25,13 +25,14 @@ def create_server_cert(process_output = sys.stdout, irods_key_path = 'irods.key'
     p.wait()
     return p.returncode
 
-def create_ssl_dir(irods_key_path = 'irods.key'):
+def create_ssl_dir(irods_key_path = 'irods.key', ssl_dir = ''):
+    ssl_dir = ssl_dir or IRODS_SSL_DIR
     save_cwd = os.getcwd()
     silent_run =  { 'shell': True, 'stderr' : PIPE, 'stdout' : PIPE }
     try:
-        if not (os.path.exists(IRODS_SSL_DIR)):
-            os.mkdir(IRODS_SSL_DIR)
-        os.chdir(IRODS_SSL_DIR)
+        if not (os.path.exists(ssl_dir)):
+            os.mkdir(ssl_dir)
+        os.chdir(ssl_dir)
         if not keep_old:
             Popen("openssl genrsa -out '{irods_key_path}' 2048 && chmod 600 '{irods_key_path}'".format(**locals()),
                   **silent_run).communicate()
