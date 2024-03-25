@@ -15,7 +15,7 @@ The tests suite can also be run on any workstation with "docker compose" install
 
    3. run:
       ```
-      docker exec <name-of-python-client-container> /repo_root/docker_testing/run_tests.sh
+      docker exec <name-of-python-client-container> /repo_root/docker-testing/run_tests.sh
       ```
       (Note:  `/repo_root` is an actual literal path, internal to the container.)
       You'll see the test output displayed on the console.  At completion, xmlrunner outputs are in /tmp.
