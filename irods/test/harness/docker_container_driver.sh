@@ -3,8 +3,9 @@
 KILL_TEST_CONTAINER=1
 RUN_AS_USER=""
 ECHO_CONTAINER=""
-
+RUN_NULL_SCRIPT=""
 EXPLICIT_WORKDIR=""
+
 while [[ $1  = -* ]]; do
     if [ "$1" = -c ]; then
         ECHO_CONTAINER=1
@@ -22,7 +23,14 @@ while [[ $1  = -* ]]; do
         EXPLICIT_WORKDIR="$2"
         shift 2
     fi
+    if [ "$1" = -x ]; then
+        RUN_NULL_SCRIPT=1
+        shift
+    fi
 done
+
+DIR=$(dirname $0)
+[ -n "$RUN_NULL_SCRIPT" ] && set "$DIR/null.sh"
 
 if [ "$1" = "" ]; then
     echo >&2 "Usage: $0 [options] /path/to/script"
@@ -30,7 +38,6 @@ if [ "$1" = "" ]; then
     exit 1
 fi
 
-DIR=$(dirname $0)
 . "$DIR"/test_script_parameters
 
 testscript=${1}
@@ -92,6 +99,10 @@ while :; do
     [ $? -ne 0 ] && { echo -n . >&2; continue; }
     break
 done
+
+[ -n "$RUN_NULL_SCRIPT" ] && [ ! -x "$1" ] && {
+    echo >&2 "exiting..."; exit 0;
+}
 
 docker exec ${RUN_AS_USER:+"-u$RUN_AS_USER"} \
             ${WORKDIR:+"-w$WORKDIR"} \

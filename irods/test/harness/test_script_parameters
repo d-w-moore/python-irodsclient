@@ -20,6 +20,7 @@ declare -A wrappers=(
 # keys for Image and User refer to the basename after resolution to a wrapper if one is used
 
 declare -A images=(
+    [null.sh]=ssl-and-pam
     [test_1.sh]=install-irods
     [test_2.sh]=bats-python3
     [test_3.bats]=bats-python3
