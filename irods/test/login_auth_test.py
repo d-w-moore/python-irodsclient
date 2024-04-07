@@ -202,7 +202,7 @@ class TestLogins(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.admin = helpers.make_session()
-        if cls.admin.server_version > (4,3):
+        if cls.admin.server_version >= (4,3):
             cls.PAM_SCHEME_STRING = cls.user_auth_envs['.irods.pam']['AUTH'] = 'pam_password'
 
     @classmethod
@@ -244,7 +244,7 @@ class TestLogins(unittest.TestCase):
 
     def tst0(self, ssl_opt, auth_opt, env_opt, name = TEST_RODS_USER, make_irods_pw = False):
         _auth_opt = auth_opt
-        if auth_opt.startswith('pam'):
+        if auth_opt in ('pam', 'pam_password'):
             auth_opt = self.PAM_SCHEME_STRING
         with self._setup_rodsuser_and_optional_pw(name = name, make_irods_pw = make_irods_pw):
             self.envdirs = self.create_env_dirs()
@@ -328,7 +328,7 @@ class TestLogins(unittest.TestCase):
         self.tst0 ( ssl_opt = False, auth_opt = 'native' , env_opt = True, make_irods_pw = True)
 
     # == test explicit scheme 'pam'
-    
+
     def test_5(self):
         self.tst0 ( ssl_opt = True,  auth_opt = 'pam'    , env_opt = False )
 
@@ -509,20 +509,25 @@ class TestWithSSL(unittest.TestCase):
 
     def test_ssl_with_server_verify_set_to_none_281(self):
         env_file = os.path.expanduser('~/.irods/irods_environment.json')
-        with helpers.file_backed_up(env_file):
-            with open(env_file) as env_file_handle:
-                env = json.load( env_file_handle )
-            my_ssl_directory = os.path.expanduser("~/some")
-            # Elect for efficiency in DH param generation, eg. when setting up for testing.
-            create_ssl_dir(ssl_dir = my_ssl_directory, use_strong_primes_for_dh_generation = False)
-            keys_to_update = {key:value.replace("/etc/irods/ssl",my_ssl_directory)
-                              for key,value in env.items() if type(value) is str and value.startswith("/etc/irods/ssl")}
-            keys_to_update["irods_ssl_verify_server"] = "none"
-            env.update( keys_to_update )
-            with open(env_file,'w') as f:
-                json.dump(env,f)
-            with helpers.make_session() as session:
-                session.collections.get('/{session.zone}/home/{session.username}'.format(**locals()))
+        my_ssl_directory = ''
+        try:
+            with helpers.file_backed_up(env_file):
+                with open(env_file) as env_file_handle:
+                    env = json.load( env_file_handle )
+                my_ssl_directory = tempfile.mkdtemp(dir = os.path.expanduser("~"))
+                # Elect for efficiency in DH param generation, eg. when setting up for testing.
+                create_ssl_dir(ssl_dir = my_ssl_directory, use_strong_primes_for_dh_generation = False)
+                settings_to_update = {key:value.replace("/etc/irods/ssl",my_ssl_directory)
+                                  for key,value in env.items() if type(value) is str and value.startswith("/etc/irods/ssl")}
+                settings_to_update["irods_ssl_verify_server"] = "none"
+                env.update( settings_to_update )
+                with open(env_file,'w') as f:
+                    json.dump(env,f)
+                with helpers.make_session() as session:
+                    session.collections.get('/{session.zone}/home/{session.username}'.format(**locals()))
+        finally:
+            if my_ssl_directory:
+                shutil.rmtree(my_ssl_directory)
 
 if __name__ == '__main__':
     # let the tests find the parent irods lib

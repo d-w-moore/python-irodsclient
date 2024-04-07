@@ -191,7 +191,7 @@ class Connection(object):
         # See https://stackoverflow.com/questions/30461969/disable-default-certificate-verification-in-python-2-7-9/49040695#49040695
         ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=CAfile, capath=CApath)
         # Note: check_hostname must be assigned prior to verify_mode property or Python library complains!
-        ctx.check_hostname = (verify_server.startswith('host') and verify != ssl.CERT_NONE)
+        ctx.check_hostname = (verify_server == 'hostname' and verify != ssl.CERT_NONE)
         ctx.verify_mode = verify
         return ctx
 
