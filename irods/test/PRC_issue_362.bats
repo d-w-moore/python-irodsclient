@@ -4,15 +4,8 @@
 . $BATS_TEST_DIRNAME/scripts/funcs
 
 setup() {
-  local -A chars=(
-    [semicolon]=";"
-    [atsymbol]="@"
-    [equals]="="
-    [ampersand]="&"
-  )
   [ $BATS_TEST_NUMBER = 1 ] && echo "---" >/tmp/PRC_test_issue_362
   local name=${BATS_TEST_DESCRIPTION##*_}
-  CHR="${chars[$name]}"
 
   ## Arrange for secrets file to be generated internally by the Python client
   cat >~/.python_irodsclient <<-EOF
@@ -43,13 +36,14 @@ setup() {
 
 prc_test()
 {
+  local CHR="$1"
   local USER="alissa"
   local PASSWORD="my${CHR}pass"
   sudo chpasswd <<<"$USER:$PASSWORD"
   env PYTHON_IRODSCLIENT_CONFIGURATION_PATH='' python ~/test_get_home_coll.py
 }
 
-@test "test_with_atsymbol" { prc_test; }
-@test "test_with_semicolon" { prc_test; }
-@test "test_with_equals" { prc_test; }
-@test "test_with_ampersand" { prc_test; }
+@test "test_with_atsymbol" { prc_test "@"; }
+@test "test_with_semicolon" { prc_test ";"; }
+@test "test_with_equals" { prc_test "="; }
+@test "test_with_ampersand" { prc_test "&"; }

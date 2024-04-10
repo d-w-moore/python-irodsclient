@@ -489,6 +489,8 @@ class Connection(object):
             if getattr(self,'DISALLOWING_PAM_PLAINTEXT',True):
                 raise PlainTextPAMPasswordError
 
+        # In general authentication API, a ';' and '=' in the password would be misinterpreted due to those
+        # characters' special meaning in the context string parameter.
         use_dedicated_pam_api = len(ctx) >= MAX_NAME_LEN or \
                                 {';','='}.intersection(set(new_pam_password))
 
