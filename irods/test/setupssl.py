@@ -73,7 +73,20 @@ def test(options, args=()):
     
 if __name__ == '__main__':
     import getopt
-    opt, arg_list = getopt.getopt(sys.argv[1:],'x:fh:kq')
+    try:
+        opt, arg_list = getopt.getopt(sys.argv[1:],'x:fh:kq')
+    except getopt.GetoptError:
+        print("""Usage: {sys.argv[0]} [-f] [-h <hostname>] [-k] [-q] [-x <extension>] 
+        -f  Force replacement of the existing SSL directory (/etc/irods/ssl) with a new one, containing newly generated files.
+        -h  In the generated certificate, use the given hostname rather than the value returned from socket.gethostname()
+        -k  (Keep old secrets files.) Do not generate new key file or dhparams.pem file.
+        -q  For testing; do a quick generation of a dhparams.pem file rather than waiting on system entropy to make it more secure.
+        -x  Optional extra extension for appending to end of the filename for the generated certificate.
+
+        Any invalid option prints this help.
+        """.format(**locals()), file = sys.stderr)
+        exit(1)
+
     opt_lookup = dict(opt)
 
     ext = opt_lookup.get('-x','')
