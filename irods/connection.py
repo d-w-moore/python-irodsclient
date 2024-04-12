@@ -75,9 +75,6 @@ class Connection(object):
             # use client side "plugin" module: irods.auth.<scheme>
             irods.auth.load_plugins(subset=[scheme])
             auth_module = getattr(irods.auth, scheme, None)
-
-            # TODO (#518 unrelated): gsi module that also sets _client_ctx?
-
             if auth_module:
                 auth_module.login(self)
                 auth_type = auth_module.__name__
