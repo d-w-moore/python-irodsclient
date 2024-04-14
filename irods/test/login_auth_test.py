@@ -211,6 +211,12 @@ class TestLogins(unittest.TestCase):
 
     def setUp(self):
         super(TestLogins,self).setUp()
+        admin = self.admin
+        user = admin.users.get(admin.username)
+        if user.type != 'rodsadmin':
+            self.skipTest('Test runnable only by rodsadmin.')
+        if admin.host not in ('localhost', socket.gethostname()):
+            self.skipTest('Test must be run co-resident with server')
 
     def tearDown(self):
         for envdir in getattr(self, 'envdirs', []):
