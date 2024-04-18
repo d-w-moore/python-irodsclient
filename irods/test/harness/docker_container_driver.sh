@@ -34,7 +34,7 @@ DIR=$(dirname $0)
 . "$DIR"/test_script_parameters
 
 testscript=${1}
-
+export raw_testscript=$testscript
 testscript_basename=$(basename "$testscript")
 arglist=${wrapper_arglist[$testscript_basename]}  # arglist dominated by symbolic link name if any
 
@@ -96,6 +96,7 @@ done
 docker exec ${RUN_AS_USER:+"-u$RUN_AS_USER"} \
             ${WORKDIR:+"-w$WORKDIR"} \
 	    -e "ORIGINAL_SCRIPT_RELATIVE_TO_ROOT=$ORIGINAL_SCRIPT_RELATIVE_TO_ROOT" \
+	    -e "RAW_TESTSCRIPT=$raw_testscript" \
             $CONTAINER \
             $INNER_MOUNT/$(realpath --relative-to $reporoot "$testscript_abspath") \
             $arglist
