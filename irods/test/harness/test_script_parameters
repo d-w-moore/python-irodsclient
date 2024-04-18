@@ -15,7 +15,9 @@ declare -A wrappers=(
     [PRC_issue_362.bats]=./login_auth_test.sh
     [test001_pam_password_expiration.bats]=../login_auth_test.sh
     [demo.sh]=./demo_hook.sh
+    [test_ssl_context.bats]=./setup_ssl_context_tests.sh
 )
+
 
 # keys for Image and User refer to the basename after resolution to a wrapper if one is used
 
@@ -27,6 +29,7 @@ declare -A images=(
     [fail.sh]=ssl-and-pam
     [login_auth_test.sh]=ssl-and-pam
     [demo_hook.sh]=ssl-and-pam
+    [setup_ssl_context_tests.sh]=ssl-and-pam
 )
 
 declare -A user=(

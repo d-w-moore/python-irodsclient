@@ -25,6 +25,8 @@
 IRODS_LOCAL_ENV=~/.irods/irods_environment.json
 IRODS_ACCOUNT_ENV=~irods/.irods/irods_environment.json
 
+REPO=/prc
+
 edit_core_re () {
     if [ "$1" = ssl ]; then
         sudo su irods -c "sed -i.orig 's/\(^\s*acPreConnect.*CS_NEG\)\([A-Z_]*\)/\1_REQUIRE/' /etc/irods/core.re"
@@ -82,10 +84,10 @@ if [ "`cat /tmp/run`" != "$RUN" ]; then
     sudo $REPO_SCRIPTS/json_config --clear-store ${ABBREVIATIONS[*]}
 
     # Set up the basic server cert, key, and DH params file.
-    [ -e /etc/irods/ssl ] || sudo su irods -c "$REPO_SCRIPTS/setupssl.py -f"
+    [ -e /etc/irods/ssl ] || sudo su irods -c "python3 $REPO_SCRIPTS/setupssl.py -f -q"
 
     # Set up another cert with non-matching hostname.
-    sudo su irods -c "$REPO_SCRIPTS/setupssl.py -kf -x.localhost -hlocalhost"
+    sudo su irods -c "python3 $REPO_SCRIPTS/setupssl.py -kf -x.localhost -hlocalhost"
     sudo su irods -c "c_rehash /etc/irods/ssl"
 
     # Change the iRODS svc account user's (and current user's) iRODS environment file for SSL.
