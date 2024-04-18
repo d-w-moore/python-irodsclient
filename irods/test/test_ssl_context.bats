@@ -25,8 +25,6 @@
 IRODS_LOCAL_ENV=~/.irods/irods_environment.json
 IRODS_ACCOUNT_ENV=~irods/.irods/irods_environment.json
 
-REPO=/prc
-
 edit_core_re () {
     if [ "$1" = ssl ]; then
         sudo su irods -c "sed -i.orig 's/\(^\s*acPreConnect.*CS_NEG\)\([A-Z_]*\)/\1_REQUIRE/' /etc/irods/core.re"
@@ -52,7 +50,7 @@ else
     log () { :; }			 		# NOP
 fi
 
-: ${REPO:=~/python-irodsclient}
+: ${REPO:=/prc}
 REPO_SCRIPTS="$REPO/irods/test"
 PATH=$REPO_SCRIPTS:$PATH
 
@@ -77,10 +75,11 @@ if [ "`cat /tmp/run`" != "$RUN" ]; then
     ## -- Begin one-time initialization --
 
     #  Initialize the variable abbreviations
-    json_config --clear-store ${ABBREVIATIONS[*]}
+    #########################################################                         json_config --clear-store ${ABBREVIATIONS[*]}
     # The next two lines were necessary under Centos 7. sudo behaved differently wrt
     # what is considered the home directory, so the wrong ~/.store* file was being used.
-    sudo su irods -c "$REPO_SCRIPTS/json_config --clear-store ${ABBREVIATIONS[*]}"
+
+    ## sudo su irods -c "$REPO_SCRIPTS/json_config --clear-store ${ABBREVIATIONS[*]}"
     sudo $REPO_SCRIPTS/json_config --clear-store ${ABBREVIATIONS[*]}
 
     # Set up the basic server cert, key, and DH params file.
@@ -98,7 +97,7 @@ if [ "`cat /tmp/run`" != "$RUN" ]; then
         'dh_params_file="/etc/irods/ssl/dhparams.pem"'\
         'certificate_chain_file="/etc/irods/ssl/irods.crt"'\
         'verify_server="cert"'
-    json_config -i $IRODS_LOCAL_ENV\
+    sudo $REPO_SCRIPTS/json_config -i $IRODS_LOCAL_ENV\
         'client_server_negotiation="request_server_negotiation"'\
         'encryption_algorithm="AES-256-CBC"'\
         'encryption_key_size=32'\
@@ -145,18 +144,18 @@ teardown() {
 # THE TESTS THEMSELVES
 
 @test "basic_test" {
-    json_config -i $IRODS_LOCAL_ENV 'verify_server="hostname"'
+    sudo $REPO_SCRIPTS/json_config -i $IRODS_LOCAL_ENV 'verify_server="hostname"'
     python3 $REPO_SCRIPTS/ssl_test_client.py
 }
 
 @test "capath_test" {
-    json_config -i $IRODS_LOCAL_ENV 'ca_certificate_path="/etc/irods/ssl"'\
+    sudo $REPO_SCRIPTS/json_config -i $IRODS_LOCAL_ENV 'ca_certificate_path="/etc/irods/ssl"'\
                                      'ca_certificate_file='
     python3 $REPO_SCRIPTS/ssl_test_client.py
 }
 
 @test "nocerts_test" {
-    json_config -i $IRODS_LOCAL_ENV 'ca_certificate_path='\
+    sudo $REPO_SCRIPTS/json_config -i $IRODS_LOCAL_ENV 'ca_certificate_path='\
                                     'ca_certificate_file='\
                                     'verify_server="none"'
     python3 $REPO_SCRIPTS/ssl_test_client.py
@@ -164,7 +163,8 @@ teardown() {
 
 @test "non_matching_hostname_test" {
     local CERT_NOT_MATCHING_HOSTNAME=/etc/irods/ssl/irods.crt.localhost
-    sudo $REPO_SCRIPTS/json_config -i $IRODS_LOCAL_ENV $IRODS_ACCOUNT_ENV\
+    ## WAS: sudo $REPO_SCRIPTS/json_config -i $IRODS_LOCAL_ENV #$IRODS_ACCOUNT_ENV\
+    sudo $REPO_SCRIPTS/json_config -i $IRODS_LOCAL_ENV \
                                     'verify_server="cert"'\
                                     "ca_certificate_file='$CERT_NOT_MATCHING_HOSTNAME'"
     sudo $REPO_SCRIPTS/json_config -i $IRODS_ACCOUNT_ENV\
