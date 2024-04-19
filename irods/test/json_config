@@ -76,7 +76,8 @@ def PRESERVE(modifier = 'no-replace'):
 
 def RESTORE():
     input_ = [ (k[3:],j) for k,j in store.items() if k.startswith('\0i:') ]
-    filt = None if not opt.input else lambda x:x[0] in opt.input
+    input_abspaths = [abspath(fn) for fn in opt.input]
+    filt = None if not opt.input else lambda x:(x[0] in input_abspaths)
     input_ = filter(filt,input_)
     for f,j in input_:
         open(f,'w').write(json.dumps(j,indent=4))
