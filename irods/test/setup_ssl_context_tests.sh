@@ -11,4 +11,5 @@ iinit_as_rods >/dev/null 2>&1 || { echo >&2 "couldn't iinit as rods"; exit 2; }
 original_script=/prc/$ORIGINAL_SCRIPT_RELATIVE_TO_ROOT
 
 export RUN=$$:`date +%s`
+export REPO=/prc
 bats "$original_script"

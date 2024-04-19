@@ -50,7 +50,7 @@ else
     log () { :; }			 		# NOP
 fi
 
-: ${REPO:=/prc}
+: ${REPO:=~/python-irodslient}
 REPO_SCRIPTS="$REPO/irods/test"
 PATH=$REPO_SCRIPTS:$PATH
 
