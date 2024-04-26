@@ -1304,7 +1304,13 @@ class TestDataObjOps(unittest.TestCase):
             resource.remove()
 
 
-    def test_obj_put_get(self):
+    def test_obj_put_get_small(self):
+        self._check_obj_put_get(1024 * 1024 * 16)
+
+    def test_obj_put_get_large(self):
+        self._check_obj_put_get(data_object_manager.MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE + 1)
+        
+    def _check_obj_put_get(self, file_size):
         # Can't do one step open/create with older servers
         if self.sess.server_version <= (4, 1, 4):
             self.skipTest('For iRODS 4.1.5 and newer')
@@ -1317,7 +1323,7 @@ class TestDataObjOps(unittest.TestCase):
 
         # make random 16M binary file
         with open(test_file, 'wb') as f:
-            f.write(os.urandom(1024 * 1024 * 16))
+            f.write(os.urandom(file_size))
 
         # compute file checksum
         digest = self.sha256_checksum(test_file)
