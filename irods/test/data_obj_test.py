@@ -1305,9 +1305,11 @@ class TestDataObjOps(unittest.TestCase):
 
 
     def test_obj_put_get_small(self):
+        # Test put/get with 16M binary file that will be transferred with a single thread.
         self._check_obj_put_get(1024 * 1024 * 16)
 
     def test_obj_put_get_large(self):
+        # Test put/get with binary file that is large enough to trigger parallel transfers.
         self._check_obj_put_get(data_object_manager.MAXIMUM_SINGLE_THREADED_TRANSFER_SIZE + 1)
         
     def _check_obj_put_get(self, file_size):
@@ -1321,7 +1323,7 @@ class TestDataObjOps(unittest.TestCase):
         test_file = os.path.join(test_dir, filename)
         collection = self.coll.path
 
-        # make random 16M binary file
+        # make random binary file
         with open(test_file, 'wb') as f:
             f.write(os.urandom(file_size))
 
