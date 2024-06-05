@@ -41,6 +41,7 @@ RUN apt-get update && \
         irods-database-plugin-postgres=${irods_package_version} \
         irods-runtime=${irods_package_version} \
         irods-server=${irods_package_version} \
+        irods-icommands=${irods_package_version} \
         irods-resource-plugin-s3=${irods_resource_plugin_version} \
     && \
     apt-get clean && \
