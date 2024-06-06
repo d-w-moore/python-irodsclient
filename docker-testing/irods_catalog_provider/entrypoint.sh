@@ -24,17 +24,20 @@ MOD_SERVER_CONFIG=/tmp/server_config.json.$$
 
 #TODO ensure this is done for 4.3+ only. 4.2 doesn't have this server config key
 {
+    [ -f ~/provider-address.do_not_remove ] || {
     jq <$ORIG_SERVER_CONFIG >$MOD_SERVER_CONFIG \
     '.host_resolution.host_entries += [
         {
             "address_type": "local",
             "addresses": [
-                "'$(hostname)'",
-                "irods-catalog-provider"
+                "irods-catalog-provider",
+                "'$(hostname)'"
             ]
         }
     ]' && \
-    cat <$MOD_SERVER_CONFIG >$ORIG_SERVER_CONFIG
+    cat <$MOD_SERVER_CONFIG >$ORIG_SERVER_CONFIG && \
+    touch ~/provider-address.do_not_remove 
+    }
 } || { echo >&2 "Error modifying $ORIG_SERVER_CONFIG"; exit 1; }
 
 echo "Starting server"
