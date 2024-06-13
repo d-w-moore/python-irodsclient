@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -x
 PYTHON=$(which python3)
-if [ -z "$PYTHON" ]; then
+if [ -z "$PYTHON" -o $PYTHON_VERSION '<' 3 ]; then
     PYTHON=$(which python)
 fi
 DIR=$(dirname "$0")

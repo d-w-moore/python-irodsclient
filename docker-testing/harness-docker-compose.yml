@@ -16,6 +16,8 @@ services:
             context: python_client
             args:
                 - python_version
+        environment:
+            - PYTHON_VERSION=$python_version
         command:
             tail -f /dev/null
         volumes:
