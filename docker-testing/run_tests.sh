@@ -8,6 +8,15 @@ DIR=$(dirname "$0")
 cd "$DIR"
 $PYTHON ./recv_oneshot -h irods-catalog-provider -p 8888 -t 360
 REPO="$(./print_repo_root_location)"
+
+NEW_REPO=/python-irodsclient
+if cp -rp "$REPO" "$NEW_REPO"
+then
+    REPO="$NEW_REPO"
+else
+    echo >&2 "Warning: REPO='$REPO' unchanged from read-only mount.  Some features and tests may not work."
+fi
+
 $PYTHON -m pip install "$REPO[tests]"
 
 if [ -d /irods_shared ]; then
