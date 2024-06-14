@@ -54,7 +54,10 @@ echo "Starting server"
     echo "**** got this far - about to execute send_oneshot" |tee -a /tmp/debug.dan 
     env PORT=8888 "$(dirname "$0")"/send_oneshot
 } &
+background_pid=$!
 
 cd /usr/sbin
 su irods -c 'bash -c "./irodsServer -u"'
 
+echo >&2 "We actually shouldn't get here unless the server exits."
+wait $background_pid

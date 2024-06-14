@@ -17,10 +17,12 @@ The tests suite can also be run on any workstation with "docker compose" install
       ```
       docker exec <name-of-python-client-container> /repo_root/docker-testing/run_tests.sh
       ```
-      (Note:  `/repo_root` is an actual literal path, internal to the container.)
+      (Note: `/repo_root` is an actual literal path, internal to the container.)
       You'll see the test output displayed on the console.  At completion, xmlrunner outputs are in /tmp.
 
    4. use `docker logs -f` with the provider instance name to tail the irods server log output
+
+   5. use `docker compose -f harness-docker-compose.yml down` to shut down container and network instances when done.
 
 DEBUGGING
 ---------
