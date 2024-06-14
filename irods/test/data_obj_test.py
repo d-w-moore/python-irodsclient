@@ -2084,6 +2084,7 @@ class TestDataObjOps(unittest.TestCase):
         with self.assertRaises(ex.InvalidInputArgument):
             user_session.data_objects.touch(home_collection_path)
 
+    @unittest.skipIf(six.PY2, 'Test is for python3 only.')
     def test_client_redirect_lets_go_of_connections__issue_562(self):
         self._skip_unless_connected_to_local_computer_by_other_than_localhost_synonym()
         # Force data object connections to redirect by enforcing a non-equivalent hostname for their resource
