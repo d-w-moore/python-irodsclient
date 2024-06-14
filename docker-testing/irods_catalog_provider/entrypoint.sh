@@ -58,6 +58,9 @@ background_pid=$!
 
 cd /usr/sbin
 su irods -c 'bash -c "./irodsServer -u"'
+server_exitcode=$?
 
-echo >&2 "We actually shouldn't get here unless the server exits."
+echo >&2 "We shouldn't get here, but the iRODS server exited [status = $server_exitcode]."
+echo >&2 "But we'll wait for the pending client communication [pid = $background_pid] to happen before quitting the container."
 wait $background_pid
+echo >&2 "Done. quitting container!"
