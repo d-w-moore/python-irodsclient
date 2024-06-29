@@ -18,9 +18,21 @@ import stat
 import string
 import sys
 import subprocess
+import threading
 import time
 import unittest
+import weakref
 import xml.etree.ElementTree
+
+try:
+    import tqdm
+except ImportError:
+    tqdm = None
+
+try:
+    import progressbar
+except ImportError:
+    progressbar = None
 
 ip_pattern = re.compile(r'(\d+)\.(\d+)\.(\d+)\.(\d+)$')
 localhost_with_optional_domain_pattern = re.compile('localhost(\.\S\S*)?$')
@@ -2094,6 +2106,115 @@ class TestDataObjOps(unittest.TestCase):
         with self.assertRaises(ex.InvalidInputArgument):
             user_session.data_objects.touch(home_collection_path)
 
+    @unittest.skipIf(progressbar is None, "progressbar is not installed")
+    def test_pbar_for_parallel_io_3(self):
+        from irods.manager.data_object_manager import (register_update_type, unregister_update_type)
+        import progressbar
+
+        class ProgressBar_wrapper:
+         def start(self,*x):return self.p.start(*x)
+         def update(self,*x):return self.p.update(*x)
+         @property
+         def currval(self): return self.p.currval
+         def __init__(self,*args,**kw):
+          self.p = progressbar.ProgressBar(*args,**kw)
+
+        class mock_progressbar_ProgressBar:
+          def __init__(self,maxval):
+            self.max = maxval
+            self.currval = 0
+          def start(self): pass
+          def update(self,total):
+            self.currval = total
+
+        def adapt_ProgressBar(pbar, total = weakref.WeakKeyDictionary()): # The 'total' data structure is mutable; thus it is
+                                                                          # first-time init'ed & memoized for subsequent calls
+            l = threading.Lock()
+            total.setdefault(pbar, 0) # one-time initialization
+            def _update(n):
+                with l:
+                    total[pbar] += n
+                    pbar.update(total[pbar])
+            return _update
+
+        try:
+            actualClass = ProgressBar_wrapper # weakref-compatible wrapper for progressbar.ProgressBar
+            register_update_type(actualClass, adapt_ProgressBar)
+
+            LEN = 1024**2*40
+            content = b'_'*LEN
+            ProgressBar_ = actualClass(maxval=len(content))
+            ProgressBar_.start()
+            self._run_pbars_for_parallel_io(content, [ProgressBar_])
+            self.assertEqual(ProgressBar_.currval, LEN)
+
+        finally:
+            unregister_update_type(actualClass)
+
+    @unittest.skipIf(tqdm is None, "tqdm is not installed")
+    def test_pbar_for_parallel_io_2(self):
+        from irods.manager.data_object_manager import (register_update_type, unregister_update_type)
+        import tqdm
+
+        def adapt_tqdm(pbar):
+            l = threading.Lock()
+            def _update(n):
+                with l:
+                    pbar.update(n)
+            return _update
+
+        try:
+            register_update_type(tqdm.tqdm, adapt_tqdm)
+
+            LEN = 1024**2*40
+            content = b'_'*LEN
+            tqdm_ = tqdm.tqdm(total=len(content))
+            self._run_pbars_for_parallel_io(content, [tqdm_])
+            self.assertEqual(tqdm_.n, LEN)
+
+        finally:
+            unregister_update_type(tqdm.tqdm)
+
+    def _run_pbars_for_parallel_io(self, file_content, list_of_progress_bars_and_update_callbacks):
+        Data = self.sess.data_objects
+        logical_path = ''
+        try:
+            with NamedTemporaryFile() as f:
+                f.write(file_content) # large file for a parallel put
+                f.flush()
+                logical_path = '{}/{}'.format(self.coll_path,os.path.basename(f.name))
+                Data.put(f.name, logical_path, updatables = list_of_progress_bars_and_update_callbacks)
+        finally:
+            if logical_path and Data.exists(logical_path):
+                Data.unlink(logical_path, force = True)
+                
+    def test_pbar_for_parallel_io(self):
+
+        class Pbar:
+            def percent_done(self): return 100.0 * self.i / self.total
+            def __init__(self, total):
+                self.i = 0
+                self.total = total
+            def update(self,n):
+                self.i += n
+
+        def thread_safe(update_fn):
+            l = threading.Lock()
+            def _update(n):
+                with l:
+                    update_fn(n)
+            return _update
+
+        FILE_LENGTH = 1024**2 * 40
+        pbar = Pbar(total = FILE_LENGTH)
+
+        with NamedTemporaryFile() as f:
+            f.write(b'_'*FILE_LENGTH) # large file for a parallel put
+            f.flush()
+            logical_path = '{}/{}'.format(self.coll_path,os.path.basename(f.name))
+            self.sess.data_objects.put(f.name, logical_path, updatables = [thread_safe(pbar.update)])
+
+        self.assertEqual(pbar.percent_done(), 100)
 
 if __name__ == '__main__':
     # let the tests find the parent irods lib

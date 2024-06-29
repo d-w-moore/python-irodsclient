@@ -1,6 +1,12 @@
 from __future__ import absolute_import
-import os
+import ast
+import collections
 import io
+import json
+import logging
+import os
+import six
+import typing
 from irods.models import DataObject, Collection
 from irods.manager import Manager
 from irods.manager._internal import _api_impl, _logical_path
@@ -17,12 +23,31 @@ import irods.client_configuration as client_config
 import irods.keywords as kw
 import irods.parallel as parallel
 from irods.parallel import deferred_call
-import six
-import ast
-import json
-import logging
 
+logger = logging.getLogger(__name__)
 
+_update_types = [
+    (typing.Callable, (lambda _:_))  # bare callables in the updatables list should be left as they are
+]
+
+def register_update_type(type_ , transform_):
+    global _update_types
+    _update_types.insert(0, (type_,transform_))
+    _update_types = list((k,v) for k,v in collections.OrderedDict(_update_types).items() if v is not None)
+
+def unregister_update_type(type_):
+    register_update_type(type_, None)
+
+def do_progress_updates(updatables, n, logging_function = logger.warning):
+    if not isinstance(updatables, (list,tuple)):
+        updatables = [updatables]
+    for obj in updatables:
+        for cl,func in _update_types:
+            if isinstance(obj,cl):
+                func(obj)(n)
+                break
+        else:
+            logging_function("Could not derive an update function for: %r",obj)
 
 def call___del__if_exists(super_):
     """
@@ -124,7 +149,7 @@ class DataObjectManager(Manager):
                 open_options[kw.DATA_SIZE_KW] = size
 
 
-    def _download(self, obj, local_path, num_threads, progress_bar, **options):
+    def _download(self, obj, local_path, num_threads, updatables = (), **options):
         """Transfer the contents of a data object to a local file.
 
         Called from get() when a local path is named.
@@ -146,16 +171,15 @@ class DataObjectManager(Manager):
                     if not self.parallel_get( (obj,o), local_file, num_threads = num_threads,
                                               target_resource_name = options.get(kw.RESC_NAME_KW,''),
                                               data_open_returned_values = data_open_returned_values_,
-                                              progress_bar=progress_bar):
+                                              updatables = updatables):
                         raise RuntimeError("parallel get failed")
                 else:
                     for chunk in chunks(o, self.READ_BUFFER_SIZE):
                         f.write(chunk)
-                        if progress_bar is not None:
-                            progress_bar.update(len(chunk))
+                        do_progress_updates(updatables, len(chunk))
 
 
-    def get(self, path, local_path = None, num_threads = DEFAULT_NUMBER_OF_THREADS, progress_bar = None, **options):
+    def get(self, path, local_path = None, num_threads = DEFAULT_NUMBER_OF_THREADS, updatables = (), **options):
         """
         Get a reference to the data object at the specified `path'.
 
@@ -166,7 +190,7 @@ class DataObjectManager(Manager):
 
         # TODO: optimize
         if local_path:
-            self._download(path, local_path, num_threads = num_threads, progress_bar=progress_bar, **options)
+            self._download(path, local_path, num_threads = num_threads, updatables = updatables, **options)
 
         query = self.sess.query(DataObject)\
             .filter(DataObject.name == irods_basename(path))\
@@ -183,7 +207,7 @@ class DataObjectManager(Manager):
         return iRODSDataObject(self, parent, results)
 
 
-    def put(self, local_path, irods_path, return_data_object = False, num_threads = DEFAULT_NUMBER_OF_THREADS, progress_bar = None, **options):
+    def put(self, local_path, irods_path, return_data_object = False, num_threads = DEFAULT_NUMBER_OF_THREADS, updatables = (), **options):
 
         if self.sess.collections.exists(irods_path):
             obj = iRODSCollection.normalize_path(irods_path, os.path.basename(local_path))
@@ -198,7 +222,7 @@ class DataObjectManager(Manager):
                 if not self.parallel_put( local_path, (obj,o), total_bytes = sizelist[0], num_threads = num_threads,
                                           target_resource_name = options.get(kw.RESC_NAME_KW,'') or
                                                                  options.get(kw.DEST_RESC_NAME_KW,''),
-                                          open_options = options, progress_bar = progress_bar):
+                                          open_options = options, updatables = updatables):
                     raise RuntimeError("parallel put failed")
             else:
                 with self.open(obj, 'w', **options) as o:
@@ -207,8 +231,7 @@ class DataObjectManager(Manager):
                         options[kw.OPR_TYPE_KW] = 1 # PUT_OPR
                     for chunk in chunks(f, self.WRITE_BUFFER_SIZE):
                         o.write(chunk)
-                        if progress_bar is not None:
-                            progress_bar.update(len(chunk))
+                        do_progress_updates(updatables, len(chunk))
         if kw.ALL_KW in options:
             repl_options = options.copy()
             repl_options[kw.UPDATE_REPL_KW] = ''
@@ -265,7 +288,7 @@ class DataObjectManager(Manager):
                      target_resource_name = '',
                      data_open_returned_values = None,
                      progressQueue = False,
-                     progress_bar = None):
+                     updatables = ()):
         """Call into the irods.parallel library for multi-1247 GET.
 
         Called from a session.data_objects.get(...) (via the _download method) on
@@ -277,7 +300,7 @@ class DataObjectManager(Manager):
                                  num_threads = num_threads, target_resource_name = target_resource_name,
                                  data_open_returned_values = data_open_returned_values,
                                  queueLength = (DEFAULT_QUEUE_DEPTH if progressQueue else 0),
-                                 progress_bar = progress_bar)
+                                 updatables = updatables)
 
     def parallel_put(self,
                      file_ ,
@@ -287,7 +310,7 @@ class DataObjectManager(Manager):
                      num_threads = 0,
                      target_resource_name = '',
                      open_options = {},
-                     progress_bar = None,
+                     updatables = (),
                      progressQueue = False):
         """Call into the irods.parallel library for multi-1247 PUT.
 
@@ -298,8 +321,8 @@ class DataObjectManager(Manager):
         return parallel.io_main( self.sess, data_or_path_, parallel.Oper.PUT | (parallel.Oper.NONBLOCKING if async_ else 0), file_,
                                  num_threads = num_threads, total_bytes = total_bytes,  target_resource_name = target_resource_name,
                                  open_options = open_options,
-                                 progress_bar = progress_bar,
-                                 queueLength = (DEFAULT_QUEUE_DEPTH if progressQueue else 0)
+                                 queueLength = (DEFAULT_QUEUE_DEPTH if progressQueue else 0),
+                                 updatables = updatables,
                                )
 
 
