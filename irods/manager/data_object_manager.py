@@ -29,23 +29,32 @@ logger = logging.getLogger(__name__)
 _update_types = [
     (typing.Callable, (lambda _:_))  # bare callables in the updatables list should be left as they are
 ]
+_update_fns = weakref.WeakKeyDictionary()
 
 def register_update_type(type_ , transform_):
     global _update_types
-    _update_types.insert(0, (type_,transform_))
-    _update_types = list((k,v) for k,v in collections.OrderedDict(_update_types).items() if v is not None)
+    if type_ is None and isinstance(transform_, dict):
+        _update_fns.update(transform_)
+    else:
+        _update_types.insert(0, (type_,transform_))
+        _update_types = list((k,v) for k,v in collections.OrderedDict(_update_types).items() if v is not None)
 
 def unregister_update_type(type_):
     register_update_type(type_, None)
+
 
 def do_progress_updates(updatables, n, logging_function = logger.warning):
     if not isinstance(updatables, (list,tuple)):
         updatables = [updatables]
     for obj in updatables:
-        for cl,func in _update_types:
-            if isinstance(obj,cl):
-                func(obj)(n)
-                break
+        storedfn = _update_fns.get(obj)
+        if storedfn:
+            storedfn(n)
+        else:
+            for cl,func in _update_types:
+                if isinstance(obj,cl):
+                    func(obj)(n)
+                    break
         else:
             logging_function("Could not derive an update function for: %r",obj)
 
