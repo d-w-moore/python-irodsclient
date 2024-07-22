@@ -2097,6 +2097,7 @@ class TestDataObjOps(unittest.TestCase):
         with self.assertRaises(ex.InvalidInputArgument):
             user_session.data_objects.touch(home_collection_path)
 
+    @unittest.skipIf(six.PY2, "Python2 won't destruct an out-of-scope iRODSSession due to lazy GC ref-cycle detection.")
     def test_client_redirect_lets_go_of_connections__issue_562(self):
         self._skip_unless_connected_to_local_computer_by_other_than_localhost_synonym()
         # Force data object connections to redirect by enforcing a non-equivalent hostname for their resource
