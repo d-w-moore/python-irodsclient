@@ -385,11 +385,15 @@ class iRODSMessage(object):
         return packed_header + main_msg + self.error + self.bs
 
 
-    def get_main_message(self, cls, r_error = None):
+    def get_main_message(self, cls, r_error = None, return_message_text_optional = False):
         msg = cls()
         logger.debug('Attempt to parse server response [%r] as class [%r].',self.msg,cls)
         if self.error and isinstance(r_error, RErrorStack):
             r_error.fill( iRODSMessage(msg=self.error).get_main_message(Error) )
+        if return_message_text_optional:
+            if self.msg is not None:
+                msg.unpack(ET().fromstring(self.msg))
+            return msg
         if self.msg is None:
             if cls is not Error:
                 # - For dedicated API response classes being built from server response, allow catching

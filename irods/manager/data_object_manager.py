@@ -479,14 +479,15 @@ class DataObjectManager(Manager):
             with self.sess.pool.get_connection() as conn:
                 conn.send(message)
                 response = conn.recv()
-                msg = response.get_main_message( STR_PI )
+                msg = response.get_main_message( STR_PI, return_message_text_optional=True )
 
-            #_ = json.loads(msg.myStr)
-            #redirected_host = _["host"]
-            #requested_hierarchy = _["resource_hierarchy"]
-
-            ########### dwm
-            print('msg.myStr = [%s]'%msg.myStr)
+            try:
+                server_response = msg.myStr
+                print('server_response =', server_response)
+                #_ = json.loads(server_response)
+                # TODO: Q: are the fields in optional JSON return message needed by anyone?
+            except KeyError:
+                print('msg.myStr (server response) field does not exist')
 
     def trim(self, path, **options):
 
