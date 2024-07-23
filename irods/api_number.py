@@ -143,7 +143,7 @@ api_number = {
     "TICKET_ADMIN_AN": 723,
     "GET_TEMP_PASSWORD_FOR_OTHER_AN": 724,
     "PAM_AUTH_REQUEST_AN": 725,
-
+ 
     "EXEC_CMD241_AN": 634,
 
     "DATA_OBJ_READ201_AN": 603,
@@ -156,6 +156,8 @@ api_number = {
     "COLL_REPL201_AN": 662,
     "RM_COLL201_AN": 663,
     "OPEN_COLLECTION201_AN": 712,
+
+    "REPLICA_TRUNCATE_AN": 802,
 
     # 1000 - 1059 - NETCDF API calls
     "NC_OPEN_AN": 1000,
