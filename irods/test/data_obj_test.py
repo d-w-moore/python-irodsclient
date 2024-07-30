@@ -2143,18 +2143,26 @@ class TestDataObjOps(unittest.TestCase):
     def test_progressbar_style_of_pbar_without_registering__issue_574(self):
         # As this test demonstrates, we can always just register an update wrapper for an object rather than the object or its update method directly.
         # This is good if the progressbar instance is not inherently threadsafe or unable to be referred to by a weak reference.
-        from irods.manager.data_object_manager import (register_update_instance, _update_fns)
+        from irods.manager.data_object_manager import register_update_instance
 
         class wrapper:
             def __init__(self,pbar):
-                self.pbar = pbar
                 self.lock = threading.Lock()
                 self.total = 0
+                self.pbar = pbar
+                pbar.start()
 
             def update(self,n):
                 with self.lock:
                     self.total += n
                     self.pbar.update(self.total)
+
+            @property
+            def value(self):
+                try: 
+                    return self.pbar.value
+                except AttributeError:
+                    return self.pbar.currval
 
         LEN = 1024**2*40
         content = b'_'*LEN
@@ -2164,64 +2172,56 @@ class TestDataObjOps(unittest.TestCase):
 
         register_update_instance(wrapped, wrapped.update)
 
-        wrapped.pbar.start()
         self._run_pbars_for_parallel_io(content, [wrapped])
-        self.assertEqual(wrapped.pbar.currval, LEN)
+        self.assertEqual(wrapped.value, LEN)
 
     @unittest.skipIf(progressbar is None, "progressbar is not installed")
     def test_progressbar_style_of_pbar_by_registering_type__issue_574(self):
         # In this test, registering the instance type allows us to use the progressbar instance in the updatables list
         from irods.manager.data_object_manager import (register_update_type, unregister_update_type)
 
-        try:
-            # This is the ProgressBar from either of the following sources:
-            #    - https://pypi.org/project/progressbar/
-            #    - https://pypi.org/project/progressbar2/
-            progressbar_class = progressbar.ProgressBar
-            weakref.ref(progressbar_class(maxval = 10))
-        except TypeError:
-            class ProgressBar_wrapper:
-               def start(self,*x):
-                   return self.p.start(*x)
-               def update(self,*x):
-                   return self.p.update(*x)
-               @property
-               def currval(self):
-                   return self.p.currval
-               def __init__(self,*args,**kw):
-                   self.p = progressbar.ProgressBar(*args,**kw)
+        # This is the ProgressBar from either of the following sources:
+        #    - https://pypi.org/project/progressbar/
+        #    - https://pypi.org/project/progressbar2/
+        # Wrapping the ProgressBar instances is useful in the case of both of the above libraries,
+        # due to their instances being callable - which confuses our methodology for managing registered objects - or,
+        # in the former case, being unusable as weak references.
 
-            progressbar_class = ProgressBar_wrapper
+        class ProgressBar_wrapper:
+            def start(self,*x):
+                return self.pbar.start(*x)
+            def update(self,*x):
+                return self.pbar.update(*x)
+            @property
+            def value(self):
+                try: 
+                    return self.pbar.value
+                except AttributeError:
+                    return self.pbar.currval
+            def __init__(self,*args,**kw):
+                self.pbar = progressbar.ProgressBar(*args,**kw)
 
         def adapt_ProgressBar(pbar):
-            # Create a function closure containing a state variable and a lock object for the instance to be updated.
             total = [0]
             l = threading.Lock()
             pbar.start()
-
-            # Here's the actual updating callable that will be returned for the current pbar instance (also part of the closure)
-            # and then registered for update during the data transfer.
             def _update(n):
-                # total was made a list-of-single-integer for the benefit of Python2 clients.
-                # If total were a bare integer we'd declare it by "nonlocal total" in Python3 and it would just work.
                 with l:
-                    # this type of progress bar requires a cumulative sum as its argument to the update method.
                     total[0] += n
                     pbar.update(total[0])
-
             return _update
 
         try:
-            register_update_type(progressbar_class, adapt_ProgressBar)
+            register_update_type(ProgressBar_wrapper, adapt_ProgressBar)
 
             LEN = 1024**2*40
             content = b'_'*LEN
-            pbar = progressbar_class(maxval=len(content))
+            pbar = ProgressBar_wrapper(maxval=len(content))
             self._run_pbars_for_parallel_io(content, [pbar])
-            self.assertEqual(pbar.currval, LEN)
+            self.assertEqual(pbar.value, LEN)
 
         finally:
-            unregister_update_type(progressbar_class)
+            unregister_update_type(ProgressBar_wrapper)
 
     @unittest.skipIf(tqdm is None, "tqdm is not installed")
     def test_passing_multiple_tqdm_instances_to_be_updated__issue_574(self):
