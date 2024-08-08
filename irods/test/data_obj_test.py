@@ -2416,10 +2416,15 @@ class TestDataObjOps(unittest.TestCase):
 
                     # Ensure there are two replicas, one on newResc as well as one on 'demoResc'
                     d.replicate(resource = newResc)
-                    d.replica_truncate(truncated_size, **{kw.RESC_NAME_KW: newResc})
+                    response = d.replica_truncate(truncated_size, **{kw.RESC_NAME_KW: newResc})
 
                     # Stat data object again.
                     d = data_objs.get(data_path)
+
+                    # Check that returned resource hierarchy and replica number match expectations.
+                    self.assertEqual(response['replica_number'],
+                        [_ for _ in data_objs.get(data_path).replicas if _.resource_name == newResc][0].number)
+                    self.assertEqual(response['resource_hierarchy'], newResc)
 
                     # Make sure sizes are as expected.
                     self.assertEqual([_ for _ in d.replicas if _.resource_name == newResc][0].size, truncated_size)
