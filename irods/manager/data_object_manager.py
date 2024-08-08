@@ -537,7 +537,7 @@ class DataObjectManager(Manager):
     def replica_truncate(self, path, desired_size, **options):
             
         if self.sess.server_version == (4,3,2):
-            message = 'replica_truncate responses can fail to parse with iRODS 4.3.2 due to routine omission of the JSON response string.  See issue: irods/irods#7918'
+            message = 'replica_truncate responses can fail to parse with iRODS 4.3.2 due to routine omission of the JSON response string, so this method is not supported for iRODS 4.3.2.'
             raise ex.OperationNotSupported(message)
         else:
             required_server_version = (4,3,3)
