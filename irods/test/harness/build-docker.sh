@@ -2,7 +2,7 @@
 
 # IRODS_PACKAGE_VERSION if defined is like "4.3.1-0~bionic"
 # (but contains no '~' suffix for irods versions <= 4.2.10)
-
+#IRODS_PACKAGE_VERSION="4.3.3-0~focal"
 BASE=$(basename "$0")
 DIR=$(realpath "$(dirname "$0")")
 cd "$DIR"
