@@ -4,6 +4,14 @@ IRODS_HOME=/var/lib/irods
 DEV_HOME="$HOME"
 : ${DEV_REPOS:="$DEV_HOME/github"}
 
+DIST_NAME=$(grep UBUNTU_CODENAME /etc/os-release|cut -d = -f 2)
+if [ $(echo -n $DIST_NAME|wc -c) -eq 0 ]; then
+  echo >&2 "not a Ubuntu based operating system."; exit 1 
+fi
+
+: ${IRODS_VSN:=4.3.3-0~$DIST_NAME}
+
+
 add_package_repo()
 {
       local R="/etc/apt/sources.list.d/renci-irods.list"
@@ -11,14 +19,11 @@ add_package_repo()
       sudo apt update
       sudo apt install -y lsb-release apt-transport-https
       wget -qO - https://packages.irods.org/irods-signing-key.asc | sudo apt-key add - && \
-      echo "deb [arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" |\
+      echo "deb [arch=amd64] https://packages.irods.org/apt/ $DIST_NAME main" |\
           sudo tee "$R"
       sudo apt update
 }
 
-DIST_NAME=$(lsb_release -sc)
-
-: ${IRODS_VSN:=4.3.1-0~$DIST_NAME}
 
 while [[ "$1" = -* ]]; do
   ARG="$1"
@@ -30,7 +35,6 @@ while [[ "$1" = -* ]]; do
     -v) VERBOSE=1;;
   esac
 done
-
 
 run_phase() {
 
