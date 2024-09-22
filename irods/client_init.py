@@ -12,10 +12,11 @@ def write_credentials_with_native_password( password ):
 
 def write_credentials_with_pam_password( password ):
     s = h.make_session()
-    assert(not s.auth_file)
     s.pool.account.password = password
-    with cfg.loadlines( [dict(setting='legacy_auth.pam.password_for_auto_renew',value='')] ):
+    with cfg.loadlines( [dict(setting='legacy_auth.pam.password_for_auto_renew',value=None),
+                         dict(setting='legacy_auth.pam.store_password_to_environment',value=False)] ):
         to_encode = s.pam_pw_negotiated
+    assert(not s.auth_file)
     if to_encode:
         open(s.pool.account.derived_auth_file,'w').write(obf.encode(to_encode[0]))
         return True
