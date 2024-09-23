@@ -4,13 +4,13 @@ import irods.helpers as h
 import getpass
 import sys
 
-def write_credentials_with_native_password( password ):
+def write_native_credentials_to_secrets_file( password ):
     s = h.make_session()
     assert(not s.auth_file)
     open(s.pool.account.derived_auth_file,'w').write(obf.encode(password))
     return True
 
-def write_credentials_with_pam_password( password ):
+def write_pam_credentials_to_secrets_file( password ):
     s = h.make_session()
     s.pool.account.password = password
     with cfg.loadlines( [dict(setting='legacy_auth.pam.password_for_auto_renew',value=None),
