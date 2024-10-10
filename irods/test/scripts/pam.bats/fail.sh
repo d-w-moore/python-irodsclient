@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR=$(dirname $0)
-. $DIR/funcs
+. $DIR/test_support_functions
 cd "$DIR"; echo >&2 -n -- ; pwd
 #echo "setting up"
 $(up_from_script_dir 1)/demo_script

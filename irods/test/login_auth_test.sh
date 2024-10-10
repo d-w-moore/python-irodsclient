@@ -1,5 +1,5 @@
 #!/bin/bash
-. $(dirname $0)/scripts/funcs
+. $(dirname $0)/scripts/test_support_functions
 . $(dirname $0)/scripts/update_json_for_test
 
 IRODS_SERVICE_ACCOUNT_ENV_FILE=~irods/.irods/irods_environment.json 
