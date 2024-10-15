@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-from __future__ import absolute_import
+
 from datetime import datetime
 import base64
 import concurrent.futures

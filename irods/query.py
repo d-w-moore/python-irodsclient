@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from collections import OrderedDict
 
 from irods import MAX_SQL_ROWS

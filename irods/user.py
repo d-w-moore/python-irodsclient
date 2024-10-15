@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from irods.models import User, Group, UserAuth
 from irods.meta import iRODSMetaCollection
 from irods.exception import NoResultFound

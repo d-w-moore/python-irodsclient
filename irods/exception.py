@@ -2,8 +2,6 @@
 # s/\(\w\+\)\s\+\(-\d\+\)/class \1(SystemException):\r    code = \2/g
 
 
-from __future__ import absolute_import
-from __future__ import print_function
 import errno
 import numbers
 import os

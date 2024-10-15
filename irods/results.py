@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from prettytable import PrettyTable
 
 from irods.models import ModelBase

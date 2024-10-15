@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from irods.message import iRODSMessage, StringStringMap, RodsHostAddress, STR_PI, MsParam, MsParamArray, RuleExecutionRequest
 from irods.api_number import api_number
 import irods.exception as ex

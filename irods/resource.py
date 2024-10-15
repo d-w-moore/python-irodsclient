@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from irods.models import Resource
 from irods.meta import iRODSMetaCollection
 import six

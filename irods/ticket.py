@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from irods.api_number import api_number
 from irods.message import iRODSMessage, TicketAdminRequest
 from irods.models import TicketQuery

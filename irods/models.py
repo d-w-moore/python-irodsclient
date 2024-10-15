@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from irods.column import Column, Integer, String, DateTime, Keyword
 import six
 
