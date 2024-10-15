@@ -140,7 +140,7 @@ class String(ColumnType):
         except TypeError:
             # Some strings are already Unicode so they do not need decoding
             pass
-        return u"'{}'".format(data)
+        return "'{}'".format(data)
 
 
 class DateTime(ColumnType):

@@ -332,7 +332,7 @@ class TestDataObjOps(unittest.TestCase):
 
             PUT_LOG = self.In_Memory_Stream(always_unicode = True)
             GET_LOG = self.In_Memory_Stream(always_unicode = True)
-            NumThreadsRegex = re.compile(u'^num_threads\s*=\s*(\d+)',re.MULTILINE)
+            NumThreadsRegex = re.compile('^num_threads\s*=\s*(\d+)',re.MULTILINE)
 
             try:
                 logger = logging.getLogger('irods.parallel')
@@ -854,11 +854,11 @@ class TestDataObjOps(unittest.TestCase):
                     def assert_expected_redirection_logging(BUF):
                         nthr = 0
                         search_text = BUF.getvalue()
-                        find_iterator = itertools.chain( re.finditer(u'redirect_to_host = (\S+)', search_text),
-                                                         re.finditer(u'target_host = (\S+)', search_text) )
+                        find_iterator = itertools.chain( re.finditer('redirect_to_host = (\S+)', search_text),
+                                                         re.finditer('target_host = (\S+)', search_text) )
                         for match in find_iterator:
                             nthr += 1
-                            self.assertEqual(match.group(1), u'localhost')
+                            self.assertEqual(match.group(1), 'localhost')
                         occur_threshold = (1 if len(content) <= 32*MEBI else 2)
                         self.assertGreaterEqual(nthr, occur_threshold)
                     assert_expected_redirection_logging(PUT_LOG)
@@ -1063,7 +1063,7 @@ class TestDataObjOps(unittest.TestCase):
         filename = 'test_open_file_with_options.txt'
         file_path = '/tmp/{filename}'.format(**locals())
         obj_path = '{collection}/{filename}'.format(**locals())
-        contents = u"blah blah " * 10000
+        contents = "blah blah " * 10000
         checksum = base64.b64encode(hashlib.sha256(contents.encode('utf-8')).digest()).decode()
 
         objs = self.sess.data_objects
@@ -1223,7 +1223,7 @@ class TestDataObjOps(unittest.TestCase):
             ufs_resources = []
 
             # make test file
-            obj_content = u'foobar'
+            obj_content = 'foobar'
             checksum = base64.b64encode(hashlib.sha256(obj_content.encode('utf-8')).digest()).decode()
             with open(test_file, 'w') as f:
                 f.write(obj_content)
@@ -1251,7 +1251,7 @@ class TestDataObjOps(unittest.TestCase):
                 self.assertEqual(replica.checksum, 'sha2:{}'.format(checksum))
 
             # now repave test file
-            obj_content = u'bar'
+            obj_content = 'bar'
             checksum = base64.b64encode(hashlib.sha256(obj_content.encode('utf-8')).digest()).decode()
             with open(test_file, 'w') as f:
                 f.write(obj_content)

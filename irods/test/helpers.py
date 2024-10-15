@@ -184,7 +184,7 @@ def home_collection(session):
 
 def make_object(session, path, content=None, **options):
     if content is None:
-        content = u'blah'
+        content = 'blah'
 
     content = iRODSMessage.encode_unicode(content)
 

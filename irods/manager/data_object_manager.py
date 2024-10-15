@@ -506,7 +506,7 @@ class DataObjectManager(Manager):
                 returned_values['session'] = directed_sess
                 conn.release()
                 conn = directed_sess.pool.get_connection()
-                logger.debug(u'redirect_to_host = %s', redirected_host)
+                logger.debug('redirect_to_host = %s', redirected_host)
 
         # Restore RESC HIER for DATA_OBJ_OPEN call
         if requested_hierarchy is not None:

@@ -73,7 +73,7 @@ class TestUnicodeNames(unittest.TestCase):
         self.sess.cleanup()
 
     def test_object_name_containing_unicode__318(self):
-        dataname = u"réprouvé"
+        dataname = "réprouvé"
         homepath = helpers.home_collection( self.sess )
         try:
             ET_set( XML_Parser_Type.QUASI_XML, self.sess.server_version )
@@ -103,7 +103,7 @@ class TestUnicodeNames(unittest.TestCase):
             assert result[DataObject.name] in ( [encode_unless_PY3(n) for n in self.names] )
 
             # fyi
-            logger.info( u"{0}/{1}".format( decode_unless_PY3(result[Collection.name]),
+            logger.info( "{0}/{1}".format( decode_unless_PY3(result[Collection.name]),
                                             decode_unless_PY3(result[DataObject.name]) )
                        )
 

@@ -623,7 +623,7 @@ class TestQuery(unittest.TestCase):
             os.remove(test_file)
 
     # view/change this line in text editors under own risk:
-    FILENAME_PREFIX = u'_prefix_ǠǡǢǣǤǥǦǧǨǩǪǫǬǭǮǯǰǱǲǳǴǵǶǷǸ' 
+    FILENAME_PREFIX = '_prefix_ǠǡǢǣǤǥǦǧǨǩǪǫǬǭǮǯǰǱǲǳǴǵǶǷǸ'
 
     @unittest.skipIf(six.PY2, 'Test is for python3 only')
     def test_query_for_data_object_with_utf8_name_python3(self):
@@ -636,9 +636,9 @@ class TestQuery(unittest.TestCase):
             encoded_file_path = file_path.encode('utf-8')
             return os.open(encoded_file_path,os.O_CREAT|os.O_RDWR,mode=open_mode), encoded_file_path
         fd = None
-        filename_prefix = u'_prefix_'\
-            u'\u01e0\u01e1\u01e2\u01e3\u01e4\u01e5\u01e6\u01e7\u01e8\u01e9\u01ea\u01eb\u01ec\u01ed\u01ee\u01ef'\
-            u'\u01f0\u01f1\u01f2\u01f3\u01f4\u01f5\u01f6\u01f7\u01f8'  # make more visible/changeable in VIM
+        filename_prefix = '_prefix_'\
+            '\u01e0\u01e1\u01e2\u01e3\u01e4\u01e5\u01e6\u01e7\u01e8\u01e9\u01ea\u01eb\u01ec\u01ed\u01ee\u01ef'\
+            '\u01f0\u01f1\u01f2\u01f3\u01f4\u01f5\u01f6\u01f7\u01f8'  # make more visible/changeable in VIM
         self.assertEqual(self.FILENAME_PREFIX, filename_prefix)
         (fd,encoded_test_file) = tempfile.mkstemp(dir = dir_.encode('utf-8'),prefix=filename_prefix.encode('utf-8')) \
             if sys.version_info >= (3,5) \
@@ -788,8 +788,8 @@ class TestQuery(unittest.TestCase):
             Rule(self.sess).remove_by_id( results[0][RuleExec.id] )
 
     def test_utf8_equality_in_query__issue_442(self):
-        name = u'prefix-\u1000-suffix'
-        self.sess.data_objects.create(u'{}/{}'.format(self.coll_path, name))
+        name = 'prefix-\u1000-suffix'
+        self.sess.data_objects.create('{}/{}'.format(self.coll_path, name))
         query = self.sess.query(DataObject).filter( DataObject.name == name.encode('utf8'),
                                                     DataObject.collection_id == self.coll.id)
         self.assertEqual(1, len(list(query)))

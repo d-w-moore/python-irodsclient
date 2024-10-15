@@ -47,7 +47,7 @@ class TestMeta(unittest.TestCase):
 
     def test_stringtypes_in_general_query__issue_442(self):
         metadata = []
-        value = u'a\u1000b'
+        value = 'a\u1000b'
         value_encoded = value.encode('utf8')
         contains_value = {type(value_encoded):b'%%'+value_encoded+b'%%',
                           type(value):'%%'+value+'%%'}
@@ -81,9 +81,9 @@ class TestMeta(unittest.TestCase):
     @unittest.skipIf(PY3, 'Unicode strings are normal on Python3')
     def test_unicode_AVUs_in_Python2__issue_442(self):
         data_object = self.sess.data_objects.get(self.obj_path)
-        meta_set = iRODSMeta(u'\u1000', u'value', u'units')
+        meta_set = iRODSMeta('\u1000', 'value', 'units')
         meta_add = iRODSMeta(*tuple(meta_set))
-        meta_add.name += u"-add"
+        meta_add.name += "-add"
         data_object.metadata.set(meta_set)
         data_object.metadata.add(meta_add)
         for index, meta in [(m.name, m) for m in (meta_add, meta_set)]:
@@ -93,7 +93,7 @@ class TestMeta(unittest.TestCase):
     @unittest.skipIf(PY2, 'Byte strings are normal on Python2')
     def test_bytestring_AVUs_in_Python3__issue_442(self):
         data_object = self.sess.data_objects.get(self.obj_path)
-        meta_set = iRODSMeta(u'\u1000'.encode('utf8'),b'value',b'units')
+        meta_set = iRODSMeta('\u1000'.encode('utf8'),b'value',b'units')
         meta_add = iRODSMeta(*tuple(meta_set))
         meta_add.name += b"-add"
         data_object.metadata.set(meta_set)
@@ -260,7 +260,7 @@ class TestMeta(unittest.TestCase):
                                iRODSMeta(self.attr1, self.value1, self.unit1))
 
         # Throw in some unicode for good measure
-        attribute, value = 'attr2', u'☭⛷★⚽'
+        attribute, value = 'attr2', '☭⛷★⚽'
         self.sess.metadata.add(DataObject, self.obj_path,
                                iRODSMeta(attribute, value))
 
