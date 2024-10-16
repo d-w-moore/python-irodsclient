@@ -5,7 +5,6 @@ import struct
 import logging
 import socket
 import json
-from six.moves import builtins
 import irods.exception as ex
 import xml.etree.ElementTree as ET_xml
 import defusedxml.ElementTree as ET_secure_xml
@@ -14,11 +13,12 @@ from ..api_number import api_number
 from collections import namedtuple
 import os
 import ast
+import sys
 import threading
 from irods.message.message import Message
-from irods.message.property import (BinaryProperty, StringProperty,
-                                    IntegerProperty, LongProperty, ArrayProperty,
-                                    SubmessageProperty)
+from irods.message.property_types import (BinaryProperty, StringProperty,
+                                          IntegerProperty, LongProperty, ArrayProperty,
+                                          SubmessageProperty)
 
 class Bad_AVU_Field(ValueError):
     pass
@@ -469,7 +469,7 @@ class PamAuthRequest(Message):
 class PamAuthRequestOut(Message):
     _name = 'pamAuthRequestOut_PI'
     irodsPamPassword = StringProperty()
-    @builtins.property
+    @property
     def result_(self): return self.irodsPamPassword
 
 
@@ -1091,7 +1091,7 @@ class RError:
         self.status_ = entry.status
 
 
-    @builtins.property
+    @property
     def message(self): #return self.raw_msg_.decode(self.Encoding)
         msg_ = self.raw_msg_
         if type(msg_) is UNICODE:
@@ -1101,11 +1101,11 @@ class RError:
         else:
             raise RuntimeError('bad msg type in',msg_)
 
-    @builtins.property
+    @property
     def status(self): return int(self.status_)
 
 
-    @builtins.property
+    @property
     def status_str(self):
         """Retrieve the IRODS error identifier."""
         return ex.get_exception_class_by_code( self.status, name_only=True )
