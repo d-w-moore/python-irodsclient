@@ -15,10 +15,10 @@ import os
 import ast
 import sys
 import threading
-from irods.message.message import Message
-from irods.message.property_types import (BinaryProperty, StringProperty,
-                                          IntegerProperty, LongProperty, ArrayProperty,
-                                          SubmessageProperty)
+from .message import Message
+from .property_types import (BinaryProperty, StringProperty,
+                             IntegerProperty, LongProperty, ArrayProperty,
+                             SubmessageProperty)
 
 class Bad_AVU_Field(ValueError):
     pass
@@ -1150,3 +1150,5 @@ def empty_gen_query_out(cols):
         SqlResult_PI=sql_results
     )
     return gqo
+
+from . import property_types as property
