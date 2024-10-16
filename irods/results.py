@@ -1,13 +1,5 @@
 from prettytable import PrettyTable
-
 from irods.models import ModelBase
-
-
-try:
-    unicode         # Python 2
-except NameError:
-    unicode = str
-
 
 class ResultSet(object):
 
@@ -44,8 +36,6 @@ class ResultSet(object):
             return (col, col.column_type.to_python(value))
         except (TypeError, ValueError):
             return (col, value)
-
-    _str_encode = staticmethod(lambda x:x.encode('utf-8') if type(x) is unicode else x)
 
     _get_column_values = (lambda self,index: [(col, col.value[index]) for col in self.cols]) 
 

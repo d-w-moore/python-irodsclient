@@ -24,7 +24,6 @@ from irods.rule import Rule
 from irods import MAX_SQL_ROWS
 from irods.test.helpers import irods_shared_reg_resc_vault
 import irods.test.helpers as helpers
-from six.moves import range as py3_range
 import irods.keywords as kw
 
 IRODS_STATEMENT_TABLE_SIZE = 50
@@ -663,7 +662,7 @@ class TestQuery(unittest.TestCase):
                 for data_obj_path in map(lambda d:d[Collection.name]+"/"+d[DataObject.name],
                                          self.session.query(*q_params).filter(Collection.name == self.test_collection.path)):
                     data_obj = self.session.data_objects.get(data_obj_path)
-                    for key in (str(x) for x in py3_range(self.nAVUs)):
+                    for key in (str(x) for x in range(self.nAVUs)):
                         data_obj.metadata[key] = iRODSMeta(key, "1")
 
                 # - in subsequent test searches, match on each AVU of every data object in the collection:
