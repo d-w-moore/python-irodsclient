@@ -13,7 +13,6 @@ from irods.models import (DataObject, Collection, Resource, CollectionMeta)
 import irods.test.helpers as helpers
 import irods.keywords as kw
 from irods.session import iRODSSession
-from six.moves import range
 from irods.message import Bad_AVU_Field
 from irods.column import Like, NotLike
 

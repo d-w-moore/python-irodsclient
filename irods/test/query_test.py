@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import six
 import sys
 import tempfile
 import unittest

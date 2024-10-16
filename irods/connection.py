@@ -2,7 +2,6 @@ import socket
 import logging
 import struct
 import hashlib
-import six
 import os
 import ssl
 import datetime
