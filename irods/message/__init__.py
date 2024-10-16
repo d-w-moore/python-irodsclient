@@ -235,7 +235,7 @@ class JSON_Binary_Response(BinBytesBuf):
 class XMLMessageNotConvertibleToJSON(Exception):
     pass
 
-class iRODSMessage(object):
+class iRODSMessage:
 
     class ResponseNotParseable(Exception):
 
@@ -1077,7 +1077,7 @@ class RErrorStack(list):
             self[:] = [ RError(Err.RErrMsg_PI[i]) for i in range(Err.count) ]
 
 
-class RError(object):
+class RError:
 
     """One of a list of RError messages potentially returned to the client
        from an iRODS API call.  """

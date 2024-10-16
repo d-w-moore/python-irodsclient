@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 class PlainTextPAMPasswordError(Exception): pass
 
-class Connection(object):
+class Connection:
 
     DISALLOWING_PAM_PLAINTEXT = True
 
