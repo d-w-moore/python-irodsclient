@@ -315,6 +315,8 @@ def load(root = None, file = '', failure_modes = (), verify_only = False, loggin
 
         for line_number, line in enumerate(_file.readlines()):
             line = line.strip()
+            if line.startswith('#'):
+                continue
             match = _key_value_pattern.match(line)
             if not match:
                 if line != '':
