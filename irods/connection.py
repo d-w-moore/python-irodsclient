@@ -490,7 +490,7 @@ class Connection:
                 raise PlainTextPAMPasswordError
 
         use_dedicated_pam_api = (len(ctx) >= MAX_NAME_LEN) or \
-                                legacy_auth.pam.force_use_of_dedicated_pam_api
+                                cfg.legacy_auth.pam.force_use_of_dedicated_pam_api
 
         if use_dedicated_pam_api:
             message_body = PamAuthRequest( pamUser = self.account.client_user,
