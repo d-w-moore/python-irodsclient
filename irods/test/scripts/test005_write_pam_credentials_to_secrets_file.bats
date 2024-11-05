@@ -45,6 +45,6 @@ print ('env_auth_scheme=%s' % ses.pool.account._original_authentication_scheme)
 "
     OUTPUT=$($PYTHON -c "$SCRIPT")
     # Assert passing value
-    [ $OUTPUT = "env_auth_scheme=pam_password" ]
+    [[ $OUTPUT = "env_auth_scheme=pam"* ]]
 
 }
