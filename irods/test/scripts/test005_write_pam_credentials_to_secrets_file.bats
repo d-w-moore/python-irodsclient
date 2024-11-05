@@ -29,7 +29,9 @@ teardown()
     # Old .irodsA is already created, so we delete it and alter the pam password.
     sudo chpasswd <<<"alice:$ALICES_NEW_PAM_PASSWD"
     rm -f ~/.irods/.irodsA
-    $PYTHON -c "import irods.client_init; irods.client_init.write_pam_credentials_to_secrets_file('$ALICES_NEW_PAM_PASSWD')"
+    $PYTHON -c "import irods.client_init
+irods.client_configuration.legacy_auth.pam.force_use_of_dedicated_pam_api = True
+irods.client_init.write_pam_credentials_to_secrets_file('$ALICES_NEW_PAM_PASSWD')"
 
     # Define the core Python to be run, basically a minimal code block ensuring that we can authenticate to iRODS
     # without an exception being raised.
@@ -37,7 +39,6 @@ teardown()
     local SCRIPT="
 import irods
 import irods.test.helpers as h
-irods.client_configuration.legacy_auth.pam.force_use_of_dedicated_pam_api = True
 ses = h.make_session()
 ses.collections.get(h.home_collection(ses))
 print ('env_auth_scheme=%s' % ses.pool.account._original_authentication_scheme)
