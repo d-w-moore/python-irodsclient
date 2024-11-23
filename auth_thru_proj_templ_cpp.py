@@ -1,9 +1,10 @@
+import logging
+logging.basicConfig( level = logging.INFO )
+
 import irods.connection, irods.pool, irods.account
 
 from irods.api_number import api_number
 from irods.message import iRODSMessage, JSON_Message
-import logging
-logging.basicConfig( level = logging.DEBUG )
 
 # General implementation to mirror iRODS cli/srv authentication framework
 
@@ -16,7 +17,8 @@ def _auth_api_request(conn, data):
     response = conn.recv()
     return response.get_json_encoded_struct()
 
-class ClientAuthError(Exception): pass
+class ClientAuthError(Exception):
+    pass
 
 FLOW_COMPLETE = "authentication_flow_complete"
 
@@ -30,11 +32,12 @@ class ClientAuthState:
         self.scheme = scheme
 
     def call(self, next_operation, request):
-
+        logging.info('next operation = %r', next_operation)
         func = getattr(self, next_operation, None)
         if func is None:
             raise RuntimeError("request contains no 'next_operation'")
         resp = func(request)
+        logging.info('resp = %r',resp)
         return resp
 
     def authenticate_client(self, next_operation = "auth_client_start", initial_request = {}):
@@ -52,7 +55,7 @@ class ClientAuthState:
               raise ClientAuthError("authentication flow stopped without success")
             to_send = resp
             
-        logging.debug("fully authenticated")
+        logging.info("fully authenticated")
             
     # ----------------------------------
 
@@ -83,14 +86,19 @@ class ClientAuthState:
 
 # __ main program __
 
+_scheme = 'project_template_cpp'
+
 account = irods.account.iRODSAccount(
   'localhost',1247,
   'rods','tempZone',
-  irods_authentication_scheme = 'project_template_cpp',
+  irods_authentication_scheme = _scheme
 )
 
 pool = irods.pool.Pool(account)
 connection = irods.connection.Connection(pool,account,connect = False)
 
-states = ClientAuthState(connection, scheme = "project_template_cpp")
-states.authenticate_client()
+state = ClientAuthState(
+    connection, 
+    scheme = _scheme
+)
+state.authenticate_client()
