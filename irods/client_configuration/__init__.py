@@ -254,7 +254,7 @@ allow_config_load_errors = ast.literal_eval(os.environ.get('PYTHON_IRODSCLIENT_C
 #  value: <A Python value which can be given to ast.literal_eval(); e.g. 5, True, or 'some_string'>
 #         <optional whitespace>
 
-_key_value_pattern = re.compile(r'\s*(?P<key>\w+(\.\w+)+)\s+(?P<value>\S.*?)\s*$')
+_key_value_pattern = re.compile(r'\s*(?P<key>\w+(\.\w+)+)\s*:?\s+(?P<value>\S.*?)\s*$')
 
 class _ConfigLoadError:
     """
@@ -293,13 +293,14 @@ def load(root = None, file = '', failure_modes = (), verify_only = False, loggin
     call's logging output.
     """
     def _existing_config(path):
+        if type(path) is io.StringIO:
+            return path
         if os.path.isfile(path):
             return open(path,'r')
         message = 'Config file not available at %r' % (path,)
         logging.getLogger(__name__).log(logging_level, message)
         if NoConfigError in failure_modes:
             raise NoConfigError(message)
-        return io.StringIO()
 
     _file = None
     try:
