@@ -18,6 +18,7 @@ declare -A wrappers=(
     [test002_write_native_credentials_to_secrets_file.bats]=../login_auth_test.sh
     [test003_write_pam_credentials_to_secrets_file.bats]=../login_auth_test.sh
     [test004_prc_pam_password_internal_secrets_file_generation.bats]=../login_auth_test.sh
+    [test005_test_special_characters_in_passwords.bats]=../login_auth_test.sh
     [test006_connection_timeout_on_ssl_socket.bats]=../login_auth_test.sh
 )
 
