@@ -38,21 +38,13 @@ print ('env_auth_scheme=%s' % ses.pool.account._original_authentication_scheme)
 
     [[ $OUTPUT = "env_auth_scheme=pam"* ]]
 
-    SET_CLEANUP=yes \
-    with_change_auth_params_for_test password_min_time 4 \
-                                     password_max_time 5
+    age_out_pam_password "alice"
 
-    # Test that running the $SCRIPT raises an exception if the PAM password has expired.
-
-    iinit <<<"$ALICES_PAM_PASSWORD"
     HOME_COLLECTION=$(ipwd)
-    sleep 9
     OUTPUT=$($PYTHON -c "$SCRIPT" 2>&1 >/dev/null || true)
     grep 'CAT_PASSWORD_EXPIRED' <<<"$OUTPUT"
 
     # Test that the $SCRIPT, when run with proper settings, can successfully reset the password.
-
-    with_change_auth_params_for_test password_max_time 3600
 
     OUTPUT=$($PYTHON -c "import irods.client_configuration as cfg
 cfg.legacy_auth.pam.password_for_auto_renew = '$ALICES_PAM_PASSWORD'
