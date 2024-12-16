@@ -605,12 +605,12 @@ class TestUserAndGroup(unittest.TestCase):
             if bob:
                 ses.users.remove(bob.name)
 
-     def test_we_cannot_overwrite_irodsA_without_overwrite_option_true__issue_635()
-         self.assertTrue(os.path.isfile(os.path.expanduser('~/.irods/.irodsA')))
-         with self.assertRaises(client_init.irodsA_already_exists):
-             client_init.write_native_credentials_to_secrets_file('somevalue',overwrite=False)
-         with self.assertRaises(client_init.irodsA_already_exists):
-             client_init.write_pam_credentials_to_secrets_file('somevalue',overwrite=False)
+    def test_we_cannot_overwrite_irodsA_without_overwrite_option_true__issue_635(self):
+        self.assertTrue(os.path.isfile(os.path.expanduser('~/.irods/.irodsA')))
+        with self.assertRaises(client_init.irodsA_already_exists):
+            client_init.write_native_credentials_to_secrets_file('somevalue',overwrite=False)
+        with self.assertRaises(client_init.irodsA_already_exists):
+            client_init.write_pam_credentials_to_secrets_file('somevalue',overwrite=False)
 
 if __name__ == '__main__':
     # let the tests find the parent irods lib
