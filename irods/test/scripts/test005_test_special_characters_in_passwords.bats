@@ -1,14 +1,13 @@
 #!/usr/bin/env bats
-#
-# Test creation of .irodsA for iRODS native authentication using the free function,
-#    irods.client_init.write_pam_credentials_to_secrets_file
+ 
+# Test creation and use of PAM password authentication info in .irodsA when the password itself contains
+# special characters (those known to have created issues in the past).
 
 . "$BATS_TEST_DIRNAME"/test_support_functions
 PYTHON=python3
 
 # Setup/prerequisites are same as for login_auth_test.
 # Run as ubuntu user with sudo; python_irodsclient must be installed (in either ~/.local or a virtualenv)
-#
 
 ALICES_OLD_PAM_PASSWD="test123"
 ALICES_NEW_PAM_PASSWD="new_&@;=_pass"
@@ -25,7 +24,6 @@ teardown()
 }
 
 @test create_secrets_file {
-
     # Old .irodsA is already created, so we delete it and alter the pam password.
     sudo chpasswd <<<"alice:$ALICES_NEW_PAM_PASSWD"
     local logfile i
