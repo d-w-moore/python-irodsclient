@@ -25,10 +25,10 @@ teardown()
 }
 
 @test create_secrets_file {
-
+    auth_file=~/.irods/.irodsA
     # Old .irodsA is already created, so we delete it and alter the pam password.
     sudo chpasswd <<<"alice:$ALICES_NEW_PAM_PASSWD"
-    rm -f ~/.irods/.irodsA
+    rm -f "$auth_file"
     $PYTHON -c "import irods.client_init; irods.client_init.write_pam_credentials_to_secrets_file('$ALICES_NEW_PAM_PASSWD')"
 
     # Define the core Python to be run, basically a minimal code block ensuring that we can authenticate to iRODS
@@ -44,4 +44,15 @@ print ('env_auth_scheme=%s' % ses.pool.account._original_authentication_scheme)
     # Assert passing value
     [[ $OUTPUT = "env_auth_scheme=pam"* ]]
 
+    # Test we are not overwriting the .irodsA file if overwrite parameter is set to False.
+    STAT1=$(stat -c%y "$auth_file")
+    CONTENTS1=$(cat "$auth_file")
+
+    $PYTHON -c "import irods.client_init; irods.client_init.write_pam_credentials_to_secrets_file('$ALICES_NEW_PAM_PASSWD', overwrite = False)"
+
+    STAT2=$(stat -c%y "$auth_file")
+    CONTENTS2=$(cat "$auth_file")
+    
+    [ "$STAT1" = "$STAT2" ]
+    [ "$CONTENTS1" = "$CONTENTS2" ]
 }
