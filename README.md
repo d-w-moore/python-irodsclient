@@ -241,7 +241,7 @@ Starting with PRC Release 0.9.0, code has been included in the session
 object's `__del__` method to call cleanup(), properly closing out
 network connections. However, `__del__`  is not guaranteed to run as
 expected, so an alternative may be to call session.cleanup()
-on any session variable which might not be used again.
+on any session variable which will not be used again.
 
 Simple PUTs and GETs
 --------------------
