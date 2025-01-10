@@ -592,10 +592,14 @@ class Connection:
         logger.debug(challenge_msg.msg)
         challenge = challenge_msg.get_main_message(AuthChallenge).challenge
 
+        print(f'{challenge = }')
         # one "session" signature per connection
         # see https://github.com/irods/irods/blob/4.2.1/plugins/auth/native/libnative.cpp#L137
         # and https://github.com/irods/irods/blob/4.2.1/lib/core/src/clientLogin.cpp#L38-L60
+#       import pdb
+#       pdb.set_trace()
         self._client_signature = "".join("{:02x}".format(c) for c in challenge[:16])
+        print(f'{self._client_signature = }')
 
         challenge = challenge.strip()
         padded_pwd = struct.pack(
