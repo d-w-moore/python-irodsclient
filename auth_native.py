@@ -3,6 +3,7 @@ import hashlib
 from irods import MAX_PASSWORD_LENGTH
 import logging
 import struct
+import sys
 
 logging.basicConfig( level = logging.INFO )
 
@@ -66,7 +67,7 @@ class ClientAuthState:
             if next_operation is None:
               raise ClientAuthError("next_operation key missing; cannot determine next operation")
             if next_operation in (__FLOW_COMPLETE__,""):
-              raise ClientAuthError("authentication flow stopped without success")
+              raise ClientAuthError(f"authentication flow stopped without success {self.scheme = }")
             to_send = resp
             
         logging.info("fully authenticated")
@@ -148,22 +149,31 @@ class native_ClientAuthState(ClientAuthState):
 
 _scheme = 'native'
 
-account = irods.account.iRODSAccount(
-  'localhost',1247,
-  'rods','tempZone',
-  password = 'rods',
-  irods_authentication_scheme = _scheme
-)
-
-pool = irods.pool.Pool(account)
-connection = irods.connection.Connection(pool, account, connect = False)
-
-state = native_ClientAuthState(
-    connection, 
-    scheme = _scheme
-)
+def authenticate_native( conn, req = {} ):
+    logging.info('----------- native (begin)'))
+    # rename 'initial_request' as 'context' ?
+    native_ClientAuthState(
+        conn, 
+        scheme = _scheme
+    ).authenticate_client( initial_request = req )
+    logging.info('----------- native (end)'))
 
 if __name__ == '__main__':
-  state.authenticate_client(
-    initial_request = {'user_name': account.client_user,
-                       'zone_name': account.client_zone})
+
+    User, Zone, Pw = sys.argv[1:4]
+
+    account = irods.account.iRODSAccount(
+      'localhost',1247,
+      User, Zone,
+      password = Pw,
+      irods_authentication_scheme = _scheme
+    )
+
+    pool = irods.pool.Pool(account)
+    connection = irods.connection.Connection(pool, account, connect = False)
+
+    authenticate_native(
+        connection, 
+        req = {'user_name': account.proxy_user,
+               'zone_name': account.proxy_zone} )
+
