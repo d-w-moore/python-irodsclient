@@ -2,7 +2,7 @@ import base64
 import getpass
 import hashlib
 from irods import MAX_PASSWORD_LENGTH
-from irods.password_obfuscation import MAX_PASSWORD_LENGTH
+import irods.password_obfuscation as obf
 import irods.session
 import logging
 import ssl
@@ -23,7 +23,7 @@ class REQUEST_IS_MISSING_KEY(Exception): pass
 def throw_if_request_message_is_missing_key( request, required_keys ):
   for key in required_keys:
     if not key in request:
-      raise REQUEST_IS_MISSING_KEY(f'{key = }')
+      raise REQUEST_IS_MISSING_KEY(f"key = {key}")
 
 # General implementation to mirror iRODS cli/srv authentication framework
 
@@ -76,7 +76,7 @@ class ClientAuthState:
             if next_operation is None:
               raise ClientAuthError("next_operation key missing; cannot determine next operation")
             if next_operation in (__FLOW_COMPLETE__,""):
-              raise ClientAuthError(f"authentication flow stopped without success {self.scheme = }")
+              raise ClientAuthError(f"authentication flow stopped without success: scheme = {self.scheme}")
             to_send = resp
             
         logging.info("fully authenticated")
@@ -95,38 +95,39 @@ def get_obfuscated_password():
 
 def set_obfuscated_password(to_encode):
     with open(irods.session.iRODSSession.get_irods_password_file(),'w') as irodsA:
-        irodsA.write(obj.encode(to_encode))
+        irodsA.write(obf.encode(to_encode))
 
 class pam_password_ClientAuthState(ClientAuthState):
 
-    def __init__(*a, specified_password = '', **kw): 
+    def __init__(self, *a, specified_password = '', check_ssl = True, **kw): 
         super().__init__(*a,**kw)
         self.specified_password =  specified_password
+        self.check_ssl =  check_ssl
 
     def auth_client_start(self, request):
 
-        if not isinstance(self.conn.socket, ssl.SSLSocket):
-            msg = 'Need to be connected via SSL.'
-            raise RuntimeError(msg)
+        if self.check_ssl:
+            if not isinstance(self.conn.socket, ssl.SSLSocket):
+                msg = 'Need to be connected via SSL.'
+                raise RuntimeError(msg)
 
         resp = request.copy()
 
         if resp.pop(FORCE_PASSWORD_PROMPT, None):
-            resp[AUTH_PASSWORD_KEY] = get_pam_password_from_stdin():
+            resp[AUTH_PASSWORD_KEY] = get_pam_password_from_stdin()
         else:
             pw = get_obfuscated_password()
             if pw:
                 resp[__NEXT_OPERATION__] = self.perform_native_auth
                 return resp
             resp[AUTH_PASSWORD_KEY] = get_pam_password_from_stdin()
-    return resp
 
-    # Client defines. These strings should match instance method names within the class namespace.
+        resp[__NEXT_OPERATION__] = self.AUTH_CLIENT_AUTH_REQUEST
+        return resp
+
+    # Client define
     AUTH_CLIENT_AUTH_REQUEST = 'pam_password_auth_client_request'
-    ## or: (TODO: test)
-    #AUTH_CLIENT_AUTH_REQUEST = pam_password_auth_client_request
-
-    # Server defines.
+    # Server define
     AUTH_AGENT_AUTH_REQUEST = "auth_agent_auth_request"
 
     def pam_password_auth_client_request(self, request):
@@ -134,15 +135,14 @@ class pam_password_ClientAuthState(ClientAuthState):
         server_req[__NEXT_OPERATION__] = self.AUTH_AGENT_AUTH_REQUEST
 
         resp = _auth_api_request(self.conn, server_req)
-        throw_if_request_message_is_missing_key( resp, {"request_result"} );
+        throw_if_request_message_is_missing_key(resp, {"request_result"})
         
-        set_obfuscated_password(obf.encode(resp["request_result"])):
+        set_obfuscated_password(obf.encode(resp["request_result"]))
         resp[__NEXT_OPERATION__] = self.perform_native_auth
         return resp
 
-    auth_agent_auth_request = pam_password_auth_client_request
 
-    def pam_password_auth_client_perform_native_auth (self, request):
+    def pam_password_auth_client_perform_native_auth(self, request):
         resp = request.copy()
         resp.pop(AUTH_PASSWORD_KEY, None)
 
@@ -174,7 +174,10 @@ if __name__ == '__main__':
     state = pam_password_ClientAuthState(
         connection, 
         specified_password = Pw,
-        scheme = _scheme
+        scheme = _scheme,
+
+# TODO remove:
+        check_ssl = False
     )
 
     state.authenticate_client(

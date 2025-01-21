@@ -150,13 +150,13 @@ class native_ClientAuthState(ClientAuthState):
 _scheme = 'native'
 
 def authenticate_native( conn, req = {} ):
-    logging.info('----------- native (begin)'))
+    logging.info('----------- native (begin)')
     # rename 'initial_request' as 'context' ?
     native_ClientAuthState(
         conn, 
         scheme = _scheme
     ).authenticate_client( initial_request = req )
-    logging.info('----------- native (end)'))
+    logging.info('----------- native (end)')
 
 if __name__ == '__main__':
 
