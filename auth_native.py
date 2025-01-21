@@ -17,7 +17,7 @@ class REQUEST_IS_MISSING_KEY(Exception): pass
 def throw_if_request_message_is_missing_key( request, required_keys ):
   for key in required_keys:
     if not key in request:
-      raise REQUEST_IS_MISSING_KEY(f'{key = }')
+      raise REQUEST_IS_MISSING_KEY(f'key = {key}')
 
 # General implementation to mirror iRODS cli/srv authentication framework
 
@@ -67,7 +67,7 @@ class ClientAuthState:
             if next_operation is None:
               raise ClientAuthError("next_operation key missing; cannot determine next operation")
             if next_operation in (__FLOW_COMPLETE__,""):
-              raise ClientAuthError(f"authentication flow stopped without success {self.scheme = }")
+              raise ClientAuthError(f"authentication flow stopped without success: scheme = {self.scheme}")
             to_send = resp
             
         logging.info("fully authenticated")
@@ -114,6 +114,11 @@ class native_ClientAuthState(ClientAuthState):
         request = request.copy()
 
         password = self.conn.account.password
+        if not password:
+            # TODO : move 'get_obfuscated_password' to a common import module (auth_utils ?)
+            # --- Note this was added so auth_pam_password.py could validate using a new .irodsA which it wrote!
+            import auth_pam_password
+            password = auth_pam_password.get_obfuscated_password()
         challenge = request["request_result"].encode('utf-8')
         self.conn._client_signature = "".join("{:02x}".format(c) for c in challenge[:16])
 
