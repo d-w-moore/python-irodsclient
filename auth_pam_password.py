@@ -137,7 +137,7 @@ class pam_password_ClientAuthState(ClientAuthState):
         resp = _auth_api_request(self.conn, server_req)
         throw_if_request_message_is_missing_key(resp, {"request_result"})
         
-        set_obfuscated_password(obf.encode(resp["request_result"]))
+        set_obfuscated_password(resp["request_result"])
         resp[__NEXT_OPERATION__] = self.perform_native_auth
         return resp
 
