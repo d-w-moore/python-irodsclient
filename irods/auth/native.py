@@ -1,4 +1,6 @@
+import base64
 import logging
+import hashlib
 import struct
 
 from irods import MAX_PASSWORD_LENGTH
