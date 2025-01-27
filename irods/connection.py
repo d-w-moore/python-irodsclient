@@ -6,7 +6,6 @@ import os
 import ssl
 import datetime
 import errno
-import irods.auth
 import irods.password_obfuscation as obf
 from irods import MAX_NAME_LEN
 from ast import literal_eval as safe_eval
@@ -757,3 +756,5 @@ class Connection:
         # Convert and return answer
         msg = response.get_main_message(GetTempPasswordOut)
         return obf.create_temp_password(msg.stringToHashWith, self.account.password)
+
+import irods.auth

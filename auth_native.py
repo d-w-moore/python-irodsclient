@@ -174,6 +174,9 @@ if __name__ == '__main__':
       irods_authentication_scheme = _scheme
     )
 
+#   from irods.auth import AuthStorage
+#   astor = AuthStorage(account)
+
     pool = irods.pool.Pool(account)
     connection = irods.connection.Connection(pool, account, connect = False)
 

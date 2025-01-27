@@ -1,6 +1,9 @@
 import logging
+import weakref
 from irods.api_number import api_number
 from irods.message import iRODSMessage, JSON_Message
+import irods.password_obfuscation as obf
+import irods.session
 
 
 __all__ = ["pam_password", "native"]
@@ -12,13 +15,45 @@ AUTH_PLUGIN_PACKAGE = "irods.auth"
 import importlib
 
 
-def get_obfuscated_password():
-    return irods.session.iRODSSession.get_irods_password()
+class AuthStorage:
 
+    @staticmethod
+    def get_env_password():
+        return irods.session.iRODSSession.get_irods_password()
 
-def set_obfuscated_password(to_encode):
-    with open(irods.session.iRODSSession.get_irods_password_file(),'w') as irodsA:
-        irodsA.write(obf.encode(to_encode))
+    @staticmethod
+    def set_env_password(unencoded_pw):
+        with open(irods.session.iRODSSession.get_irods_password_file(),'w') as irodsA:
+            irodsA.write(obf.encode(unencoded_pw))
+
+    @staticmethod
+    def get_temp_pw_storage(conn):
+        return getattr(conn,'auth_storage',lambda:None)()
+
+    @staticmethod
+    def create_temp_pw_storage(conn):
+        """A reference to the result of this call should be stored for the duration of the authentication exchange.
+        """
+        store = getattr(conn,'auth_storage',None)
+        if store is None:
+            store = AuthStorage(conn)
+            conn.auth_storage = weakref.ref(store)
+        return store
+        
+    def __init__(self,acct):
+        self.acct = acct
+        self.pw = ''
+
+    def store_pw(self,pw): 
+        if self.acct.env_file: 
+            self.set_env_password(pw)
+        else:
+            self.pw = pw
+
+    def retrieve_pw(self): 
+        if self.acct.env_file: 
+            return self.get_env_password()
+        return pw
 
 
 def load_plugins(subset=set(), _reload=False):

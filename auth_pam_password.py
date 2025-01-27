@@ -97,11 +97,10 @@ def set_obfuscated_password(to_encode):
     with open(irods.session.iRODSSession.get_irods_password_file(),'w') as irodsA:
         irodsA.write(obf.encode(to_encode))
 
-class pam_password_ClientAuthState(ClientAuthState):
+class pam_password_ClientAuthState(authentication_base):
 
-    def __init__(self, *a, specified_password = '', check_ssl = True, **kw): 
+    def __init__(self, *a, check_ssl = True, **kw): 
         super().__init__(*a,**kw)
-        self.specified_password =  specified_password
         self.check_ssl =  check_ssl
 
     def auth_client_start(self, request):
@@ -173,10 +172,9 @@ if __name__ == '__main__':
 
     state = pam_password_ClientAuthState(
         connection, 
-        specified_password = Pw,
         scheme = _scheme,
 
-# TODO remove:
+# TODO remove this line for testing without SSL:
         check_ssl = False
     )
 

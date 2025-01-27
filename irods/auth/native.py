@@ -6,7 +6,7 @@ import struct
 from irods import MAX_PASSWORD_LENGTH
 
 from . import (__NEXT_OPERATION__, __FLOW_COMPLETE__,
-    get_obfuscated_password, set_obfuscated_password, 
+    AuthStorage,
     authentication_base, _auth_api_request, 
     throw_if_request_message_is_missing_key)
 
@@ -15,7 +15,8 @@ def login(conn):
     ## short-cut back to the 4.2 logic:
     #conn._login_native()
 
-    ## call the new auth-framework compatible logic:
+    _ = AuthStorage.create_temp_pw_storage(conn)
+
     authenticate_native(conn,
         req = {'user_name': conn.account.proxy_user,
                'zone_name': conn.account.proxy_zone} )
@@ -82,8 +83,12 @@ class native_ClientAuthState(authentication_base):
         if not password:
             # TODO : move 'get_obfuscated_password' to a common import module (auth_utils ?)
             # --- Note this was added so auth_pam_password.py could validate using a new .irodsA which it wrote!
-            import auth_pam_password
-            password = auth_pam_password.get_obfuscated_password()
+            #password = auth_pam_password.get_obfuscated_password()
+            store = AuthStorage.get_temp_pw_storage(self.conn)
+            if store:
+                password = store.retrieve_pw()
+            else:
+                password = AuthStorage.get_env_password()
         challenge = request["request_result"].encode('utf-8')
         self.conn._client_signature = "".join("{:02x}".format(c) for c in challenge[:16])
 
@@ -123,9 +128,6 @@ def main(*argv):
     User, Zone, Pw = argv[1:4]
 
     import irods.account, irods.pool, irods.connection
-
-    import pdb
-    pdb.set_trace()
 
     account = irods.account.iRODSAccount(
       'localhost',1247,
