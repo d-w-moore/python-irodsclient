@@ -32,7 +32,8 @@ class AuthStorage:
 
     @staticmethod
     def create_temp_pw_storage(conn):
-        """A reference to the result of this call should be stored for the duration of the authentication exchange.
+        """A reference to the value returned by this call should be stored for the duration of the
+           authentication exchange.
         """
         store = getattr(conn,'auth_storage',None)
         if store is None:

@@ -81,14 +81,13 @@ class native_ClientAuthState(authentication_base):
 
         password = self.conn.account.password
         if not password:
-            # TODO : move 'get_obfuscated_password' to a common import module (auth_utils ?)
-            # --- Note this was added so auth_pam_password.py could validate using a new .irodsA which it wrote!
-            #password = auth_pam_password.get_obfuscated_password()
-            store = AuthStorage.get_temp_pw_storage(self.conn)
-            if store:
-                password = store.retrieve_pw()
-            else:
+            # The following is how pam_password authenticates using an .irodsA file or depot object to which it wrote a server-generated password
+            depot = AuthStorage.get_temp_pw_storage(self.conn)
+            if depot:
+                password = depot.retrieve_pw()
+            if not password:
                 password = AuthStorage.get_env_password()
+
         challenge = request["request_result"].encode('utf-8')
         self.conn._client_signature = "".join("{:02x}".format(c) for c in challenge[:16])
 

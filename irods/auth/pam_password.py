@@ -101,7 +101,13 @@ class pam_password_ClientAuthState(authentication_base):
         resp = _auth_api_request(self.conn, server_req)
         throw_if_request_message_is_missing_key(resp, {"request_result"})
         
-        self.conn.auth_storage().store_pw(resp["request_result"])
+        depot = AuthStorage.get_temp_pw_storage(self.conn)
+        if depot:
+            depot.store_pw(resp["request_result"])
+        else:
+            msg = "auth storage object was either not set, or allowed to expire prematurely."
+            raise RuntimeError(msg)
+
         resp[__NEXT_OPERATION__] = self.perform_native_auth
         return resp
 
