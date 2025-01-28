@@ -84,7 +84,7 @@ class native_ClientAuthState(authentication_base):
             password = depot.retrieve_pw()
 
         if not password:
-            password = self.conn.account.password
+            password = self.conn.account.password or ''
 
         challenge = request["request_result"].encode('utf-8')
         self.conn._client_signature = "".join("{:02x}".format(c) for c in challenge[:16])
