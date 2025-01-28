@@ -40,19 +40,19 @@ class AuthStorage:
             store = AuthStorage(conn)
             conn.auth_storage = weakref.ref(store)
         return store
-        
+
     def __init__(self,acct):
         self.acct = acct
         self.pw = ''
 
-    def store_pw(self,pw): 
-        if self.acct.env_file: 
+    def store_pw(self,pw):
+        if self.acct.env_file:
             self.set_env_password(pw)
         else:
             self.pw = pw
 
-    def retrieve_pw(self): 
-        if self.acct.env_file: 
+    def retrieve_pw(self):
+        if self.acct.env_file:
             return self.get_env_password()
         return pw
 
@@ -127,5 +127,5 @@ class authentication_base:
             if next_operation in (__FLOW_COMPLETE__,""):
               raise ClientAuthError(f"authentication flow stopped without success: scheme = {self.scheme}")
             to_send = resp
-            
+
         logging.info("fully authenticated")

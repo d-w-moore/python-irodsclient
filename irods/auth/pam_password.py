@@ -6,7 +6,7 @@ import sys
 
 from . import (__NEXT_OPERATION__, __FLOW_COMPLETE__,
     AuthStorage,
-    authentication_base, _auth_api_request, 
+    authentication_base, _auth_api_request,
     throw_if_request_message_is_missing_key)
 
 
@@ -24,7 +24,7 @@ _scheme = 'pam_password'
 
 def get_pam_password_from_stdin(file_like_object = None):
     try:
-        if file_like_object: 
+        if file_like_object:
             sys.stdin = file_like_object
         if sys.stdin.isatty():
             return getpass.getpass('Please enter PAM Password: ')
@@ -45,7 +45,7 @@ def authenticate_pam_password( conn, req = None ):
     _ = AuthStorage.create_temp_pw_storage(conn)
 
     pam_password_ClientAuthState(
-        conn, 
+        conn,
         scheme = _scheme
     ).authenticate_client(
         initial_request = req
@@ -60,7 +60,7 @@ AUTH_PASSWORD_KEY = "a_pw"
 
 class pam_password_ClientAuthState(authentication_base):
 
-    def __init__(self, *a, check_ssl = True, **kw): 
+    def __init__(self, *a, check_ssl = True, **kw):
         super().__init__(*a,**kw)
         # TODO: Remove. This is only for debug & testing; check_ssl=False lets us send
         # password-related information in the clear (i.e. when SSL/TLS isn't active).
@@ -99,7 +99,7 @@ class pam_password_ClientAuthState(authentication_base):
 
         resp = _auth_api_request(self.conn, server_req)
         throw_if_request_message_is_missing_key(resp, {"request_result"})
-        
+
         depot = AuthStorage.get_temp_pw_storage(self.conn)
         if depot:
             depot.store_pw(resp["request_result"])
@@ -120,5 +120,5 @@ class pam_password_ClientAuthState(authentication_base):
         self.loggedIn = 1;
         return resp
 
-    perform_native_auth = pam_password_auth_client_perform_native_auth 
+    perform_native_auth = pam_password_auth_client_perform_native_auth
 

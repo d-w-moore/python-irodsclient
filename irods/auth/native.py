@@ -7,7 +7,7 @@ from irods import MAX_PASSWORD_LENGTH
 
 from . import (__NEXT_OPERATION__, __FLOW_COMPLETE__,
     AuthStorage,
-    authentication_base, _auth_api_request, 
+    authentication_base, _auth_api_request,
     throw_if_request_message_is_missing_key)
 
 
@@ -35,7 +35,7 @@ def authenticate_native( conn, req = None ):
                'zone_name': conn.account.proxy_zone}
 
     native_ClientAuthState(
-        conn, 
+        conn,
         scheme = _scheme
     ).authenticate_client(
         # TODO - Q: should we rename 'initial_request' as 'context'?
@@ -60,7 +60,7 @@ class native_ClientAuthState(authentication_base):
     AUTH_CLIENT_AUTH_RESPONSE = 'native_auth_client_response'
 
     # Server defines.
-    AUTH_AGENT_AUTH_REQUEST = "auth_agent_auth_request" 
+    AUTH_AGENT_AUTH_REQUEST = "auth_agent_auth_request"
     AUTH_AGENT_AUTH_RESPONSE = "auth_agent_auth_response"
 
     def native_auth_client_request(self, request):
@@ -138,7 +138,7 @@ def main(*argv):
     )
 
     authenticate_native(
-        connection, 
+        connection,
         req = {'user_name': account.proxy_user,
                'zone_name': account.proxy_zone} )
 
