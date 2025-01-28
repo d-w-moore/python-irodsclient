@@ -2,12 +2,11 @@ import getpass
 import logging
 import ssl
 import sys
-
-
 from . import (__NEXT_OPERATION__, __FLOW_COMPLETE__,
     AuthStorage,
     authentication_base, _auth_api_request,
     throw_if_request_message_is_missing_key)
+from .native import authenticate_native
 
 
 def login(conn):

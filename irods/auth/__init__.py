@@ -38,21 +38,22 @@ class AuthStorage:
         store = getattr(conn,'auth_storage',None)
         if store is None:
             store = AuthStorage(conn)
+            # So that the connection object doesn't hold on to password data too long:
             conn.auth_storage = weakref.ref(store)
         return store
 
-    def __init__(self,acct):
-        self.acct = acct
+    def __init__(self, conn):
+        self.conn = conn
         self.pw = ''
 
     def store_pw(self,pw):
-        if self.acct.env_file:
+        if self.conn.account.env_file:
             self.set_env_password(pw)
         else:
             self.pw = pw
 
     def retrieve_pw(self):
-        if self.acct.env_file:
+        if self.conn.account.env_file:
             return self.get_env_password()
         return pw
 
