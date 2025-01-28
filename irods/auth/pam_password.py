@@ -14,8 +14,6 @@ def login(conn):
     ## short-cut back to the 4.2 logic:
     # conn._login_pam()
 
-    _ = AuthStorage.create_temp_pw_storage(conn)
-
     authenticate_pam_password(conn,
         req = {'user_name': conn.account.proxy_user,
                'zone_name': conn.account.proxy_zone} )
@@ -43,6 +41,8 @@ def authenticate_pam_password( conn, req = None ):
     if req is None:
         req = {'user_name': conn.account.proxy_user,
                'zone_name': conn.account.proxy_zone}
+
+    _ = AuthStorage.create_temp_pw_storage(conn)
 
     pam_password_ClientAuthState(
         conn, 

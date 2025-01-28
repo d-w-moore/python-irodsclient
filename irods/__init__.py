@@ -29,9 +29,9 @@ def env_filename_from_keyword_args(kwargs):
 def derived_auth_filename(env_filename):
     if not env_filename:
         return ""
-    # TODO: Q: is the following correct ?? - I now believe iCommands always expects .irodsA in ~/.irods/ unless IRODS_AUTHENTICATION_FILE specifies elsewhere.
-    default_irods_authentication_file = os.path.join(
-        os.path.dirname(env_filename), ".irodsA"
+    default_irods_authentication_file = (
+        #os.path.join(os.path.dirname(env_filename), ".irodsA")# <-- Issue #XXX)
+        os.path.expanduser("~/.irods/.irodsA")
     )
     return os.environ.get(
         "IRODS_AUTHENTICATION_FILE", default_irods_authentication_file
