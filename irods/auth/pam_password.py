@@ -60,14 +60,13 @@ AUTH_PASSWORD_KEY = "a_pw"
 
 class pam_password_ClientAuthState(authentication_base):
 
-    def __init__(self, *a, #specified_password = '',
-        check_ssl = True, **kw): 
+    def __init__(self, *a, check_ssl = True, **kw): 
         super().__init__(*a,**kw)
-        #self.specified_password =  specified_password
+        # TODO: Remove. This is only for debug & testing; check_ssl=False lets us send
+        # password-related information in the clear (i.e. when SSL/TLS isn't active).
         self.check_ssl =  check_ssl
 
     def auth_client_start(self, request):
-
         if self.check_ssl:
             if not isinstance(self.conn.socket, ssl.SSLSocket):
                 msg = 'Need to be connected via SSL.'
@@ -90,7 +89,7 @@ class pam_password_ClientAuthState(authentication_base):
         return resp
 
     # Client define
-    AUTH_CLIENT_AUTH_REQUEST = 'pam_password_auth_client_request'
+    AUTH_CLIENT_AUTH_REQUEST = "pam_password_auth_client_request"
     # Server define
     AUTH_AGENT_AUTH_REQUEST = "auth_agent_auth_request"
 
@@ -110,7 +109,6 @@ class pam_password_ClientAuthState(authentication_base):
 
         resp[__NEXT_OPERATION__] = self.perform_native_auth
         return resp
-
 
     def pam_password_auth_client_perform_native_auth(self, request):
         resp = request.copy()
