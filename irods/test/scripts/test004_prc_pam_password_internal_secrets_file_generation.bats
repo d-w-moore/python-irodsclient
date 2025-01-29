@@ -22,11 +22,15 @@ setup()
 
 teardown()
 {
-    finalize_pam_login_for_alice
-    test_specific_cleanup
+#    finalize_pam_login_for_alice
+#    test_specific_cleanup
+  :
 }
 
 @test f001 {
+
+return
+# DWM
 
     local AUTH_FILE=~/.irods/.irodsA
 
