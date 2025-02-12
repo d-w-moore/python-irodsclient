@@ -1,11 +1,16 @@
 #! /usr/bin/env python
 
+import numbers
 import os
 import sys
 import tempfile
 import unittest
-from irods.exception import NetworkException
 from irods import MAXIMUM_CONNECTION_TIMEOUT
+from irods.exception import (
+    NetworkException,
+    CAT_INVALID_AUTHENTICATION
+)
+import irods.session
 import irods.test.helpers as helpers
 from irods.test.helpers import (
     server_side_sleep,
@@ -33,6 +38,29 @@ class TestConnections(unittest.TestCase):
         self.assertIsNone(conn.socket)
         self.assertTrue(conn._disconnected)
         conn.release(destroy=True)
+
+    def test_server_version_without_authentication__issue_688 (self):
+        sess = self.sess
+
+        # Make a session object that cannot authenticate.
+        non_authenticating_session = irods.session.iRODSSession(
+            host = sess.host,
+            port = sess.port,
+            user = sess.username,
+            zone = sess.zone,
+            # No password.
+        )
+
+        # Test raw_server_version method returns a value.
+        version_tup = non_authenticating_session.raw_server_version()
+
+        # Test returned value is non-empty "version" tuple, i.e. holds only integer values.
+        self.assertTrue(len(version_tup) > 0)
+        self.assertFalse(any(not isinstance(_, numbers.Integral) for _ in version_tup))
+
+        # Test that the older server_version property fails for the unauthorized session object.
+        with self.assertRaises(CAT_INVALID_AUTHENTICATION):
+            non_authenticating_session.server_version
 
     def test_failed_connection(self):
         # Make sure no connections are cached in self.sess.pool.idle to be grabbed by get_connection().

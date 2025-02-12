@@ -36,3 +36,13 @@ def xml_mode(s):
         yield
     finally:
         ET(None)
+
+
+@contextlib.contextmanager
+def attr_changed(obj, attrname, value):
+   old = getattr(obj, attrname, None)
+   try:
+       setattr(obj, attrname, value)
+       yield
+   finally:
+       setattr(obj, attrname, old)
