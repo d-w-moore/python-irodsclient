@@ -1,5 +1,6 @@
 import ast
 import atexit
+import contextlib
 import copy
 import errno
 import json
@@ -354,11 +355,36 @@ class iRODSSession:
         return self.pool.account.port
 
     @property
-    def server_version(self):
+    def server_version(self): return self._server_version()
+
+    def raw_server_version(self):
+        """Returns the same version tuple as iRODSSession's server_version property, but
+           does not require successful authentication.
+        """
+        import irods.connection
+        with self.clone().pool.no_auto_authenticate() as pool:
+            return irods.connection.Connection(
+                pool, pool.account
+            ).server_version
+
+    RAW_SERVER_VERSION = staticmethod(lambda s:s.raw_server_version())
+
+    def _server_version(self, version_func = None):
+        """The  server version can be retrieved by the usage
+            session._server_version()
+        with conditional substitution by another version by use of the environment variable:
+            PYTHON_IRODSCLIENT_REPORTED_SERVER_VERSION.
+
+        Also: if iRODSServer.RAW_SERVER_VERSION is passed in version_func, the true server
+        version can be accessed without first going through authentication.
+        Example:
+            ses = irods.helpers.make_session()
+            vsn = ses._server_version( ses.RAW_SERVER_VERSION )
+        """
         reported_vsn = os.environ.get("PYTHON_IRODSCLIENT_REPORTED_SERVER_VERSION", "")
         if reported_vsn:
             return tuple(ast.literal_eval(reported_vsn))
-        return self.__server_version()
+        return self.__server_version() if version_func is None else version_func(self)
 
     def __server_version(self):
         try:
