@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import contextlib
+import getopt
 import getpass
 import os
 import sys
@@ -41,7 +42,7 @@ def _write_encoded_auth_value(auth_file, encode_input, overwrite):
         irodsA.write(obf.encode(encode_input))
 
 
-def write_native_credentials_to_secrets_file(password, overwrite=True, **kw):
+def write_native_irodsA_file(password, overwrite=True, **kw):
     """Write the credentials to an .irodsA file that will enable logging in with native authentication
     using the given cleartext password.
 
@@ -53,20 +54,52 @@ def write_native_credentials_to_secrets_file(password, overwrite=True, **kw):
     _write_encoded_auth_value(auth_file, password, overwrite)
 
 
-def write_pam_credentials_to_secrets_file(password, overwrite=True, **kw):
+# Reverse compatibility.
+write_native_credentials_to_secrets_file = write_native_irodsA_file
+
+
+# Facility for writing authentication secrets file.  Designed to be useable for iRODS 4.3(+) and 4.2(-).
+def write_pam_irodsA_file(password, overwrite=True, ttl = '', **kw):
+    import irods.auth.pam_password
+    from irods.session import iRODSSession
+    import io
+    ses = kw.pop('_session', None) or h.make_session(**kw)
+    if ses._server_version(iRODSSession.RAW_SERVER_VERSION) < (4,3):
+        write_pam_credentials_to_secrets_file(
+            password,
+            overwrite = overwrite,
+            ttl = ttl,
+            _session = ses)
+
+    auth_file = ses.pool.account.derived_auth_file
+    if not auth_file:
+        msg = "Need an active client environment"
+        raise RuntimeError(msg)
+    if ttl:
+        ses.set_auth_option_for_scheme('pam_password', irods.auth.pam_password.AUTH_TTL_KEY, ttl)
+    ses.set_auth_option_for_scheme('pam_password', irods.auth.FORCE_PASSWORD_PROMPT, io.StringIO(password))
+    ses.set_auth_option_for_scheme('pam_password', irods.auth.STORE_PASSWORD_IN_MEMORY, True)
+    L = []
+    ses.set_auth_option_for_scheme('pam_password', irods.auth.CLIENT_GET_REQUEST_RESULT, L)
+    with ses.pool.get_connection() as conn:
+        _write_encoded_auth_value(auth_file, L[0], overwrite)
+
+
+def write_pam_credentials_to_secrets_file(password, overwrite=True, ttl = '', **kw):
     """Write the credentials to an .irodsA file that will enable logging in with PAM authentication
     using the given cleartext password.
 
     If overwrite is False, irodsA_already_exists will be raised if an .irodsA is found at the
     expected path.
     """
-    s = h.make_session()
+    s = kw.pop('_session', None) or h.make_session(**kw)
     s.pool.account.password = password
     to_encode = []
     with cfg.loadlines(
         [
             dict(setting="legacy_auth.pam.password_for_auto_renew", value=None),
             dict(setting="legacy_auth.pam.store_password_to_environment", value=False),
+            dict(setting="legacy_auth.pam.time_to_live_in_hours", value = ttl)
         ]
     ):
         to_encode = s.pam_pw_negotiated
@@ -91,17 +124,22 @@ if __name__ == "__main__":
     )
 
     vector = {
-        "pam_password": write_pam_credentials_to_secrets_file,
-        "native": write_native_credentials_to_secrets_file,
+        "pam_password": write_pam_irodsA_file,
+        "native": write_native_irodsA_file
     }
-
-    if len(sys.argv) != 2:
-        print("{}\nUsage: {} AUTH_SCHEME".format(extra_help, sys.argv[0]))
+    opts, args = getopt.getopt(sys.argv[1:], "-h", ["ttl=","help"])
+    optD = dict(opts)
+    help_selected = {*optD} & {'-h','--help'}
+    if len(args) != 1 or help_selected:
+        print("{}\nUsage: {} [-h | --help | --ttl HOURS] AUTH_SCHEME".format(extra_help, sys.argv[0]))
         print("  AUTH_SCHEME:")
         for x in vector:
             print("    {}".format(x))
-        sys.exit(1)
-    elif sys.argv[1] in vector:
-        vector[sys.argv[1]](getpass.getpass(prompt=f"{sys.argv[1]} password: "))
+        sys.exit(0 if help_selected else 1)
+    elif args[0] in vector:
+        options = {}
+        if '--ttl' in optD:
+            options['ttl'] = optD['--ttl']
+        vector[args[0]](getpass.getpass(prompt=f"{args[0]} password: "), **options)
     else:
         print("did not recognize authentication scheme argument", file=sys.stderr)

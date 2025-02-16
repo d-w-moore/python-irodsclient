@@ -7,6 +7,7 @@ import weakref
 
 from irods import DEFAULT_CONNECTION_TIMEOUT
 from irods.connection import Connection
+#import irods.helpers
 from irods.ticket import Ticket
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ class Pool:
         'application_name' specifies the application name as it should appear in an 'ips' listing.
         """
 
-        self.session_ref = weakref.ref(session) if session is not None else lambda: None
+        self.set_session_ref( session )
         self._thread_local = threading.local()
         self.account = account
         self._lock = threading.RLock()
