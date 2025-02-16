@@ -65,7 +65,7 @@ def write_pam_irodsA_file(password, overwrite=True, ttl = '', **kw):
     import io
     ses = kw.pop('_session', None) or h.make_session(**kw)
     if ses._server_version(iRODSSession.RAW_SERVER_VERSION) < (4,3):
-        write_pam_credentials_to_secrets_file(
+        return write_pam_credentials_to_secrets_file(
             password,
             overwrite = overwrite,
             ttl = ttl,
@@ -73,7 +73,7 @@ def write_pam_irodsA_file(password, overwrite=True, ttl = '', **kw):
 
     auth_file = ses.pool.account.derived_auth_file
     if not auth_file:
-        msg = "Need an active client environment"
+        msg = "Auth file could not be written because no iRODS client environment was found."
         raise RuntimeError(msg)
     if ttl:
         ses.set_auth_option_for_scheme('pam_password', irods.auth.pam_password.AUTH_TTL_KEY, ttl)

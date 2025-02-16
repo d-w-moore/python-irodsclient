@@ -7,7 +7,6 @@ import weakref
 
 from irods import DEFAULT_CONNECTION_TIMEOUT
 from irods.connection import Connection
-#import irods.helpers
 from irods.ticket import Ticket
 
 logger = logging.getLogger(__name__)
@@ -71,7 +70,7 @@ class Pool:
     @contextlib.contextmanager
     def no_auto_authenticate(self):
         import irods.helpers
-        with irods.helpers.attr_changed(self, '_need_auth', False):
+        with irods.helpers.temporarily_assign_attribute(self, '_need_auth', False):
             yield self
 
     def set_session_ref(self, session):

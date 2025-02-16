@@ -30,8 +30,10 @@ def derived_auth_filename(env_filename):
     if not env_filename:
         return ""
     default_irods_authentication_file = (
-        ##->https://github.com/irods/python-irodsclient/issues/686
-        #os.path.join(os.path.dirname(env_filename), ".irodsA")
+        # TODO(#686): move into separate commit linked to this issue.
+        # This is a revision in how we determine the default value of the authentication file (.irodsA) path.
+        # Previously this was calculated as:
+        #     os.path.join(os.path.dirname(env_filename), ".irodsA")
         os.path.expanduser("~/.irods/.irodsA")
     )
     return os.environ.get(

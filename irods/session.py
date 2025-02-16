@@ -9,7 +9,7 @@ from numbers import Number
 import os
 import threading
 import weakref
-import irods.auth 
+import irods.auth
 from irods.query import Query
 from irods.genquery2 import GenQuery2
 from irods.pool import Pool
@@ -69,16 +69,6 @@ logger = logging.getLogger(__name__)
 
 class NonAnonymousLoginWithoutPassword(RuntimeError):
     pass
-
-
-@contextlib.contextmanager
-def attr_changed(obj, attrname, value):
-   old = getattr(obj, attrname, None)
-   try:
-       setattr(obj, attrname, value)
-       yield
-   finally:
-       setattr(obj, attrname, old)
 
 
 class iRODSSession:

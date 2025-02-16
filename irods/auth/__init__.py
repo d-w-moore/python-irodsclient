@@ -13,10 +13,27 @@ __all__ = ["pam_password", "native"]
 AUTH_PLUGIN_PACKAGE = "irods.auth"
 
 
-NoneType = type(None)
+# Python3 does not have types.NoneType
+_NoneType = type(None)
 
 
 class AuthStorage:
+    """A class that facilitates flexible means password storage.
+
+    Using an instance of this class, passwords may either be
+
+        - directly placed in a member attribute (pw), or 
+
+        - they may be written to / read from a specified file path in encoded
+          form, usually in an .irodsA file intended for iRODS client authentication.
+
+    Most typical of this class's utility is the transfer of password information from
+    the pam_password to the native authentication flow.  In this usage, whether the
+    password is stored in RAM or in the filesystem depends on whether it was read 
+    originally as a function parameter or from an authentication file, respectively,
+    when the session was created.
+    
+    """
 
     @staticmethod
     def get_env_password(filename = None):
@@ -38,12 +55,20 @@ class AuthStorage:
 
     @staticmethod
     def get_temp_pw_storage(conn):
+        """Fetch the AuthStorage instance associated with this connection object.
+        """
         return getattr(conn,'auth_storage',lambda:None)()
 
     @staticmethod
     def create_temp_pw_storage(conn):
-        """A reference to the value returned by this call should be stored for the duration of the
-           authentication exchange.
+        """Creates an AuthStorage instance to be cached and associated with this connection object.
+
+           Called multiple times for the same connection, it will return the cached instance.
+
+           The value returned by this call should be stored by the caller into an appropriately scoped
+           variable to ensure the AuthStorage instance endures for the desired lifetime -- that is,
+           for however long we wish to keep the password information around.  This is because the
+           connection object only maintains a weak reference to said instance.
         """
         store = getattr(conn,'auth_storage',None)
         if store is None:
@@ -64,7 +89,9 @@ class AuthStorage:
         return self._auth_file or self.conn.account.derived_auth_file
 
     def use_client_auth_file(self, auth_file):
-        if isinstance(auth_file, (str, NoneType)):
+        """Set to None to completely suppress use of an .irodsA auth file.
+        """
+        if isinstance(auth_file, (str, _NoneType)):
             self._auth_file = auth_file
         else:
             msg = f"Invalid object in {self.__class__}._auth_file"
@@ -132,17 +159,17 @@ class authentication_base:
     def call(self, next_operation, request):
         logging.info('next operation = %r', next_operation)
         old_func = func = next_operation
-        while isinstance(func, str):
+        # One level of indirection should be sufficient to get a callable method.
+        if not callable(func):
             old_func, func = (func, getattr(self, func, None))
         func = (func or old_func)
-        if not func:
+        if not callable(func):
             raise RuntimeError("client request contains no callable 'next_operation'")
         resp = func(request)
         logging.info('resp = %r',resp)
         return resp
 
     def authenticate_client(self, next_operation = "auth_client_start", initial_request = {}):
-
         to_send = initial_request.copy()
         to_send["scheme"] = self.scheme
 

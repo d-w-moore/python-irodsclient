@@ -12,11 +12,8 @@ from irods.exception import (
 )
 import irods.session
 import irods.test.helpers as helpers
-from irods.test.helpers import (
-    server_side_sleep,
-    temporarily_assign_attribute as temp_setter,
-)
-
+from irods.test.helpers import server_side_sleep
+from irods.helpers import temporarily_assign_attribute as temp_setter
 
 class TestConnections(unittest.TestCase):
 

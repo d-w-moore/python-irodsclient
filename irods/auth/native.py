@@ -12,20 +12,29 @@ from . import (__NEXT_OPERATION__, __FLOW_COMPLETE__,
 
 
 def login(conn, **extra_opt):
+    """When the Python iRODS client loads this(or any plugin) for authenticating a connection object,
+    login is the hook function that gets called.
+    """
     opt = {'user_name': conn.account.proxy_user,
            'zone_name': conn.account.proxy_zone}
     opt.update(extra_opt)
-    authenticate_native(conn, req = opt)
+    _authenticate_native(conn, req = opt)
 
 
 _scheme = 'native'
 
 
-def authenticate_native(conn, req):
+_logger = logging.getLogger(__name__)
 
-    logging.info('----------- %s (begin)', _scheme)
 
-    native_ClientAuthState(
+def _authenticate_native(conn, req):
+    """The implementation for the client side of a native scheme authentication flow.
+       It is called by login(), the external hook.
+       Other client auth plugins should at least roughly follow this pattern.
+    """
+    _logger.debug('----------- %s (begin)', _scheme)
+
+    _native_ClientAuthState(
         conn,
         scheme = _scheme
     ).authenticate_client(
@@ -33,16 +42,12 @@ def authenticate_native(conn, req):
         initial_request = req
     )
 
-    logging.info('----------- %s (end)', _scheme)
+    _logger.debug('----------- %s (end)', _scheme)
 
 
-class native_ClientAuthState(authentication_base):
-
-    def auth_client_start(self, request):
-        resp = request.copy()
-        # user_name and zone_name keys injected by authenticate_client() method
-        resp[__NEXT_OPERATION__] = self.AUTH_CLIENT_AUTH_REQUEST # native_auth_client_request
-        return resp
+class _native_ClientAuthState(authentication_base):
+    """A class containing the specific methods needed to implement a native scheme authentication flow.
+    """
 
     # Client defines. These strings should match instance method names within the class namespace.
     AUTH_AGENT_START = 'native_auth_agent_start'
@@ -53,6 +58,12 @@ class native_ClientAuthState(authentication_base):
     # Server defines.
     AUTH_AGENT_AUTH_REQUEST = "auth_agent_auth_request"
     AUTH_AGENT_AUTH_RESPONSE = "auth_agent_auth_response"
+
+    def auth_client_start(self, request):
+        resp = request.copy()
+        # user_name and zone_name keys injected by authenticate_client() method
+        resp[__NEXT_OPERATION__] = self.AUTH_CLIENT_AUTH_REQUEST # native_auth_client_request
+        return resp
 
     def native_auth_client_request(self, request):
         server_req = request.copy()
