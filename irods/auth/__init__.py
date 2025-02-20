@@ -70,7 +70,12 @@ class AuthStorage:
            for however long we wish to keep the password information around.  This is because the
            connection object only maintains a weak reference to said instance.
         """
-        store = getattr(conn,'auth_storage',None)
+
+        # resolve the weakly referenced AuthStore obj for the connection if there is one.
+        weakref_to_store = getattr(conn,'auth_storage',None)
+        store = (weakref_to_store and weakref_to_store())
+
+        # In absence of a permanent AuthStore, create one.
         if store is None:
             store = AuthStorage(conn)
             # So that the connection object doesn't hold on to password data too long:
