@@ -27,6 +27,10 @@ _logger = logging.getLogger(__name__)
 
 
 def authenticate_pam_password(conn, req):
+    """The implementation for the client side of a pam_password scheme authentication flow.
+       It is called by login(), the external-facing hook.
+       Follow the pattern set in the original iRODS (native) plugin.
+    """
     _logger.debug('----------- %s (begin)', _scheme)
 
     # By design, we persist this "depot" object over the whole of the authentication
