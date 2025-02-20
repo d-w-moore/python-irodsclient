@@ -64,7 +64,7 @@ def write_pam_irodsA_file(password, overwrite=True, ttl = '', **kw):
     from irods.session import iRODSSession
     import io
     ses = kw.pop('_session', None) or h.make_session(**kw)
-    if ses._server_version(iRODSSession.RAW_SERVER_VERSION) < (4,3):
+    if ses._server_version(iRODSSession.GET_SERVER_VERSION_WITHOUT_AUTH) < (4,3):
         return write_pam_credentials_to_secrets_file(
             password,
             overwrite = overwrite,

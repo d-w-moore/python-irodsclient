@@ -29,7 +29,7 @@ _logger = logging.getLogger(__name__)
 
 def _authenticate_native(conn, req):
     """The implementation for the client side of a native scheme authentication flow.
-       It is called by login(), the external hook.
+       It is called by login(), the external-facing hook.
        Other client auth plugins should at least roughly follow this pattern.
     """
     _logger.debug('----------- %s (begin)', _scheme)

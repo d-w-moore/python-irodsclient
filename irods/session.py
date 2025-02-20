@@ -376,7 +376,7 @@ class iRODSSession:
     @property
     def server_version(self): return self._server_version()
 
-    def raw_server_version(self):
+    def server_version_without_auth(self):
         """Returns the same version tuple as iRODSSession's server_version property, but
            does not require successful authentication.
         """
@@ -386,7 +386,7 @@ class iRODSSession:
                 pool, pool.account
             ).server_version
 
-    RAW_SERVER_VERSION = staticmethod(lambda s:s.raw_server_version())
+    GET_SERVER_VERSION_WITHOUT_AUTH = staticmethod(lambda s:s.server_version_without_auth())
 
     def _server_version(self, version_func = None):
         """The  server version can be retrieved by the usage
@@ -394,11 +394,11 @@ class iRODSSession:
         with conditional substitution by another version by use of the environment variable:
             PYTHON_IRODSCLIENT_REPORTED_SERVER_VERSION.
 
-        Also: if iRODSServer.RAW_SERVER_VERSION is passed in version_func, the true server
+        Also: if iRODSServer.GET_SERVER_VERSION_WITHOUT_AUTH is passed in version_func, the true server
         version can be accessed without first going through authentication.
         Example:
             ses = irods.helpers.make_session()
-            vsn = ses._server_version( ses.RAW_SERVER_VERSION )
+            vsn = ses._server_version( ses.GET_SERVER_VERSION_WITHOUT_AUTH )
         """
         reported_vsn = os.environ.get("PYTHON_IRODSCLIENT_REPORTED_SERVER_VERSION", "")
         if reported_vsn:

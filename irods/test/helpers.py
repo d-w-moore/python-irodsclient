@@ -172,8 +172,10 @@ def make_environment_and_auth_files(dir_, **params):
     return (config, auth)
 
 
-# Create a connection for test, based on ~/.irods environment by default.
+def get_server_version_for_test(session, curtail_length):
+    return session._server_version(session.GET_SERVER_VERSION_WITHOUT_AUTH)[:curtail_length]
 
+# Create a connection for test, based on ~/.irods environment by default.
 
 def make_session(test_server_version=True, **kwargs):
     """Connect to an iRODS server as determined by any client environment
@@ -193,7 +195,7 @@ def make_session(test_server_version=True, **kwargs):
     env_file = env_filename_from_keyword_args(kwargs)
     session = iRODSSession(irods_env_file=env_file, **kwargs)
     if test_server_version:
-        connected_version = session.server_version[:3]
+        connected_version = get_server_version_for_test(session, curtail_length = 3)
         advertised_version = IRODS_VERSION[:3]
         if connected_version > advertised_version:
             msg = (

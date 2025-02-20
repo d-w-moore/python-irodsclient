@@ -22,17 +22,17 @@ class AuthStorage:
 
     Using an instance of this class, passwords may either be
 
-        - directly placed in a member attribute (pw), or 
+        - directly placed in a member attribute (pw), or
 
         - they may be written to / read from a specified file path in encoded
           form, usually in an .irodsA file intended for iRODS client authentication.
 
     Most typical of this class's utility is the transfer of password information from
     the pam_password to the native authentication flow.  In this usage, whether the
-    password is stored in RAM or in the filesystem depends on whether it was read 
+    password is stored in RAM or in the filesystem depends on whether it was read
     originally as a function parameter or from an authentication file, respectively,
     when the session was created.
-    
+
     """
 
     @staticmethod
@@ -70,7 +70,12 @@ class AuthStorage:
            for however long we wish to keep the password information around.  This is because the
            connection object only maintains a weak reference to said instance.
         """
-        store = getattr(conn,'auth_storage',None)
+
+        # resolve the weakly referenced AuthStore obj for the connection if there is one.
+        weakref_to_store = getattr(conn,'auth_storage',None)
+        store = (weakref_to_store and weakref_to_store())
+
+        # In absence of a permanent AuthStore, create one.
         if store is None:
             store = AuthStorage(conn)
             # So that the connection object doesn't hold on to password data too long:

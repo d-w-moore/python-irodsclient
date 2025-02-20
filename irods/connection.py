@@ -694,6 +694,7 @@ class Connection:
         )
         self.send(pwd_request)
         self.recv()
+        logger.info("Native authorization validated (in legacy auth).")
 
     def write_file(self, desc, string):
         message_body = OpenedDataObjRequest(
@@ -764,4 +765,3 @@ class Connection:
         # Convert and return answer
         msg = response.get_main_message(GetTempPasswordOut)
         return obf.create_temp_password(msg.stringToHashWith, self.account.password)
-
