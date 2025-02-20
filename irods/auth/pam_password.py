@@ -7,8 +7,7 @@ from . import (__NEXT_OPERATION__, __FLOW_COMPLETE__,
     authentication_base, _auth_api_request,
     throw_if_request_message_is_missing_key,
     STORE_PASSWORD_IN_MEMORY, CLIENT_GET_REQUEST_RESULT, FORCE_PASSWORD_PROMPT)
-
-from .native import authenticate_native
+from .native import _authenticate_native
 
 
 AUTH_TTL_KEY = "a_ttl"
@@ -17,7 +16,7 @@ AUTH_TTL_KEY = "a_ttl"
 def login(conn, **extra_opt):
     context_opt =  {'user_name': conn.account.proxy_user,'zone_name': conn.account.proxy_zone}
     context_opt.update(extra_opt)
-    authenticate_pam_password(conn, req = context_opt)
+    _authenticate_pam_password(conn, req = context_opt)
 
 
 _scheme = 'pam_password'
@@ -26,7 +25,7 @@ _scheme = 'pam_password'
 _logger = logging.getLogger(__name__)
 
 
-def authenticate_pam_password(conn, req):
+def _authenticate_pam_password(conn, req):
     """The implementation for the client side of a pam_password scheme authentication flow.
        It is called by login(), the external-facing hook.
        Follow the pattern set in the original iRODS (native) plugin.
@@ -50,7 +49,7 @@ def authenticate_pam_password(conn, req):
     _logger.debug('----------- %s (end)', _scheme)
 
 
-def get_pam_password_from_stdin(file_like_object = None):
+def _get_pam_password_from_stdin(file_like_object = None):
     try:
         if file_like_object:
             if not getattr(file_like_object,'readline',None):
@@ -100,7 +99,7 @@ class _pam_password_ClientAuthState(authentication_base):
             if isinstance(password_input_obj,(int,bool)):
                 password_input_obj = None
             # Like with the C++ plugin, we offer the user a chance to enter a password.
-            resp[AUTH_PASSWORD_KEY] = get_pam_password_from_stdin(file_like_object = password_input_obj)
+            resp[AUTH_PASSWORD_KEY] = _get_pam_password_from_stdin(file_like_object = password_input_obj)
         else:
             # Password from .irodsA in environment.
             if self.conn.account._auth_file:
@@ -140,11 +139,10 @@ class _pam_password_ClientAuthState(authentication_base):
         resp = request.copy()
         resp.pop(AUTH_PASSWORD_KEY, None)
 
-        authenticate_native(self.conn, request)
+        _authenticate_native(self.conn, request)
 
         resp["next_operation"] = __FLOW_COMPLETE__
         self.loggedIn = 1;
         return resp
 
     perform_native_auth = pam_password_auth_client_perform_native_auth
-
