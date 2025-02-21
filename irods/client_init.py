@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 
 import contextlib
-import getopt
-import getpass
 import os
-import sys
-import textwrap
 
 from irods import env_filename_from_keyword_args, derived_auth_filename
 import irods.client_configuration as cfg
@@ -107,39 +103,3 @@ def write_pam_credentials_to_secrets_file(password, overwrite=True, ttl = '', **
         raise RuntimeError(f"Password token was not passed from server.")
     auth_file = s.pool.account.derived_auth_file
     _write_encoded_auth_value(auth_file, to_encode[0], overwrite)
-
-
-if __name__ == "__main__":
-    extra_help = textwrap.dedent(
-        """
-    This Python module also functions as a script to produce a "secrets" (i.e. encoded password) file.
-    Similar to iinit in this capacity, if the environment - and where applicable, the PAM
-    configuration for both system and user - is already set up in every other regard, this program
-    will generate the secrets file with appropriate permissions and in the normal location, usually:
-
-       ~/.irods/.irodsA
-
-    The user will be interactively prompted to enter their cleartext password.
-    """
-    )
-
-    vector = {
-        "pam_password": write_pam_irodsA_file,
-        "native": write_native_irodsA_file
-    }
-    opts, args = getopt.getopt(sys.argv[1:], "-h", ["ttl=","help"])
-    optD = dict(opts)
-    help_selected = {*optD} & {'-h','--help'}
-    if len(args) != 1 or help_selected:
-        print("{}\nUsage: {} [-h | --help | --ttl HOURS] AUTH_SCHEME".format(extra_help, sys.argv[0]))
-        print("  AUTH_SCHEME:")
-        for x in vector:
-            print("    {}".format(x))
-        sys.exit(0 if help_selected else 1)
-    elif args[0] in vector:
-        options = {}
-        if '--ttl' in optD:
-            options['ttl'] = optD['--ttl']
-        vector[args[0]](getpass.getpass(prompt=f"{args[0]} password: "), **options)
-    else:
-        print("did not recognize authentication scheme argument", file=sys.stderr)
