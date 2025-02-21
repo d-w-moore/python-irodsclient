@@ -57,7 +57,7 @@ def _get_pam_password_from_stdin(file_like_object = None):
                 raise RuntimeError(msg)
             sys.stdin = file_like_object
         if sys.stdin.isatty():
-            return getpass.getpass('Please enter PAM Password: ')
+            return getpass.getpass("Enter your current PAM password: ")
         else:
             return sys.stdin.readline().strip()
     finally:

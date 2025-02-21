@@ -239,7 +239,7 @@ class TestConnections(unittest.TestCase):
             sess, old_timeout
         )
 
-    def test_legacy_auth_codepath__issue_499(self):
+    def test_legacy_auth_used_with_force_legacy_auth_configuration__issue_499(self):
         import irods.client_configuration as config
         with config.loadlines(
             entries=[dict(setting="legacy_auth.force_legacy_auth", value=True)]

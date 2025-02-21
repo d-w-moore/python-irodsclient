@@ -765,4 +765,3 @@ class Connection:
         # Convert and return answer
         msg = response.get_main_message(GetTempPasswordOut)
         return obf.create_temp_password(msg.stringToHashWith, self.account.password)
-
