@@ -30,6 +30,7 @@ if __name__ == "__main__":
     opts, args = getopt.getopt(sys.argv[1:], "hi:", ["ttl=","help"])
     optD = dict(opts)
     help_selected = {*optD} & {'-h','--help'}
+    scheme = args[0]
     if len(args) != 1 or help_selected:
         print("{}\nUsage: {} [-i STREAM| -h | --help | --ttl HOURS] AUTH_SCHEME".format(extra_help, sys.argv[0]))
         print("  Choices for AUTH_SCHEME are:")
@@ -38,13 +39,13 @@ if __name__ == "__main__":
         print("  STREAM is the name of a file containing a password. Alternatively, a hyphen('-') is used to\n"
               "  indicate that the password may be read from stdin.")
         sys.exit(0 if help_selected else 1)
-    elif args[0] in vector:
+    elif scheme in vector:
         options = {}
         inp_stream = optD.get('-i',None)
         if '--ttl' in optD:
             options['ttl'] = optD['--ttl']
         pw = get_password(sys.stdin if inp_stream in ("-",None)
-                          else open(inp_stream,"r"))
-        vector[args[0]](pw,**options)
+                          else open(inp_stream,"r"), prompt = f"Enter current password for scheme {scheme!r}: ")
+        vector[scheme](pw,**options)
     else:
         print("did not recognize authentication scheme argument", file=sys.stderr)
