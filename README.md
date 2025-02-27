@@ -134,8 +134,8 @@ Creating PAM or Native Credentials File (.irodsA)
 
 Two free functions exist for creating encoded authentication files:
 ```
-irods.client_init.write_native_credentials_to_secrets_file
-irods.client_init.write_pam_credentials_to_secrets_file
+irods.client_init.write_native_irodsA_file
+irods.client_init.write_pam_irodsA_file
 ```
 
 Each takes a cleartext password and writes an appropriately processed version of it

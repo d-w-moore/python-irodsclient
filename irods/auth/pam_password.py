@@ -54,7 +54,7 @@ def _authenticate_pam_password(conn, req):
     _logger.debug('----------- %s (end)', _scheme)
 
 
-def _get_pam_password_from_stdin(file_like_object = None):
+def _get_pam_password_from_stdin(file_like_object = None, prompt = "Enter your current PAM password: "):
     try:
         if file_like_object:
             if not getattr(file_like_object,'readline',None):
@@ -62,7 +62,7 @@ def _get_pam_password_from_stdin(file_like_object = None):
                 raise RuntimeError(msg)
             sys.stdin = file_like_object
         if sys.stdin.isatty():
-            return getpass.getpass("Enter your current PAM password: ")
+            return getpass.getpass(prompt)
         else:
             return sys.stdin.readline().strip()
     finally:
