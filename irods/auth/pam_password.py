@@ -70,6 +70,7 @@ def _get_pam_password_from_stdin(file_like_object = None, prompt = "Enter your c
 
 
 AUTH_PASSWORD_KEY = "a_pw"
+ENSURE_SSL_IS_ACTIVE = "ensure_ssl_is_active"
 
 
 class _pam_password_ClientAuthState(authentication_base):
@@ -80,6 +81,7 @@ class _pam_password_ClientAuthState(authentication_base):
     # Server define
     AUTH_AGENT_AUTH_REQUEST = "auth_agent_auth_request"
 
+    # TODO: check_ssl does not need to be a parameter here, if we have the ENSURE_SSL_IS_ACTIVE option available.
     def __init__(self,*_,check_ssl=True,**_kw):
         super().__init__(*_,**_kw)
         self.check_ssl = check_ssl
@@ -90,6 +92,10 @@ class _pam_password_ClientAuthState(authentication_base):
         # This list reference is popped and cached for the purpose of returning the request_result value
         # to the caller upon request.
         self._list_for_request_result_return = request.pop(CLIENT_GET_REQUEST_RESULT, False)
+
+        ensure_ssl = request.pop(ENSURE_SSL_IS_ACTIVE, None)
+        if ensure_ssl is not None:
+            self.check_ssl = ensure_ssl
 
         if self.check_ssl:
             if not isinstance(self.conn.socket, ssl.SSLSocket):

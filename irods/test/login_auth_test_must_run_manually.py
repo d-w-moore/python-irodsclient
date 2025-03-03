@@ -100,9 +100,21 @@ def client_env_keys_from_admin_env(user_name, auth_scheme=""):
         cli_env["irods_authentication_scheme"] = auth_scheme
     return cli_env
 
+@contextlib.contextmanager
+def pam_password_in_plaintext_4_3(allow = True):
+    import irods.helpers
+    from irods.auth.pam_password import ENSURE_SSL_IS_ACTIVE
+    old_init = iRODSSession.__init__
+    def new_init(self,*arg,**kw):
+        old_init(self,*arg,**kw)
+        self.set_auth_option_for_scheme("pam_password", irods.auth.pam_password.ENSURE_SSL_IS_ACTIVE, not(allow))
+    # in the scope of this context manager, all new iRODSSession objects will allow plaintext transmission of PAM passwords.
+    # (for test only!)
+    with irods.helpers.temporarily_assign_attribute(iRODSSession, '__init__', new_init):
+        yield
 
 @contextlib.contextmanager
-def pam_password_in_plaintext(allow=True):
+def pam_password_in_plaintext_4_2(allow = True):
     saved = bool(Connection.DISALLOWING_PAM_PLAINTEXT)
     try:
         Connection.DISALLOWING_PAM_PLAINTEXT = not (allow)
@@ -110,6 +122,11 @@ def pam_password_in_plaintext(allow=True):
     finally:
         Connection.DISALLOWING_PAM_PLAINTEXT = saved
 
+@contextlib.contextmanager
+def pam_password_in_plaintext(allow = True):
+    with pam_password_in_plaintext_4_2(allow=allow):
+        with pam_password_in_plaintext_4_3(allow=allow):
+            yield
 
 class TestLogins(unittest.TestCase):
     """
