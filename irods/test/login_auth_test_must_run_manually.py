@@ -100,16 +100,20 @@ def client_env_keys_from_admin_env(user_name, auth_scheme=""):
         cli_env["irods_authentication_scheme"] = auth_scheme
     return cli_env
 
+# For testing only!
+# Note pam_password_in_plaintext* functions are for test only as they will allow transmitting passwords on a potentially
+# interceptible, unencrypted channel.
+
 @contextlib.contextmanager
 def pam_password_in_plaintext_4_3(allow = True):
     import irods.helpers
     from irods.auth.pam_password import ENSURE_SSL_IS_ACTIVE
+    # We'll temporarily replace the original iRODSSession constructor with a new version which changes pam_password options
+    # to allow pam password SSL
     old_init = iRODSSession.__init__
     def new_init(self,*arg,**kw):
         old_init(self,*arg,**kw)
         self.set_auth_option_for_scheme("pam_password", irods.auth.pam_password.ENSURE_SSL_IS_ACTIVE, not(allow))
-    # in the scope of this context manager, all new iRODSSession objects will allow plaintext transmission of PAM passwords.
-    # (for test only!)
     with irods.helpers.temporarily_assign_attribute(iRODSSession, '__init__', new_init):
         yield
 
