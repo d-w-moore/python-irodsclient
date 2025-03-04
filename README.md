@@ -134,8 +134,8 @@ Creating PAM or Native Credentials File (.irodsA)
 
 Two free functions exist for creating encoded authentication files:
 ```
-irods.client_init.write_native_credentials_to_secrets_file
-irods.client_init.write_pam_credentials_to_secrets_file
+irods.client_init.write_native_irodsA_file
+irods.client_init.write_pam_irodsA_file
 ```
 
 Each takes a cleartext password and writes an appropriately processed version of it
@@ -146,16 +146,28 @@ For the `native` authentication scheme, we can use the currently set iRODS passw
 
 ```python
 import irods.client_init as iinit
-iinit.write_native_credentials_to_secrets_file(irods_password)
+iinit.write_native_irodsA_file(irods_password)
 ```
-
-Note, in the `pam_password` case, this involves sending the cleartext password
-to the server (SSL must be enabled!) and then writing the scrambled token that
-is returned from the transaction.
 
 If an .irodsA file exists already, it will be overwritten by default; however, if these functions'
 overwrite parameter is set to `False`, an exception of type `irods.client_init.irodsA_already_exists`
 will be raised to indicate the older .irodsA file is present.
+
+From the command line, we can also run:
+```bash
+$ prc_write_irodsA.py native <<<"${MY_CURRENT_IRODS_PASSWORD}"
+```
+
+The redirect may be left off, in which case the user is prompted for the iRODS password
+and echo of the keyboard input will be suppressed.  In neither case does the password
+become visible on the terminal.
+
+```bash
+$ prc_write_irodsA.py native <<<"${MY_CURRENT_IRODS_PASSWORD}"
+```
+Currently
+Note that for the `pam_password` scheme, SSL/TLS must be enabled to avoid sending
+an unencrypted password to the server in the clear. 
 
 For the `pam_password` authentication scheme, we must first ensure an `irods_environment.json` file exists in the 
 client environment (necessary for establishing SSL/TLS connection parameters as well as obtaining a PAM token from the server after connecting)
