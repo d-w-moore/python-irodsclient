@@ -234,8 +234,9 @@ class TestLogins(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        import irods.client_configuration as cfg
         cls.admin = helpers.make_session()
-        if cls.admin.server_version >= (4, 3):
+        if cls.admin.server_version >= (4, 3) and not cfg.legacy_auth.force_legacy_auth:
             cls.PAM_SCHEME_STRING = cls.user_auth_envs[".irods.pam"]["AUTH"] = (
                 "pam_password"
             )

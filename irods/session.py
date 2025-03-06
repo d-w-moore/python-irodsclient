@@ -15,6 +15,7 @@ from irods.genquery2 import GenQuery2
 from irods.pool import Pool
 from irods.account import iRODSAccount
 from irods.api_number import api_number
+import irods.client_configuration as client_config
 from irods.manager.collection_manager import CollectionManager
 from irods.manager.data_object_manager import DataObjectManager
 from irods.manager.metadata_manager import MetadataManager
@@ -423,15 +424,22 @@ class iRODSSession:
             response = conn.recv()
         return response.get_json_encoded_struct()
 
+#dwm
     @property
     def pam_pw_negotiated(self):
-        self.pool.account.store_pw = []
-        conn = self.pool.get_connection()
-        pw = getattr(self.pool.account, "store_pw", [])
-        delattr(self.pool.account, "store_pw")
-        conn.release()
-        return pw
-
+        old_setting = _dummy = lambda:None
+        try:
+            self.pool.account.store_pw = box = []
+            if self.server_version_without_auth() >= (4,3) and not client_config.legacy_auth.force_legacy_auth:
+                old_setting = self.set_auth_option_for_scheme('pam_password', irods.auth.CLIENT_GET_REQUEST_RESULT, box)
+            conn = self.pool.get_connection()
+            pw = getattr(self.pool.account, "store_pw", [])
+            delattr(self.pool.account, "store_pw")
+            conn.release()
+            return pw
+        finally:
+            if old_setting != _dummy:
+                self.set_auth_option_for_scheme('pam_password', irods.auth.CLIENT_GET_REQUEST_RESULT, old_setting)
     @property
     def default_resource(self):
         return self.pool.account.default_resource
