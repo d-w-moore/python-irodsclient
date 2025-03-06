@@ -427,7 +427,7 @@ class iRODSSession:
 #dwm
     @property
     def pam_pw_negotiated(self):
-        old_setting = _dummy = lambda:None
+        old_setting = _dummy = object()
         try:
             self.pool.account.store_pw = box = []
             if self.server_version_without_auth() >= (4,3) and not client_config.legacy_auth.force_legacy_auth:
@@ -438,7 +438,7 @@ class iRODSSession:
             conn.release()
             return pw
         finally:
-            if old_setting != _dummy:
+            if old_setting is not _dummy:
                 self.set_auth_option_for_scheme('pam_password', irods.auth.CLIENT_GET_REQUEST_RESULT, old_setting)
     @property
     def default_resource(self):
