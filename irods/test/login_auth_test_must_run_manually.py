@@ -127,7 +127,10 @@ def pam_password_in_plaintext_4_2(allow = True):
         Connection.DISALLOWING_PAM_PLAINTEXT = saved
 
 @contextlib.contextmanager
-def pam_password_in_plaintext(allow = True):
+def pam_password_in_plaintext(allow = True, nop = False):
+    if nop:
+        yield
+        return
     with pam_password_in_plaintext_4_2(allow=allow):
         with pam_password_in_plaintext_4_3(allow=allow):
             yield
@@ -314,12 +317,13 @@ class TestLogins(unittest.TestCase):
                         json_file_update(
                             env_file, keys_to_delete=remove, **cli_env_extras
                         )
-                        session = iRODSSession(irods_env_file=env_file)
-                        with open(env_file) as f:
-                            out = json.load(f)
-                        self.validate_session(session, verbose=verbosity, ssl=ssl_opt)
-                        session.cleanup()
-                out["ARGS"] = "no"
+                        with pam_password_in_plaintext(nop = ssl_opt):
+                            session = iRODSSession(irods_env_file=env_file)
+                            with open(env_file) as f:
+                                out = json.load(f)
+                            self.validate_session(session, verbose=verbosity, ssl=ssl_opt)
+                            session.cleanup()
+                            out["ARGS"] = "no"
             else:
                 session_options = {}
                 if auth_opt:
@@ -338,18 +342,19 @@ class TestLogins(unittest.TestCase):
                 lookup = self.user_auth_envs[
                     ".irods." + ("native" if not (_auth_opt) else _auth_opt)
                 ]
-                session = iRODSSession(
-                    host=gethostname(),
-                    user=lookup["USER"],
-                    zone="tempZone",
-                    password=lookup["PASSWORD"],
-                    port=1247,
-                    **session_options
-                )
-                out = session_options
-                self.validate_session(session, verbose=verbosity, ssl=ssl_opt)
-                session.cleanup()
-                out["ARGS"] = "yes"
+                with pam_password_in_plaintext(nop = ssl_opt):
+                    session = iRODSSession(
+                        host=gethostname(),
+                        user=lookup["USER"],
+                        zone="tempZone",
+                        password=lookup["PASSWORD"],
+                        port=1247,
+                        **session_options
+                    )
+                    out = session_options
+                    self.validate_session(session, verbose=verbosity, ssl=ssl_opt)
+                    session.cleanup()
+                    out["ARGS"] = "yes"
 
             if verbosity == "":
                 print("--- ssl:", ssl_opt, "/ auth:", repr(auth_opt), "/ env:", env_opt)
@@ -360,6 +365,8 @@ class TestLogins(unittest.TestCase):
                     ),
                 )
                 print("---")
+
+            return session
 
     # == test defaulting to 'native'
 
@@ -396,12 +403,14 @@ class TestLogins(unittest.TestCase):
 
     def test_6(self):
         try:
-            self.tst0(ssl_opt=False, auth_opt="pam", env_opt=False)
+            ses = self.tst0(ssl_opt=False, auth_opt="pam", env_opt=False)
         except PlainTextPAMPasswordError:
             pass
         else:
-            # -- no exception raised
-            self.fail("PlainTextPAMPasswordError should have been raised")
+            # -- no exception raised (this is expected behavior in 4.3+ with the new authentication framework,
+            #    but for 4.2 and previous, we expect the PlainTextPAMPasswordError to be raised.
+            if ses.server_version_without_auth() < (4,3):
+                self.fail("PlainTextPAMPasswordError should have been raised")
 
     def test_7(self):
         self.tst0(ssl_opt=True, auth_opt="pam", env_opt=True)
