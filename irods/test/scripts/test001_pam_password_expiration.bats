@@ -20,7 +20,7 @@ teardown()
     test_specific_cleanup
 }
 
-@test f001 {
+@test main {
 
     # Define the core Python to be run, basically a minimal code block ensuring that we can authenticate to iRODS
     # without an exception being raised.

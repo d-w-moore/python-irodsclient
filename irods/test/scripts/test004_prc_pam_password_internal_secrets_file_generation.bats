@@ -26,7 +26,7 @@ teardown()
     test_specific_cleanup
 }
 
-@test f001 {
+@test main {
 
     local AUTH_FILE=~/.irods/.irodsA
 

@@ -10,7 +10,7 @@ PYTHON=python3
 # Run as ubuntu user with sudo; python_irodsclient must be installed (in either ~/.local or a virtualenv)
 #
 
-@test create_irods_secrets_file {
+@test main {
 
     rm -fr ~/.irods
     mkdir ~/.irods

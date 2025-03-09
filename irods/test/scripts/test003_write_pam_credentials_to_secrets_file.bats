@@ -24,7 +24,7 @@ teardown()
     test_specific_cleanup
 }
 
-@test create_secrets_file {
+@test main {
     auth_file=~/.irods/.irodsA
 
     CONTENTS1=$(cat $auth_file)

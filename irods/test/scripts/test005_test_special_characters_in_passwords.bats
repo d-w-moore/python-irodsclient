@@ -23,7 +23,7 @@ teardown()
     test_specific_cleanup
 }
 
-@test create_secrets_file {
+@test main {
     # Old .irodsA is already created, so we delete it and alter the pam password.
     sudo chpasswd <<<"alice:$ALICES_NEW_PAM_PASSWD"
     local logfile i
