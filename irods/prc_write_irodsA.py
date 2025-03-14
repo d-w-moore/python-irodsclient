@@ -1,5 +1,4 @@
 import getopt
-import getpass
 import textwrap
 import sys
 

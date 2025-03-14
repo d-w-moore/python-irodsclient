@@ -58,7 +58,7 @@ class TestConnections(unittest.TestCase):
 
         # Test that the older server_version property fails for the unauthorized session object.
         with self.assertRaises(CAT_INVALID_AUTHENTICATION):
-            non_authenticating_session.server_version
+            _ = non_authenticating_session.server_version
 
     def test_failed_connection(self):
         # Make sure no connections are cached in self.sess.pool.idle to be grabbed by get_connection().

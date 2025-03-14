@@ -118,7 +118,7 @@ def pam_password_in_plaintext_4_3(allow=True):
     def new_init(self, *arg, **kw):
         old_init(self, *arg, **kw)
         self.set_auth_option_for_scheme(
-            "pam_password", irods.auth.pam_password.ENSURE_SSL_IS_ACTIVE, not (allow)
+            "pam_password", ENSURE_SSL_IS_ACTIVE, not (allow)
         )
 
     with irods.helpers.temporarily_assign_attribute(iRODSSession, "__init__", new_init):
