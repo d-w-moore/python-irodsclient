@@ -89,6 +89,9 @@ with_change_auth_params_for_test()
 }
 
 _begin_pam_environment_and_password() {
+    # If the environment variable SKIP_IINIT_FOR_PASSWORD is set to a non-null length string, then
+    # the step of generating the .irodsA containing the PAM authentication secret will be skipped.
+
     local username=${2:-alice}
     local ENV='{
     "irods_host": "localhost",
