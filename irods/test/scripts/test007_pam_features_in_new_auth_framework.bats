@@ -22,9 +22,8 @@ setup()
 
 teardown()
 {
-:
- ;  finalize_pam_login_for_alice
- ;  test_specific_cleanup
+    finalize_pam_login_for_alice
+    test_specific_cleanup
 }
 
 @test main {
@@ -70,7 +69,7 @@ SSL_OPTIONS = {
     'irods_encryption_num_hash_rounds': 16,
     'irods_encryption_algorithm': 'AES-256-CBC'
 }
-ses = irods.session.iRODSSession(user = 'alice', password = '$ALICES_ORIGINAL_PAM_PASSWORD', 
+ses = irods.session.iRODSSession(user = 'alice', password = '$ALICES_ORIGINAL_PAM_PASSWORD',
                                  host = 'localhost', port = 1247, zone = 'tempZone',
                                  authentication_scheme = 'pam_password', **SSL_OPTIONS)
 ses.collections.get(irods.helpers.home_collection(ses))
@@ -84,7 +83,7 @@ print ('env_auth_scheme=%s' % ses.pool.account._original_authentication_scheme)"
 
     [ "$mc1" == "$mc2" ]
 
-    # Set a new password for alice and use prc_write_irodsA script to alter with chosen 
+    # Set a new password for alice and use prc_write_irodsA script to alter with chosen
     # time-to-live setting of 2000 seconds.
     sudo chpasswd <<< "alice:$ALICES_NEW_PASSWORD"
     prc_write_irodsA.py -i - --ttl=1 pam_password <<<"$ALICES_NEW_PASSWORD"
@@ -92,7 +91,7 @@ print ('env_auth_scheme=%s' % ses.pool.account._original_authentication_scheme)"
     # Check we're able to login with the new password and correspondingly new .irodsA
     OUTPUT=$($PYTHON -c "$SCRIPT")
     [[ $OUTPUT = "env_auth_scheme=pam"* ]]
-   
+
     age_out_pam_password alice 2000
 
     OUTPUT=$($PYTHON -c "$SCRIPT")

@@ -6,7 +6,7 @@ now implemented in a development branch but slated for release in a later versio
 of python-irodsclient.  (See issue #502.)
 
 Each BATS script is designed such that a "main" function is executed to assert
-the relevant test outcomes.  In effect this is realized because BATS fails the 
+the relevant test outcomes.  In effect this is realized because BATS fails the
 test if any individual command in the function fails.
 
 The BATS tests are designed to be run by the recipe below:
