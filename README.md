@@ -198,7 +198,7 @@ As a final note, in the "pam_password" scheme the default SSL requirement can be
 of testing only):
 
 ```python
-session = irods.session.iRODSSession(host = "localhost", port = 1247, 
+session = irods.session.iRODSSession(host = "localhost", port = 1247,
                                      user = "alice", password = "test123", zone="tempZone",
                                      authentication_scheme = "pam_password")
 
