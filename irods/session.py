@@ -382,10 +382,10 @@ class iRODSSession:
         """Returns the same version tuple as iRODSSession's server_version property, but
         does not require successful authentication.
         """
-        import irods.connection
+        from irods.connection import Connection
 
         with self.clone().pool.no_auto_authenticate() as pool:
-            return irods.connection.Connection(pool, pool.account).server_version
+            return Connection(pool, pool.account).server_version
 
     GET_SERVER_VERSION_WITHOUT_AUTH = staticmethod(
         lambda s: s.server_version_without_auth()

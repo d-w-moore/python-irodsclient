@@ -53,12 +53,12 @@ class TestConnections(unittest.TestCase):
         version_tup = non_authenticating_session.server_version_without_auth()
 
         # Test returned value is non-empty "version" tuple, i.e. holds only integer values.
-        self.assertTrue(len(version_tup) > 0)
+        self.assertGreater(len(version_tup), 0)
         self.assertFalse(any(not isinstance(_, numbers.Integral) for _ in version_tup))
 
-        # Test that the older server_version property fails for the unauthorized session object.
+        # Test that the older server_version property fails for the unauthenticated session object.
         with self.assertRaises(CAT_INVALID_AUTHENTICATION):
-            non_authenticating_session.server_version
+            _ = non_authenticating_session.server_version
 
     def test_failed_connection(self):
         # Make sure no connections are cached in self.sess.pool.idle to be grabbed by get_connection().
