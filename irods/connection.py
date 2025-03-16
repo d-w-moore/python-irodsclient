@@ -119,7 +119,7 @@ class Connection:
                 elif scheme == GSI_AUTH_SCHEME:
                     self.client_ctx = None
                     self._login_gsi()
-                elif scheme == PAM_AUTH_SCHEME:
+                elif scheme in PAM_AUTH_SCHEMES:
                     self._login_pam()
                 else:
                     auth_type = None
