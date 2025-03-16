@@ -21,7 +21,7 @@ PYTHON=python3
       "irods_zone_name":"tempZone"
     }
 	EOF
-    $PYTHON -c "import irods.client_init; irods.client_init.write_native_credentials_to_secrets_file('rods')"
+    $PYTHON -c "import irods.client_init; irods.client_init.write_native_irodsA_file('rods')"
 
     # Define the core Python to be run, basically a minimal code block ensuring that we can authenticate to iRODS
     # without an exception being raised.

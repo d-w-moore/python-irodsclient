@@ -28,6 +28,9 @@ teardown()
 
 @test main {
 
+    echo legacy_auth.force_legacy_auth True > ~/.python_irodsclient
+    export PYTHON_IRODSCLIENT_CONFIGURATION_PATH=""
+
     local AUTH_FILE=~/.irods/.irodsA
 
     # Test assertion: No pre-existing authentication file.
