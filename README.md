@@ -129,87 +129,86 @@ the `encryption_*` and `ssl_*` options
 directly to the constructor as keyword arguments, even though it is
 required when they are placed in the environment file.
 
-Creating PAM or Native Credentials File (.irodsA)
--------------------------------------------------
+Creating a PAM or Native Authentication File
+--------------------------------------------
 
-Two free functions exist which allow the user to create encoded authentication files
-for use in the client's iRODS login environment:
-```
-irods.client_init.write_native_irodsA_file
-irods.client_init.write_pam_irodsA_file
-```
+The following free functions may be used to create the authentication secrets files (called
+`.irodsA` per the convention of iRODS's iCommands):
+   - `irods.client_init.write_native_irodsA_file`
+   - `irods.client_init.write_pam_irodsA_file`
 
-These functions can roughly be described as duplicating the function of iinit (from iCommands),
-once a valid irods_environment.json has already been created.
+These functions can roughly be described as duplicating the function of `iinit`,
+provided that a valid `irods_environment.json` has already been created.
 
-Each takes a cleartext password and writes an appropriately processed version of it
-into an .irodsA "password" or "secrets" in the appropriate location.
+Each of the above functions can take a cleartext password and write an appropriately encoded
+version of it into an authentication in the appropriate location.  That location is
+`~/.irods/.irodsA` unless the environment variable IRODS_AUTHENTICATION_FILE has been set
+in the command shell to dictate an alternative file path.
 
-That location is  ~/.irods/.irodsA) unless IRODS_AUTHENTICATION_FILE has
-been set with an alternate file path in the OS environment.
-
-As an example, for the `native` authentication scheme, it is simple to create the
-.irodsA file directly:
+As an example, here we write a native `.irodsA` file using the first of the two functions.  We
+provide the one required argument, a password string entered - in this case - interactively at the
+terminal.
 
 ```bash
-$ echo '{ "irods_user_name":"rods", ...  }'> ~/.irods/irods_environment.json
-$ python -c "import irods.client_init, getpass
+bash$ echo '{ "irods_user_name":"rods",
+              ... # other parameters as needed
+            }'> ~/.irods/irods_environment.json
+bash$ python -c "import irods.client_init, getpass
 irods.client_init.write_native_irodsA_file(getpass.getpass('Enter iRODS password -> '))"
 ```
 
-If an .irodsA file already exists, it will be overwritten by default; however, if these functions'
-overwrite parameter is set to `False`, an exception of type `irods.client_init.irodsA_already_exists`
-will be raised to warn of an older .irodsA file that might otherwise be overwritten.
+By default, when an `.irodsA` file already exists, it will be overwritten. If however the
+`overwrite` parameter is set to `False`, an exception of type `irods.client_init.irodsA_already_exists`
+is raised to warn of any older `.irodsA` file that might otherwise have been overwritten.
 
-Equivalently, we can issue the following command.
+Equivalently to the above, we can issue the following command.
 
 ```bash
-$ prc_write_irodsA.py native <<<"${MY_CURRENT_IRODS_PASSWORD}"
+bash$ prc_write_irodsA.py native <<<"${MY_CURRENT_IRODS_PASSWORD}"
 ```
 
-The redirect may be left off, in which case the user is prompted for the iRODS password
-and echo of the keyboard input will be suppressed.  (Regardless which technique is used,
-no password will be visible on the terminal during or after input.)
+The redirect may of course be left off, in which case the user is prompted for the iRODS password
+and echo of the keyboard input will be suppressed, in the style of `iinit`.  Regardless
+which technique is used, no password will be visible on the terminal during or after input.
 
 For the `pam_password` scheme, typically SSL/TLS must first be enabled to avoid sending data related
 to the password - or even sending the raw password itself - over a network connection in the clear.
 
-Thus, for `pam_password` authentication to work well, we should first ensure when setting up the
-client environment that the `irods_environment.json` file includes the appropriate
-SSL/TLS connection parameters.  If present, `iinit` can be used to verify this condition is fulfilled,
-as of course its invocation would create a valid .irodsA from merely prompting the user for their
-PAM password
+Thus for `pam_password` authentication to work well, we should first ensure, when setting up the
+client environment, to include within `irods_environment.json` the appropriate SSL/TLS connection
+parameters.  In a pinch, `iinit` can be used to verify this prerequisite is fulfilled,
+as its invocation would then create a valid .irodsA from merely prompting the user for their PAM password.
 
-But if we wish to use the Python client for this purpose instead, we can run:
+Once again, this can also be done either using the free function directly:
 
 ```python
 irods.client_init.write_pam_irodsA_file(getpass.getpass('Enter current PAM password -> '))
 ```
 
-Or from the Bash command shell, we simply run:
+or from the Bash command shell:
 
 ```bash
-$ prc_write_irodsA.py pam_password <<<"${MY_CURRENT_PAM_PASSWORD}"
+bash$ prc_write_irodsA.py pam_password <<<"${MY_CURRENT_PAM_PASSWORD}"
 ```
 
-again leaving out the redirection if password prompting is preferable.
-
-As a final note, in the "pam_password" scheme the default SSL requirement can be disabled (for purposes
-of testing only):
+As a final note, in the "pam_password" scheme the default SSL requirement can be disabled (preferably for
+purposes of testing only!):
 
 ```python
+from irods.auth.pam_password import ENSURE_SSL_IS_ACTIVE
+
 session = irods.session.iRODSSession(host = "localhost", port = 1247,
                                      user = "alice", password = "test123", zone="tempZone",
                                      authentication_scheme = "pam_password")
 
-session.set_auth_option_for_scheme('pam_password', irods.auth.pam_password.ENSURE_SSL_IS_ACTIVE, False)
+session.set_auth_option_for_scheme('pam_password', ENSURE_SSL_IS_ACTIVE, False)
 
 # Do something with the session:
 home = session.collections.get('/tempZone/home/alice')
 ```
 
-Note however that in future releases of iRODS it is possible that extra SSL checking could be
-implemented server-side, at which point, the above code could not be guaranteed to work.
+Note, however, in future releases of iRODS it is possible that extra SSL checking could be
+implemented server-side, at which point the above code could not be guaranteed to work.
 
 Legacy (iRODS 4.2-compatible) PAM authentication
 ------------------------------------------------
