@@ -130,6 +130,10 @@ class REQUEST_IS_MISSING_KEY(Exception):
     pass
 
 
+class ClientAuthError(Exception):
+    pass
+
+
 def throw_if_request_message_is_missing_key(request, required_keys):
     for key in required_keys:
         if not key in request:
@@ -176,8 +180,11 @@ class authentication_base:
         return resp
 
     def authenticate_client(
-        self, next_operation="auth_client_start", initial_request={}
+        self, next_operation="auth_client_start", initial_request=()
     ):
+        if not isinstance(initial_request, dict):
+            initial_request = dict(initial_request)
+
         to_send = initial_request.copy()
         to_send["scheme"] = self.scheme
 

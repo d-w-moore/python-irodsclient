@@ -1,6 +1,5 @@
 import ast
 import atexit
-import contextlib
 import copy
 import errno
 import json
