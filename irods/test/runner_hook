@@ -1,0 +1,8 @@
+#!/bin/bash
+scr="/prc/$ORIGINAL_SCRIPT_RELATIVE_TO_ROOT"
+cd "$(dirname "$scr")"
+source ./scripts/test_support_functions
+activate_virtual_env_with_prc_installed
+iinit_as_rods
+#. /py3/bin/activate
+python ./runner.py "$@"
