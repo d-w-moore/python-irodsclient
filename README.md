@@ -191,8 +191,9 @@ or from the Bash command shell:
 bash$ prc_write_irodsA.py pam_password <<<"${MY_CURRENT_PAM_PASSWORD}"
 ```
 
-As a final note, in the "pam_password" scheme the default SSL requirement can be disabled (preferably for
-purposes of testing only!):
+As a final note, in the "pam_password" scheme the default SSL requirement can be disabled.
+**Warning:** Disabling the SSL requirement may cause user passwords to be sent over the network
+in the clear. This should only be done for purposes of testing. Here's how to do it:
 
 ```python
 from irods.auth.pam_password import ENSURE_SSL_IS_ACTIVE
