@@ -7,6 +7,7 @@ import ssl
 import datetime
 import errno
 import irods.password_obfuscation as obf
+from irods.exception import PAM_AUTH_PASSWORD_INVALID_TTL
 from irods import MAX_NAME_LEN
 from ast import literal_eval as safe_eval
 import re
@@ -598,7 +599,7 @@ class Connection:
         # Getting the new password
         try:
             output_message = self.recv()
-        except irods.exception.PAM_AUTH_PASSWORD_INVALID_TTL as exc:
+        except PAM_AUTH_PASSWORD_INVALID_TTL as exc:
             # TODO (#480): In Python3 will be able to do: 'raise RuntimeError(...) from exc' for more succinct error messages
             raise RuntimeError(
                 "Client-configured TTL is outside server parameters (password min and max times)"
