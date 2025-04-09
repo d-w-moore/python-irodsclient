@@ -1,14 +1,37 @@
+import base64
+import copy
+
+
 class iRODSMeta:
 
+    def _to_column_triple(self):
+        return (self.FX(self.name),self.FX(self.value)) + (('',) if not self.units else (self.FX(self.units),))
+
+    def _from_column_triple(self, name, value, units, **kw):
+        self.__low_level_init(self.RX(name), 
+                              self.RX(value),
+                              units=None if not units else self.RX(units),
+                              **kw)
+        return self
+        
+    RX = FX = staticmethod(lambda _:_)
+    INIT_KW_ARGS = 'units avu_id create_time modify_time'.split()
+
     def __init__(
-        self, name, value, units=None, avu_id=None, create_time=None, modify_time=None
+        self, name, value, units=None, avu_id=None, create_time=None, modify_time=None, 
     ):
-        self.avu_id = avu_id
+        # We defer initialization for iRODSMeta(a,b,,...) if neither a nor b has truth value.
+        # This more efficiently creates a null instance which can be populated via _from_column_triple(...).
+        # (This is the pathway for allowing user-defined encoding/decoding of the iRODSMeta string components.)
+        if name or value:
+            kw={name:locals().get(name) for name in self.INIT_KW_ARGS}
+            self.__low_level_init(name, value, **kw)
+
+    def __low_level_init(self, name, value, **kw):
         self.name = name
         self.value = value
-        self.units = units
-        self.create_time = create_time
-        self.modify_time = modify_time
+        for attr in self.INIT_KW_ARGS:
+            setattr(self, attr, kw.get(attr))
 
     def __eq__(self, other):
         return tuple(self) == tuple(other)
@@ -20,8 +43,19 @@ class iRODSMeta:
             yield self.units
 
     def __repr__(self):
-        return "<iRODSMeta {avu_id} {name} {value} {units}>".format(**vars(self))
+        return f"<{self.__class__.__name__} {self.avu_id} {self.name} {self.value} {self.units}>"
 
+
+class iRODSBinOrStringMeta(iRODSMeta):
+
+    @staticmethod
+    def RX(value):
+        return value if value[0] != '\\' else base64.decodebytes(value[1:])
+
+    @staticmethod
+    def FX(value):
+        return '\\' + base64.encodebytes(value).strip() if isinstance(value,(bytes,bytearray)) else value
+    
 
 class BadAVUOperationKeyword(Exception):
     pass
@@ -84,14 +118,11 @@ class AVUOperation(dict):
             setattr(self, atr, locals()[atr])
 
 
-import copy
-
-
 class iRODSMetaCollection:
 
-    def __call__(self, admin=False, timestamps=False, **opts):
+    def __call__(self, admin=False, timestamps=False, iRODSMeta_type=iRODSMeta, **opts):
         x = copy.copy(self)
-        x._manager = (x._manager)(admin, timestamps, **opts)
+        x._manager = (x._manager)(admin, timestamps, iRODSMeta_type, **opts)
         x._reset_metadata()
         return x
 
@@ -129,7 +160,7 @@ class iRODSMetaCollection:
     def _get_meta(self, *args):
         if not len(args):
             raise ValueError("Must specify an iRODSMeta object or key, value, units)")
-        return args[0] if len(args) == 1 else iRODSMeta(*args)
+        return args[0] if len(args) == 1 else self._manager.iRODSMeta_type(*args)
 
     def apply_atomic_operations(self, *avu_ops):
         self._manager.apply_atomic_operations(self._model_cls, self._path, *avu_ops)

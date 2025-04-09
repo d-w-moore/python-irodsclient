@@ -33,18 +33,20 @@ class MetadataManager(Manager):
         return getattr(self, "_use_ts", False)
 
     __kw = {}  # default (empty) keywords
+    iRODSMeta_type = iRODSMeta
 
     def _updated_keywords(self, opts):
         kw_ = self.__kw.copy()
         kw_.update(opts)
         return kw_
 
-    def __call__(self, admin=False, timestamps=False, **irods_kw_opt):
+    def __call__(self, admin=False, timestamps=False, iRODSMeta_type=iRODSMeta, **irods_kw_opt):
         if admin:
             irods_kw_opt.update([(kw.ADMIN_KW, "")])
         new_self = copy.copy(self)
         new_self._use_ts = timestamps
         new_self.__kw = irods_kw_opt
+        new_self.iRODSMeta_type = iRODSMeta_type
         return new_self
 
     @staticmethod
@@ -95,9 +97,9 @@ class MetadataManager(Manager):
             return opts
 
         return [
-            iRODSMeta(
-                row[model.name], row[model.value], row[model.units], **meta_opts(row)
-            )
+            self.iRODSMeta_type(None,None,None)._from_column_triple(
+                row[model.name], row[model.value], row[model.units],
+                **meta_opts(row))
             for row in results
         ]
 
@@ -108,9 +110,7 @@ class MetadataManager(Manager):
             "add",
             "-" + resource_type,
             path,
-            meta.name,
-            meta.value,
-            meta.units,
+            *meta._to_column_triple(),
             **self._updated_keywords(opts)
         )
         request = iRODSMessage(
@@ -166,9 +166,7 @@ class MetadataManager(Manager):
             "set",
             "-" + resource_type,
             path,
-            meta.name,
-            meta.value,
-            meta.units,
+            *meta._to_column_triple(),
             **self._updated_keywords(opts)
         )
         request = iRODSMessage(
