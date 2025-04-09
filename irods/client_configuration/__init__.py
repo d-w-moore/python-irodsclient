@@ -45,17 +45,29 @@ class iRODSConfigAliasMetaclass(type):
 
 
 class ConnectionsProperties(iRODSConfiguration, metaclass=iRODSConfigAliasMetaclass):
+    # We introduce the '_cached_...' identifier and give it minimal utility in order to have a
+    # '__slots__' variable that doesn't conflict with a class variable of the same name.
+    # (See https://discuss.python.org/t/slots-conflicts-with-class-variable/37835)
+    __slots__ = ('_cached_xml_parser_default',)
+
+    def __init__(self):
+        self._cached_xml_parser_default = None
+                 
     @property
     def xml_parser_default(self):
         from irods.message import get_default_XML_by_name
-
-        return get_default_XML_by_name()
-
+        self._cached_xml_parser_default = get_default_XML_by_name()
+        return self._cached_xml_parser_default
+        
     @xml_parser_default.setter
     def xml_parser_default(self, str_value):
         from irods.message import set_default_XML_by_name
-
-        return set_default_XML_by_name(str_value)
+        try:
+            return set_default_XML_by_name(str_value)
+        except:
+            raise
+        else:
+            self._cached_xml_parser_default = str_value
 
 
 connections = ConnectionsProperties()
