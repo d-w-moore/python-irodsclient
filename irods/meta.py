@@ -53,11 +53,11 @@ class iRODSBinOrStringMeta(iRODSMeta):
 
     @staticmethod
     def RX(value):
-        return value if value[0] != '\\' else base64.decodebytes(value[1:])
+        return value if value[0] != '\\' else base64.decodebytes(value[1:].encode('utf8'))
 
     @staticmethod
     def FX(value):
-        return '\\' + base64.encodebytes(value).strip() if isinstance(value,(bytes,bytearray)) else value
+        return b'\\' + base64.encodebytes(value).strip() if isinstance(value,(bytes,bytearray)) else value
 
 
 class BadAVUOperationKeyword(Exception):
