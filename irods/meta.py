@@ -8,23 +8,26 @@ class iRODSMeta:
         return (self.FX(self.name),self.FX(self.value)) + (('',) if not self.units else (self.FX(self.units),))
 
     def _from_column_triple(self, name, value, units, **kw):
-        self.__low_level_init(self.RX(name), 
+        self.__low_level_init(self.RX(name),
                               self.RX(value),
                               units=None if not units else self.RX(units),
                               **kw)
         return self
-        
+
     RX = FX = staticmethod(lambda _:_)
     INIT_KW_ARGS = 'units avu_id create_time modify_time'.split()
 
     def __init__(
-        self, name, value, units=None, avu_id=None, create_time=None, modify_time=None, 
+        self, name, value, /, units=None, *, avu_id=None, create_time=None, modify_time=None,
     ):
-        # We defer initialization for iRODSMeta(a,b,,...) if neither a nor b has truth value.
-        # This more efficiently creates a null instance which can be populated via _from_column_triple(...).
-        # (This is the pathway for allowing user-defined encoding/decoding of the iRODSMeta string components.)
+        # Defer initialization for iRODSMeta(attribute,value,...) if neither attribute nor value is True under
+        # a 'bool' transformation.  In so doing we streamline initialization for iRODSMeta (and any subclasses)
+        # for alternatively populating via _from_column_triple(...).
+        # This is the pathway for allowing user-defined encodings of the iRODSMeta (byte-)string AVU components.)
         if name or value:
-            kw={name:locals().get(name) for name in self.INIT_KW_ARGS}
+            # Note: calling locals() inside the dict comprehension would not access variables in this frame.
+            local_vars = locals()
+            kw = {name:local_vars.get(name) for name in self.INIT_KW_ARGS}
             self.__low_level_init(name, value, **kw)
 
     def __low_level_init(self, name, value, **kw):
@@ -55,7 +58,7 @@ class iRODSBinOrStringMeta(iRODSMeta):
     @staticmethod
     def FX(value):
         return '\\' + base64.encodebytes(value).strip() if isinstance(value,(bytes,bytearray)) else value
-    
+
 
 class BadAVUOperationKeyword(Exception):
     pass
