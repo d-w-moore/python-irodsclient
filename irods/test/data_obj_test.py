@@ -2951,6 +2951,24 @@ class TestDataObjOps(unittest.TestCase):
                     if data_objs.exists(data_path):
                         data_objs.unlink(data_path, force=True)
 
+    def test_replica_open_on_logical_path_with_apostrophe__issue_703(self):
+        ses = self.sess
+        hc = helpers.home_collection(ses)
+        without = f'{hc}/ab.dat'
+        with ses.data_objects.open(without,'w') as f:
+            f.write(b'write ')
+            f.flush()
+            f.seek(0)
+            replica_token,resc_hier = f.raw.replica_access_info()
+            with ses.clone().data_objects.open(without,'a', finalize_on_close=False,
+              **{
+              kw.REPLICA_TOKEN_KW: replica_token,
+              kw.RESC_HIER_STR_KW: resc_hier}) as f2:
+                f2.write(b'data\n')
+                print(f'{f2.raw.desc,f.raw.desc}')
+        with ses.data_objects.open(without,'r') as f:
+            self.assertEqual(f.read(), b'write data\n')
+
 
 if __name__ == "__main__":
     # let the tests find the parent irods lib
