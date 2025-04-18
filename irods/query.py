@@ -34,6 +34,7 @@ query_number = {
     "SELECT_COUNT": 6,
 }
 
+IRODS_QUERY_LIMIT = 500
 
 class Query:
 
@@ -196,7 +197,7 @@ class Query:
         return StringStringMap(dct)
 
     def _message(self):
-        max_rows = 500 if self._limit == -1 else self._limit
+        max_rows = IRODS_QUERY_LIMIT if self._limit < 0 else self._limit
         args = {
             "maxRows": max_rows,
             "continueInx": self._continue_index,
@@ -230,6 +231,13 @@ class Query:
         self._continue_index must be set to a valid value (returned by a previous query API call).
         """
         self.limit(0).execute()
+
+    def _all(self):
+        """Internally used version of all().  Unlike the public version, the returned iterator when
+        executed to completion is unaffected by IRODS_QUERY_LIMIT.  This is in order to accurately
+        reflect the enumeration of sub-objects, e.g. AVU's associated with an object.
+        """
+        return self.get_results()
 
     def all(self):
         result_set = self.execute()
@@ -380,3 +388,9 @@ class SpecificQuery:
         for result_set in self.get_batches():
             for result in result_set:
                 yield result
+
+
+# Record a copy of the original value of IRODS_QUERY_LIMIT for possible future access.
+import irods.helpers as helpers
+cached_values = helpers.create_value_cache(globals())
+cached_values.make_entry('IRODS_QUERY_LIMIT')
