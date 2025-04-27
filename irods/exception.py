@@ -885,6 +885,10 @@ class USER_INCOMPATIBLE_PARAMS(iRODSException):
     code = -402000
 
 
+class INTERMEDIATE_REPLICA_ACCESS(iRODSException):
+    code = -405000
+
+
 class CHECK_VERIFICATION_RESULTS(SystemException):
     code = -407000
 

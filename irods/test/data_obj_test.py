@@ -917,6 +917,7 @@ class TestDataObjOps(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        del cls.logins
         pass
 
     def _data_object_and_associated_ticket(
