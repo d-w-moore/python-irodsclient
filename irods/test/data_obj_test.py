@@ -2954,7 +2954,7 @@ class TestDataObjOps(unittest.TestCase):
     def test_replica_open_on_logical_path_with_apostrophe__issue_703(self):
         ses = self.sess
         hc = helpers.home_collection(ses)
-        without = f'{hc}/ab.dat'
+        without = f"""{hc}/with'apostrophe"""
         with ses.data_objects.open(without,'w') as f:
             f.write(b'write ')
             f.flush()
