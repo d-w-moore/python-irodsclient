@@ -932,6 +932,7 @@ class DataObjectManager(Manager):
                 in_pdmo="",
                 next=0,
                 rescId=0,
+                dataAccessTime=""
             ),
             regParam=StringStringMap(meta_dict),
         )
