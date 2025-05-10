@@ -209,10 +209,24 @@ class iRODSSession:
                 value = value(self, conn)
             conn.auth_options[key] = value
 
-    def set_auth_option_for_scheme(self, scheme, key, value_or_factory_function):
+    def set_auth_option_for_scheme(self, scheme, key, value_or_factory_function, delete_if_None = False):
+        """Set values for options to be used in the auth plugin).
+
+        This allows users and application developers to set control options that influence operations in the authentication handshake
+        for the given scheme.
+
+        The key is a string, and value_or_factory_function is either the value to be stored under that key or a callable that will yield
+        that value at resolution time (that is, when the auth plugin is about to be called to log in for the session.)
+
+        If delete_if_None is True, then a value_or_factory_function parameter of None will cause the key to be deleted from the internal key-value
+        map (ie dictionary) maintained for the given scheme.
+        """
+
         entry = self.auth_options_by_scheme.setdefault(scheme, {})
         old_key = entry.get(key)
         entry[key] = value_or_factory_function
+        if value_or_factory_function is None and delete_if_None:
+            del entry[key]
         return old_key
 
     def clone(self, **kwargs):

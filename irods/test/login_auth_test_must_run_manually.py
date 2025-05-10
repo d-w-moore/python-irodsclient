@@ -106,6 +106,9 @@ def client_env_keys_from_admin_env(user_name, auth_scheme=""):
 # interceptible, unencrypted channel.
 
 
+class test_feature_lacking_in_iRODS_5(Exception): pass
+
+
 @contextlib.contextmanager
 def pam_password_in_plaintext_4_3(allow=True):
     import irods.helpers
@@ -117,6 +120,8 @@ def pam_password_in_plaintext_4_3(allow=True):
 
     def new_init(self, *arg, **kw):
         old_init(self, *arg, **kw)
+        if allow and self.server_version_without_auth() > (5,):
+            raise test_feature_lacking_in_iRODS_5
         self.set_auth_option_for_scheme(
             "pam_password", ENSURE_SSL_IS_ACTIVE, not (allow)
         )
@@ -140,8 +145,8 @@ def pam_password_in_plaintext(allow=True, nop=False):
     if nop:
         yield
         return
-    with pam_password_in_plaintext_4_2(allow=allow):
-        with pam_password_in_plaintext_4_3(allow=allow):
+    with pam_password_in_plaintext_4_3(allow=allow):
+        with pam_password_in_plaintext_4_2(allow=allow):
             yield
 
 

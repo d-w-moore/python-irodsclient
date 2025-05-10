@@ -104,14 +104,22 @@ class _pam_password_ClientAuthState(authentication_base):
             CLIENT_GET_REQUEST_RESULT, False
         )
 
-        ensure_ssl = request.pop(ENSURE_SSL_IS_ACTIVE, None)
-        if ensure_ssl is not None:
-            self.check_ssl = ensure_ssl
+        if ENSURE_SSL_IS_ACTIVE in request:
+            self.check_ssl = request.pop(ENSURE_SSL_IS_ACTIVE)
 
-        if self.check_ssl:
+        if self.check_ssl is True or (
+            self.check_ssl is None and (4,3,0) <= self.conn.server_version < (5,)):
+            self.check_ssl = True
             if not isinstance(self.conn.socket, ssl.SSLSocket):
                 msg = "pam_password auth scheme requires secure communications (TLS/SSL) with the server."
                 raise RuntimeError(msg)
+        elif not self.check_ssl:
+            self.check_ssl = False
+            msg = "pam_password scheme configured in a way that will allow passwords sent unencrypted for testing purposes"
+            _logger.warning ("%s",msg)
+        else:
+            msg = f"For {self.conn}, ENSURE_SSL_IS_ACTIVE set to a nonstandard value; it will have no effect.  check_ssl remains {self.check_ssl} for pam_password scheme"
+            _logger.warning ("%s",msg)
 
         resp = request.copy()
 
