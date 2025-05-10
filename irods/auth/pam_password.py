@@ -107,8 +107,10 @@ class _pam_password_ClientAuthState(authentication_base):
         if ENSURE_SSL_IS_ACTIVE in request:
             self.check_ssl = request.pop(ENSURE_SSL_IS_ACTIVE)
 
-        if self.check_ssl is True or (
-            self.check_ssl is None and (4,3,0) <= self.conn.server_version < (5,)):
+        if self.check_ssl is True or (self.check_ssl is None and (4,3,0) <= self.conn.server_version
+            ## TODO: presumably an extra stage in the pam_password auth exchange will interrupt the process before this point - ??
+            # < (6,) 
+        ):
             self.check_ssl = True
             if not isinstance(self.conn.socket, ssl.SSLSocket):
                 msg = "pam_password auth scheme requires secure communications (TLS/SSL) with the server."
