@@ -12,6 +12,7 @@ RUN apt update
 
 SHELL [ "/bin/bash","-c" ]
 
+COPY irodsctl /var/lib/irods
 COPY ICAT.sql /tmp
 COPY pgpass root/.pgpass
 RUN chmod 600 root/.pgpass
