@@ -1,0 +1,7 @@
+#!/bin/sh
+if [ "$1" = start ]; then
+  irodsServer -d
+else
+  echo >&2 "use for starting iRODS5 only"
+  exit 1
+fi
