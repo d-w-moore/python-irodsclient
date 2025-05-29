@@ -12,7 +12,7 @@ RUN apt update
 
 SHELL [ "/bin/bash","-c" ]
 
-COPY irodsctl /var/lib/irods
+COPY irodsctl /tmp
 COPY ICAT.sql /tmp
 COPY pgpass root/.pgpass
 RUN chmod 600 root/.pgpass
@@ -39,7 +39,7 @@ CMD apt install -y /irods_packages/irods*{serv,dev,icommand,runtime,database-*po
         | python${SERVER_PY} /var/lib/irods/scripts/setup_irods.py && \
     { [ "${PYTHON_RULE_ENGINE_INSTALLED}" = '' ] || { /tmp/install_python_rule_engine "$PYTHON_RULE_ENGINE_INSTALLED" /irods_packages \
                                                      && /tmp/setup_python_rule_engine; } } && \
-    { pgrep -u irods irodsServer >/dev/null || su irods -c '~/irodsctl start'; \
+    { pgrep -u irods irodsServer >/dev/null || su irods -c '/tmp/irodsctl start'; \
       env PORT=8888 /tmp/send_oneshot "iRODS is running..." & } && \
     { [ ! -d /irods_shared ] || { mkdir -p /irods_shared/reg_resc && mkdir -p /irods_shared/tmp && \
                                   chown -R irods.irods /irods_shared && chmod g+ws /irods_shared/tmp && \
