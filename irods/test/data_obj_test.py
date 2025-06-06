@@ -3176,6 +3176,55 @@ class TestDataObjOps(unittest.TestCase):
             self.assertEqual(Data.open(test_path,"r").read(), b"", "Data object is not empty")
             return True
 
+    def test_create_and_put_forcing_based_on_truth_table__issue_132(self):
+        Data = self.sess.data_objects
+        def create_with_options(path,opt):
+            try:
+              Data.create(path,**({} if opt is None else {'force':opt}))
+            except ex.DataObjectExistsAtLogicalPath:
+              return False
+            else:
+              return True
+        def put_with_options(path,opt):
+            with NamedTemporaryFile() as f:
+                f.write(b"new")
+                f.flush()
+                try:
+                    Data.put(f.name,path,**({} if opt is None else {kw.FORCE_FLAG_KW:opt}))
+                except ex.OVERWRITE_WITHOUT_FORCE_FLAG:
+                    return False
+                else:
+                    return True
+
+        for (default,option,expect_success) in [
+            (False,False,False), # row 1 in https://github.com/irods/python-irodsclient/pull/721#discussion_r2116598564
+            (False,True,True ),  # row 2
+            (False,None,False),  # row 3
+            (True,False,False),  # row 4
+            (True,True,True),    # row 5
+            (True,None,True),    # row 6
+                                 # rows 7 thru 9 not needed since default settings are always False or True.
+        ]:
+            with self.subTest(f"{default = }; {option = }; {expect_success = }"),\
+            config.loadlines(
+            entries=[
+                dict(setting="data_objects.force_create_by_default", value=default),
+                dict(setting="data_objects.force_put_by_default", value=default),
+            ]):
+                # Test put success against predicted value.
+                put_path = iRODSPath(
+                    self.coll_path, unique_name(my_function_name(), datetime.now())
+                )
+                Data.open(put_path, "w").write(b"")
+                self.assertEqual(expect_success, put_with_options(put_path, option))
+
+                # Test create success against predicted value.
+                create_path = iRODSPath(
+                    self.coll_path, unique_name(my_function_name(), datetime.now())
+                )
+                Data.open(create_path, "w").write(b"")
+                self.assertEqual(expect_success, create_with_options(create_path, option))
+
     def test_force_create_options_resolve_correctly_observing_defaults__issue_132(self):
         T = collections.namedtuple('T',('force_default','param'))
         test_vec = {
