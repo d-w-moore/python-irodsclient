@@ -1142,10 +1142,9 @@ class DataObjInfo(Message):
     in_pdmo = StringProperty()
     next = IntegerProperty()
     rescId = LongProperty()
-    #dataAccessTime = StringProperty()
 
 def DataObjInfo_for_session(session):
-    if session.version_info < (5,):
+    if session.server_version < (5,):
         return DataObjInfo
     else:
         class DataObjInfo_iRODSv5(DataObjInfo):
