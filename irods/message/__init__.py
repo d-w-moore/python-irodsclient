@@ -1142,8 +1142,17 @@ class DataObjInfo(Message):
     in_pdmo = StringProperty()
     next = IntegerProperty()
     rescId = LongProperty()
-    dataAccessTime = StringProperty()
+    #dataAccessTime = StringProperty()
 
+def DataObjInfo_for_session(session):
+    if session.version_info < (5,):
+        return DataObjInfo
+    else:
+        class DataObjInfo_iRODSv5(DataObjInfo):
+            dataAccessTime = StringProperty()
+        return DataObjInfo_iRODSv5
+  
+    dataAccessTime = StringProperty()
 
 class ModDataObjMeta(Message):
     _name = "ModDataObjMeta_PI"
