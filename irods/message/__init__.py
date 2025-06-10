@@ -1151,7 +1151,7 @@ def DataObjInfo_for_session(session):
         class DataObjInfo_iRODSv5(DataObjInfo):
             dataAccessTime = StringProperty()
         return DataObjInfo_iRODSv5
-  
+
     dataAccessTime = StringProperty()
 
 class ModDataObjMeta(Message):
