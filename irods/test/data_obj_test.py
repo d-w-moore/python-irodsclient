@@ -2944,6 +2944,7 @@ class TestDataObjOps(unittest.TestCase):
 
                     # Check that content of truncated replicas is as expected.
                     if truncated_size <= original_size:
+                        import pdb;pdb.set_trace()
                         self.assertEqual(
                             d.open("r").read(), original_content[:truncated_size]
                         )
