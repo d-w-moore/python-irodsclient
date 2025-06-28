@@ -60,8 +60,10 @@ class iRODSUserLogins:
         self._pw = {}
 
     def __del__(self):
-        for username in self._users_to_remove:
-            self.admin.users.remove(username)
+        try:
+            for username in self._users_to_remove:
+                self.admin.users.remove(username)
+        except Exception as e: log.info('exception [%r] in iRODSUserLogins dtor',e)
 
 
 def configuration_file_exists():
