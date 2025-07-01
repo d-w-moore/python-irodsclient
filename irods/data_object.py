@@ -4,6 +4,7 @@ import logging
 import os
 import ast
 
+from irods.exception import NotImplementedInIRODSServer
 from irods.models import DataObject, DataObject_for_session
 from irods.meta import iRODSMetaCollection
 import irods.keywords as kw
@@ -48,13 +49,15 @@ class iRODSDataObject:
 
     def __init__(self, manager, parent=None, results=None):
         self.manager = manager
+        self.create_time = None
         _DataObject = DataObject_for_session(manager.sess)
         if parent and results:
             self.collection = parent
             for attr, value in _DataObject.__dict__.items():
                 if not attr.startswith("_"):
                     try:
-                        setattr(self, attr, results[0][value])
+                        if attr not in ('modify_time','access_time'):
+                            setattr(self, attr, results[0][value])
                     except KeyError:
                         # backward compatibility with older schema versions
                         pass
@@ -87,6 +90,26 @@ class iRODSDataObject:
             self.replicas = [iRODSReplica(*a,**k) for a,k in replica_args]
 
         self._meta = None
+
+    @property
+    def access_time(self):
+        required_server_version = (5,)
+        if self.manager.server_version < required_server_version:
+            raise NotImplementedInIRODSServer('access_time in data objects', required_server_version)
+        return self._get_most_recent_timestamp('access_time')
+
+    @property
+    def modify_time(self):
+        return self._get_most_recent_timestamp('modify_time')
+
+    def _get_most_recent_timestamp(self,timestamp_attr):
+        # Count only timestamps contributed by good replicas.
+        good_replicas = list(filter(lambda r:int(r.status)==1, self.replicas))
+        if good_replicas:
+            sorted_good_replicas = sorted(good_replicas, key=lambda r:getattr(r,timestamp_attr))
+            return getattr(sorted_good_replicas[-1],timestamp_attr)
+        error_msg = f"Cannot check '{timestamp_attr}' with no good replicas cached."
+        raise RuntimeError(error_msg)
 
     def __repr__(self):
         return f"<iRODSDataObject {self.id} {self.name}>"
