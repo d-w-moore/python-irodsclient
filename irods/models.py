@@ -120,6 +120,7 @@ class DataObject(Model):
     comments = Column(String, "D_COMMENTS", 418)
     create_time = Column(DateTime, "D_CREATE_TIME", 419)
     modify_time = Column(DateTime, "D_MODIFY_TIME", 420)
+    access_time = Column(DateTime, "D_ACCESS_TIME", 424, min_version=(5, 0, 0))
     resc_hier = Column(String, "D_RESC_HIER", 422, min_version=(4, 0, 0))
     resc_id = Column(String, "D_RESC_ID", 423, min_version=(4, 2, 0))
 

@@ -71,6 +71,7 @@ class iRODSDataObject:
                     comments=r[DataObject.comments],
                     create_time=r[DataObject.create_time],
                     modify_time=r[DataObject.modify_time],
+                    access_time=r[DataObject.access_time] if self.manager.sess.server_version >= (5,) else None,
                 )
                 for r in replicas
             ]
