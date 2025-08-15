@@ -45,7 +45,23 @@ class UserManager(Manager):
             self._get_session, "set-quota", "user", user_name, resource, "0"
         )
 
+    @staticmethod
+    def _parse_user_and_zone(user_param, zone_param):
+        """Parse out the uesr name ane zone name from USER and ZONE string parameters.
+           If the USER string contains # and a non-null-length ZONE spec, ensure that multiply specified zone names agree.
+        """
+        if '#' in user_param:
+            parsed_user, parsed_zone = user_param.split('#')
+            if parsed_zone != "":
+                if zone_param != "" and parsed_zone != zone_param:
+                    raise RuntimeError(f"Two nonzero-length zone names ({parsed_zone}, {zone_param}) were given and do not agree.")
+            else:
+                raise RuntimeError(f"The compound user#zone specification may not contain a zero-length zone")
+            return parsed_user, parsed_zone
+        return user_param, zone_param 
+
     def get(self, user_name, user_zone=""):
+        user_name, user_zone = self._parse_user_and_zone(user_name, user_zone)
         query = self.sess.query(User).filter(User.name == user_name)
 
         if len(user_zone) > 0:
@@ -107,6 +123,11 @@ class UserManager(Manager):
     def remove(self, user_name, user_zone="", _object=None):
         if _object is None:
             _object = self.get(user_name, user_zone)
+        if os.environ.get("GENADM_REMOVE_USER_FMT","") != "":
+            uz_args = ( f"{_object.name}#{_object.zone}", )
+        else:
+            uz_args = ( _object.name, _object.zone )
+
         message_body = GeneralAdminRequest(
             "rm",
             (
@@ -114,8 +135,7 @@ class UserManager(Manager):
                 if (_object.type != "rodsgroup" or self.sess.server_version < (4, 3, 2))
                 else "group"
             ),
-            user_name,
-            user_zone,
+            *uz_args,
         )
         request = iRODSMessage(
             "RODS_API_REQ", msg=message_body, int_info=api_number["GENERAL_ADMIN_AN"]
