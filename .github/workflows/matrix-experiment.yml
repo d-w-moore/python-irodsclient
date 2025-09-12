@@ -21,7 +21,8 @@ jobs:
       - name: Print
         run: |
              echo -n === ; grep ^VERSION_ID /etc/os-release;
-             echo " OS: ${{matrix.os}} ;; iRODS-Version: ${{ matrix.irods-version }}"
+             XXX=threeXs
+             echo "$XXX: OS: ${{matrix.os}} ;; iRODS-Version: ${{ matrix.irods-version }}"
 #     - name: Dan's Experiment
 #     - name: Install Prerequisites
 #       run:  |
