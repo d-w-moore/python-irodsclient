@@ -207,13 +207,17 @@ setup_preconnect_preference() {
     sudo su irods -c "sed -i.orig 's/\(^\s*acPreConnect.*CS_NEG\)\([A-Z_]*\)/\1_$1/' /etc/irods/core.re"
 }
 
+activate_virtual_env() {
+    source /py3/bin/activate
+}
+
 # requires image to descend from bats-python3
 activate_virtual_env_with_prc_installed()
 {
     # install python client using copy of /prc so that bdist doesn't build in the readonly mount
     sudo su - -c "source /py3/bin/activate && cp -rp /prc /prc-copy && \
                   pip install '/prc-copy[tests]' && sudo rm -fr /prc-copy"
-    source /py3/bin/activate
+    activate_virtual_env
 }
 
 mtime_and_content()

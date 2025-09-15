@@ -11,6 +11,7 @@ ALICES_PAM_PASSWORD=test123
 
 setup()
 {
+    activate_virtual_env_with_prc_installed
     setup_pam_login_for_alice $ALICES_PAM_PASSWORD
 }
 
@@ -22,6 +23,7 @@ teardown()
 
 @test main {
 
+    activate_virtual_env
     # Define the core Python to be run, basically a minimal code block ensuring that we can authenticate to iRODS
     # without an exception being raised.
 
@@ -39,7 +41,6 @@ print ('env_auth_scheme=%s' % ses.pool.account._original_authentication_scheme)
     [[ $OUTPUT = "env_auth_scheme=pam"* ]]
 
     age_out_pam_password "alice"
-
     HOME_COLLECTION=$(ipwd)
     OUTPUT=$($PYTHON -c "$SCRIPT" 2>&1 >/dev/null || true)
     grep 'CAT_PASSWORD_EXPIRED' <<<"$OUTPUT"
