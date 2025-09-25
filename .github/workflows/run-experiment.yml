@@ -1,0 +1,32 @@
+name: run-the-tests
+
+on: [push, pull_request]
+
+jobs:
+  tests:
+    timeout-minutes: 20
+
+    name: ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+          working-directory: ./docker-testing
+    strategy:
+      matrix:
+        python: ['3.13']
+        #irods_server: ['4.3.4']
+        irods_server: ['5.0.1']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: search for container
+        run: |
+             docker compose -f run-experiment-compose.yml up -d --build
+             while :; do 
+               sleep 5
+               X=$(docker ps | grep python)
+               echo "$((++Y)) -- $X"
+               [[ $X =~ python ]] && break
+             done
