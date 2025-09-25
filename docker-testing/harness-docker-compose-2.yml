@@ -15,7 +15,8 @@ services:
         build:
             context: irods_ctx
         healthcheck:
-            test: ["CMD", "su", "-", "irods", "-c", "test -f /tmp/flag || exit 1"]
+                #test: ["CMD", "sh", "-c", "test -f /tmp/flag || exit 1"]
+            test: ["CMD", "sh", "-c", "test -f /tmp/test || exit 11"]
             interval: 10s
             timeout: 10s
             retries: 3
