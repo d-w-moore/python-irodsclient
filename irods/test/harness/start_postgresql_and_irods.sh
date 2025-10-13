@@ -17,7 +17,7 @@ IRODS_VSN_MAJOR=${IRODS_VSN//.*/}
 if [ "$IRODS_VSN_MAJOR" -lt 5 ]; then
     su - irods -c '~/irodsctl restart'
 else
-    /manage_irods5_procs start
+    "$IRODS_CONTROL_PATH"/manage_irods5_procs stdout start
 fi
 IRODS_WAIT_SEC=20
 x=$IRODS_WAIT_SEC

@@ -38,7 +38,7 @@ if irods_server_version ge 5.0.0; then
   update_json_file $IRODS_SERVER_CONFIG \
                    "$(newcontent $IRODS_SERVER_CONFIG tls_server_items tls_client_items)"
 
-  sudo su - irods -c "/manage_irods5_procs rescan-config"
+  sudo su - irods -c "$IRODS_CONTROL_PATH/manage_irods5_procs rescan-config"
 fi
 
 # Configure clients with admin user + TLS

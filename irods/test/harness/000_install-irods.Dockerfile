@@ -11,4 +11,5 @@ RUN apt install -y sudo
 RUN useradd -ms/bin/bash testuser
 RUN echo 'testuser ALL=(ALL) NOPASSWD: ALL' >>/etc/sudoers
 RUN apt install -y faketime
-CMD bash /start_postgresql_and_irods.sh
+ENV IRODS_CONTROL_PATH=""
+CMD bash $IRODS_CONTROL_PATH/start_postgresql_and_irods.sh

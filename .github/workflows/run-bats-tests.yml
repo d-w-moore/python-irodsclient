@@ -28,6 +28,7 @@ jobs:
 
       - name: run tests
         run: |
-          for script in ../scripts/test[0-9]*; do
+          for script in ../scripts/test[0-9]* ../login_auth_test_must_run_manually.py
+          do
               ./docker_container_driver.sh -V $script
           done

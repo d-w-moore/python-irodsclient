@@ -19,7 +19,7 @@ server_ctl() {
         if [ "$1" = stop ]; then
           W=wait
         fi
-        /manage_irods5_procs $1 $W
+        "$IRODS_CONTROL_PATH"/manage_irods5_procs $1 $W
     else
         ~/irodsctl $1
     fi
