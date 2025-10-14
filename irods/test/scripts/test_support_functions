@@ -1,3 +1,9 @@
+# This file may be sourced from a test script written in Bash or BATS.  It
+# contains a number of utility functions, most of which have to do with:
+#
+#  1. implementing common tasks, often setup or configuration wrt iRODS; or
+#  2. more primitive functions e.g. string manipulations or comparisons, etc.
+
 SCRIPTDIR=${BASH_SOURCE[0]}
 up_from_script_dir() {
   local x incr=""
@@ -195,10 +201,6 @@ setup_pyN() {
   if [ ! -d /pyN ]; then
     mkdir /pyN ; chown testuser /pyN
     su - testuser -c "/root/python/bin/python3 -m virtualenv /pyN"
-
-    # TODO, REMOVE: Verbose to check proper version is being installed
-    echo "/pyN venv is python version => [$(. /pyN/bin/activate ; python -V)]"
-
     cp -r /prc{,.rw}
     chown -R testuser /prc.rw
   fi
@@ -208,12 +210,13 @@ setup_pyN() {
 activate_virtual_env_with_prc_installed()
 {
     local py_venv=${1:-pyN}
-    [ "$py_venv" = pyN ] && sudo bash -c "$(declare -f setup_pyN); setup_pyN"
-    # install python client using copy of /prc so that bdist doesn't build in the readonly mount
+    # install python client.  We use a recursive copy of /prc so bdist doesn't try to build from a readonly mount
+    [ "$py_venv" = pyN ] && sudo bash -c "$(declare -f setup_pyN); setup_pyN" && \
     sudo su - -c "source /${py_venv}/bin/activate && cp -rp /prc /prc-copy && \
-                  pip install '/prc-copy[tests]' && sudo rm -fr /prc-copy"
-    source /${py_venv}/bin/activate
-    echo "---> Python virtual environment activated.  Interpreter Version is: $(python -V)"
+                  pip install '/prc-copy[tests]' && sudo rm -fr /prc-copy" && \
+    source /${py_venv}/bin/activate && \
+    echo "---> Python virtual environment activated.  Interpreter Version is: $(python -V)" && \
+    python -c 'import irods' || { echo >&2 "ERROR: python-irodsclient install failed."; false; }
 }
 
 mtime_and_content()

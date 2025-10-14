@@ -6,9 +6,9 @@
 . $BATS_TEST_DIRNAME/test_support_functions
 
 setup() {
-  [ -f /tmp/once ] || {
+  [ -f /tmp/test010_one_time_initialize_flag ] || {
       rm -fr ~/.irods
-      $BATS_TEST_DIRNAME/iinit.py host localhost \
+      /prc/test_harness/utility/iinit.py host localhost \
           port 1247     \
           zone tempZone \
           user rods     \
@@ -19,17 +19,8 @@ setup() {
       mv  $CLIENT_JSON.$$ $CLIENT_JSON
 
       setup_pam_login_for_user "test123" alice
-
-      cat >~/test_get_home_coll.py <<-EOF
-	import irods.test.helpers as h
-	ses = h.make_session()
-	home_coll = h.home_collection(ses)
-	exit(0 if ses.collections.get(home_coll).path == home_coll
-	       and ses.pool.account._original_authentication_scheme.lower() in ('pam','pam_password')
-	     else 1)
-	EOF
   }
-  touch /tmp/once
+  touch /tmp/test010_one_time_initialize_flag
 }
 
 prc_test()
@@ -44,7 +35,14 @@ prc_test()
   local USER="alice"
   local PASSWORD="my${CHR}pass"
   sudo chpasswd <<<"$USER:$PASSWORD"
-  env PYTHON_IRODSCLIENT_CONFIGURATION_PATH='' python ~/test_get_home_coll.py
+  env PYTHON_IRODSCLIENT_CONFIGURATION_PATH='' python <<-EOF
+	import irods.test.helpers as h
+	ses = h.make_session()
+	home_coll = h.home_collection(ses)
+	exit(0 if ses.collections.get(home_coll).path == home_coll
+	       and ses.pool.account._original_authentication_scheme.lower() in ('pam','pam_password')
+	     else 1)
+	EOF
 }
 
 @test "test_with_atsymbol" { prc_test "@"; }
