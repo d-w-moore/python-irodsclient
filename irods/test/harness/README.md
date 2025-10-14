@@ -35,20 +35,20 @@ similar) to specify the path to the top level of the local repository.
 
 Sample command lines to build Docker images:
 
-    1. ```
-       cd $REPO_ROOT/irods/test/harness
-        ./build_docker.sh
-       ```
+1. ```
+   cd $REPO_ROOT/irods/test/harness
+    ./build_docker.sh
+   ```
 
-       Builds docker images in proper sequence.
+   Builds docker images in proper sequence.
 
-    2. ```
-       cd $REPO_ROOT/irods/test/harness;
-       IRODS_PACKAGE_VERSION=4.3.4 PYTHON_VERSION=3.11 NO_CACHE=1 ./build-docker.sh [ Dockerfiles... ]
-       ```
+2. ```
+   cd $REPO_ROOT/irods/test/harness;
+   IRODS_PACKAGE_VERSION=4.3.4 PYTHON_VERSION=3.11 NO_CACHE=1 ./build-docker.sh [ Dockerfiles... ]
+   ```
 
-       Builds (ignoring docker cache) images based on specific iRODS package version and desired
-       Python Interpreter version, optionally with a restricted list of Docker files in need of rebulding.
+   Builds (ignoring docker cache) images based on specific iRODS package version and desired
+   Python Interpreter version, optionally with a restricted list of Docker files in need of rebulding.
 
 ### To run a test script.
 
