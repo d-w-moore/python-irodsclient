@@ -1,3 +1,6 @@
+# Run a set of tests, each in its own container and with a potentially customized setup.
+# (Documentation and implementation for the test harness may be found in `irods/test/harness`.)
+
 name: run-bats-tests
 
 on: [push, pull_request]

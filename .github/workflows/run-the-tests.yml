@@ -1,3 +1,6 @@
+# Create a networked set of containers (via a Docker compose project) on which to run the client test suite.
+# (For further information, see the README in `docker-testing`.)
+
 name: run-the-tests
 
 on: [push, pull_request]
