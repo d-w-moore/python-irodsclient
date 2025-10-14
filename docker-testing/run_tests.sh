@@ -30,7 +30,7 @@ if [ -d /irods_shared ]; then
     chown -R user "$REPO"
     chmod u+w "$REPO"/irods/test/test-data
 
-    Install PRC from the repo.
+    # Install PRC from the repo.
     $PYTHON -m pip install "$REPO[tests]"
 fi
 
