@@ -1,3 +1,6 @@
+# Run the client test suite in a Docker container, targeting a locally running instance of the iRODS server.
+# (Documentation and implementation for the test harness may be found in `irods/test/harness`.)
+
 name: run-local-suite
 
 on: [push, pull_request]

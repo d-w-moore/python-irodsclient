@@ -9,13 +9,23 @@ DEV_HOME="$HOME"
 
 add_package_repo()
 {
-      local R="/etc/apt/sources.list.d/renci-irods.list"
       echo >&2 "... installing package repo"
       sudo apt update
-      sudo apt install -y lsb-release apt-transport-https
-      wget -qO - https://packages.irods.org/irods-signing-key.asc | sudo apt-key add - && \
-      echo "deb [arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" |\
-          sudo tee "$R"
+      sudo apt install -y lsb-release apt-transport-https gnupg2
+      wget -qO - https://packages.irods.org/irods-signing-key.asc | \
+          gpg \
+              --no-options \
+              --no-default-keyring \
+              --no-auto-check-trustdb \
+              --homedir /dev/null \
+              --no-keyring \
+              --import-options import-export \
+              --output /etc/apt/keyrings/renci-irods-archive-keyring.pgp \
+              --import \
+          && \
+      echo "deb [signed-by=/etc/apt/keyrings/renci-irods-archive-keyring.pgp arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" | \
+          tee /etc/apt/sources.list.d/renci-irods.list
+
       sudo apt update
 }
 
@@ -66,17 +76,11 @@ run_phase() {
         echo >&2 "root authorization for 'sudo' is automatic - no /etc/sudoers modification needed"
       else
         if [ -f "/etc/sudoers" ]; then
-           if [ -n "$USER" ] ; then
-             # add a line with our USER name to /etc/sudoers if not already there
-             sudo su -c "sed -n '/^\s*[^#]/p' /etc/sudoers | grep '^$USER\s*ALL=(ALL)\s*NOPASSWD:\s*ALL\s*$' >/dev/null" || \
-             sudo su -c "echo '$USER ALL=(ALL) NOPASSWD: ALL' >>/etc/sudoers"
-           else
-             echo >&2 "user login is '$USER' - can this be right?"
-           fi
+            # add a line with our USER name to /etc/sudoers if not already there
+            sudo su -c "sed -n '/^\s*[^#]/p' /etc/sudoers | grep '^$USER\s*ALL=(ALL)\s*NOPASSWD:\s*ALL\s*$' >/dev/null" || \
+            sudo su -c "echo '$USER ALL=(ALL) NOPASSWD: ALL' >>/etc/sudoers"
         else
-           echo >&2 "WARNING - Could not modify sudoers files"
-           echo -n >&2 "           (hit 'Enter' to continue)"
-           read key
+            echo >&2 "WARNING - Could not modify sudoers files"
         fi
       fi # not root
     fi # with-opts

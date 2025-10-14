@@ -1,3 +1,9 @@
+# This is effectively a group of utility functions to be sourced from tests 
+# written in BATS or in straight Bash.  Many or most have to do either with:
+#
+#  1. implementing common tasks, most often setup or configuration wrt iRODS, or
+#  2. more primitive functions e.g. string manipulations or comparisons, etc.
+
 SCRIPTDIR=${BASH_SOURCE[0]}
 up_from_script_dir() {
   local x incr=""

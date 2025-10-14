@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# This script creates the client environment to authenticate natively
+# as the 'rods' admin on the Docker node running the Python client tests.
+# Thus, we don't need irods-icommands to be installed on that node.
+
 from irods.password_obfuscation import encode
 import json
 import os
