@@ -11,9 +11,10 @@ REPO="$(./print_repo_root_location)"
 
 if [ -d /irods_shared ]; then
 
-    # Figure out the ids for irods user and group from the shared directory and add their counterparts in the client node.
+    # Get the numeric user and group id's for irods service account on the provider.  This helps to set up the test user
+    # (named 'user') with proper permissions for the shared volume on the client node.
     groupadd -o -g $(stat -c%g /irods_shared) irods
-    useradd -g irods -u $(stat -c%u /irods_shared) irods # ... and user.
+    useradd -g irods -u $(stat -c%u /irods_shared) irods
 
     # Set up useful subdirectories in the client/provider shared volume.
     mkdir /irods_shared/{tmp,reg_resc}
