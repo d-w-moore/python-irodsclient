@@ -1,0 +1,36 @@
+# This action is based on Github's default starter workflow for Python at
+# https://github.com/actions/starter-workflows/blob/master/ci/python-package.yml
+# (C) Github, MIT License
+
+name: "Python upload"
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        touch /tmp/my_file.txt
+
+    - name: Run type checks
+      run: |
+        touch my_file.txt
+
+    - name: 'Upload Artifact'
+      uses: actions/upload-artifact@v4
+      with:
+        name: my-artifact
+        path: my_file.txt
+        retention-days: 5
+
