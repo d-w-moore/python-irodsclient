@@ -25,7 +25,7 @@ jobs:
 
     - name: Run type checks
       run: |
-        touch my_file.txt
+        echo 123 >my_file.txt
 
     - name: 'Upload Artifact'
       uses: actions/upload-artifact@v4
