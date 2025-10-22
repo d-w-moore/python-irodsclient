@@ -4,7 +4,6 @@ RUN apt install -y wget build-essential
 RUN apt install -y libssl-dev zlib1g-dev libffi-dev libncurses-dev wget build-essential
 ARG python_version
 RUN wget https://www.python.org/ftp/python/${python_version}/Python-${python_version}.tar.xz
-RUN touch /tmp/aaaaaaaaaa # dummmy change
 RUN tar xf Python-${python_version}.tar.xz
 WORKDIR /Python-${python_version}
 RUN ./configure --prefix /root/python --with-ensurepip=install

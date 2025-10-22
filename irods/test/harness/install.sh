@@ -66,17 +66,11 @@ run_phase() {
         echo >&2 "root authorization for 'sudo' is automatic - no /etc/sudoers modification needed"
       else
         if [ -f "/etc/sudoers" ]; then
-           if [ -n "$USER" ] ; then
-             # add a line with our USER name to /etc/sudoers if not already there
-             sudo su -c "sed -n '/^\s*[^#]/p' /etc/sudoers | grep '^$USER\s*ALL=(ALL)\s*NOPASSWD:\s*ALL\s*$' >/dev/null" || \
-             sudo su -c "echo '$USER ALL=(ALL) NOPASSWD: ALL' >>/etc/sudoers"
-           else
-             echo >&2 "user login is '$USER' - can this be right?"
-           fi
+            # add a line with our USER name to /etc/sudoers if not already there
+            sudo su -c "sed -n '/^\s*[^#]/p' /etc/sudoers | grep '^$USER\s*ALL=(ALL)\s*NOPASSWD:\s*ALL\s*$' >/dev/null" || \
+            sudo su -c "echo '$USER ALL=(ALL) NOPASSWD: ALL' >>/etc/sudoers"
         else
-           echo >&2 "WARNING - Could not modify sudoers files"
-           echo -n >&2 "           (hit 'Enter' to continue)"
-           read key
+            echo >&2 "WARNING - Could not modify sudoers files"
         fi
       fi # not root
     fi # with-opts
