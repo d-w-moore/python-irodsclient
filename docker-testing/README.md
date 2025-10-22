@@ -20,12 +20,12 @@ Currently the database server is fixed as Postgres.
 ## Details of usage
 
 The file `$REPO/.github/workflows/run-the-tests.yml`
-(where `$REPO` is the /path/to/local/python-irodsclient repository)
+(where `$REPO` is the `/path/to/local/python-irodsclient` repository)
 contains commands for starting the server and client containers and running the PRC
 suite in response to a push or pull-request.
 
-The tests can also be run on any workstation with "docker compose" installed.
-What follows is a short summary of how to run the test configuration "at the bench".
+The test suite can also be run on any workstation with docker compose installed.
+What follows is a short summary of how to run the test configuration at the bench.
 It is this procedure which is run within the Github workflows.
 
    1. cd into top level of $REPO
