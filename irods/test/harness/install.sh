@@ -12,10 +12,21 @@ add_package_repo()
       local R="/etc/apt/sources.list.d/renci-irods.list"
       echo >&2 "... installing package repo"
       sudo apt update
-      sudo apt install -y lsb-release apt-transport-https
-      wget -qO - https://packages.irods.org/irods-signing-key.asc | sudo apt-key add - && \
-      echo "deb [arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" |\
-          sudo tee "$R"
+      sudo apt install -y lsb-release apt-transport-https gnupg2
+      RUN wget -qO - https://packages.irods.org/irods-signing-key.asc | \
+              gpg \
+                  --no-options \
+                  --no-default-keyring \
+                  --no-auto-check-trustdb \
+                  --homedir /dev/null \
+                  --no-keyring \
+                  --import-options import-export \
+                  --output /etc/apt/keyrings/renci-irods-archive-keyring.pgp \
+                  --import \
+              && \
+          echo "deb [signed-by=/etc/apt/keyrings/renci-irods-archive-keyring.pgp arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" | \
+              tee /etc/apt/sources.list.d/renci-irods.list
+
       sudo apt update
 }
 

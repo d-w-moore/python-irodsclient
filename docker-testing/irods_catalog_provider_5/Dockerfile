@@ -1,5 +1,4 @@
 FROM ubuntu:24.04
-#dwm ^
 
 ENV DEBIAN_FRONTEND=noninteractive
 
