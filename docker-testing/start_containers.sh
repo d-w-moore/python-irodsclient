@@ -49,6 +49,8 @@ python_version=\"${PYTHON_VERSION}\"
 irods_version=\"${IRODS_VERSION}\"
 irods_major=\"${IRODS_MAJOR}\"" >.env
 
+# In case the docker-compose setup varies between iRODS major releases, the .YML file may be a symbolic link.
+
 docker compose -f harness-docker-compose-irods-${IRODS_MAJOR}.yml build $SHELL_DOCKER_COMPOSE_BUILD_ARGS
 
 if [ -z "$DO_NOT_RUN" ]; then

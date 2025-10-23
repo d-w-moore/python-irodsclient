@@ -25,4 +25,6 @@ shift $#
 
 IRODS_MAJOR=${IRODS_VERSION//.*/}
 
+# In case the docker-compose setup varies between iRODS major releases, the .YML file may be a symbolic link.
+
 docker compose -f harness-docker-compose-irods-${IRODS_MAJOR}.yml down
