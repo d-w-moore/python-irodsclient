@@ -11,13 +11,20 @@
 # A sourced header for this script, 'test_script_parameters', contains configuration for each script that will
 # be run under its control.
 
+IRODS_CONTROL_PATH=""
 KILL_TEST_CONTAINER=1
 RUN_AS_USER=""
 ECHO_CONTAINER=""
 REMOVE_OPTION="--rm"
 EXPLICIT_WORKDIR=""
+INTERACTIVE_OPTION=""
 VERBOSITY=0
+
 while [[ $1  = -* ]]; do
+    if [ "$1" = -i ]; then
+        INTERACTIVE_OPTION="-it"
+        shift
+    fi
     if [ "$1" = -V ]; then
         VERBOSITY=1
         shift
@@ -29,6 +36,10 @@ while [[ $1  = -* ]]; do
     if [ "$1" = -L ]; then
         KILL_TEST_CONTAINER=0
         shift
+    fi
+    if [ "$1" = -p ]; then
+        IRODS_CONTROL_PATH="$2"
+        shift 2
     fi
     if [ "$1" = -u ]; then
         RUN_AS_USER="$2"
@@ -104,7 +115,8 @@ INNER_MOUNT=/prc
 
 # Start the container.
 echo image="[$image]"
-CONTAINER=$($DOCKER run -d -v "$reporoot:$INNER_MOUNT:ro" $REMOVE_OPTION $image)
+CONTAINER=$($DOCKER run -d -v "$reporoot:$INNER_MOUNT:ro" $INTERACTIVE_OPTION $REMOVE_OPTION \
+    -e "IRODS_CONTROL_PATH=$IRODS_CONTROL_PATH" $image)
 
 # Wait for iRODS and database to start up.
 TIME0=$(date +%s)
@@ -126,7 +138,8 @@ fi
 $DOCKER exec ${RUN_AS_USER:+"-u$RUN_AS_USER"} \
              ${WORKDIR:+"-w$WORKDIR"} \
 	     -e "ORIGINAL_SCRIPT_RELATIVE_TO_ROOT=$ORIGINAL_SCRIPT_RELATIVE_TO_ROOT" \
-             $CONTAINER \
+             -e "IRODS_CONTROL_PATH=$IRODS_CONTROL_PATH" \
+             $INTERACTIVE_OPTION $CONTAINER \
              "$INNER_MOUNT/$(realpath --relative-to "$reporoot" "$testscript_abspath")" \
              $arglist
 STATUS=$?
