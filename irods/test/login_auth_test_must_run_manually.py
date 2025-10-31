@@ -207,6 +207,9 @@ class TestLogins(unittest.TestCase):
                         authentication_scheme=lookup["AUTH"],
                         password=lookup["PASSWORD"],
                         port=1247,
+                        **(
+                            {**SERVER_ENV_SSL_SETTINGS, **CLIENT_OPTIONS_FOR_SSL} if self.admin.server_version >= (5,) else {}
+                        )
                     )
                     try:
                         pam_hashes = ses.pam_pw_negotiated
@@ -377,7 +380,7 @@ class TestLogins(unittest.TestCase):
                 )
                 print("---")
 
-            return session
+            session.cleanup()
 
     # == test defaulting to 'native'
 
@@ -413,6 +416,8 @@ class TestLogins(unittest.TestCase):
         self.tst0(ssl_opt=True, auth_opt="pam", env_opt=False)
 
     def test_6(self):
+        if self.admin.server_version >= (5,):
+            self.skipTest("iRODS 5 does not permit sending the raw PAM password on an unencrypted connection.")
         try:
             ses = self.tst0(ssl_opt=False, auth_opt="pam", env_opt=False)
         except PlainTextPAMPasswordError:
