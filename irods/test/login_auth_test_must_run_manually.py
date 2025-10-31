@@ -298,6 +298,7 @@ class TestLogins(unittest.TestCase):
     def tst0(
         self, ssl_opt, auth_opt, env_opt, name=TEST_RODS_USER, make_irods_pw=False
     ):
+        session = None
         _auth_opt = auth_opt
         if auth_opt in ("pam", "pam_password"):
             auth_opt = self.PAM_SCHEME_STRING
@@ -380,7 +381,10 @@ class TestLogins(unittest.TestCase):
                 )
                 print("---")
 
+        if session:
             session.cleanup()
+        return session
+       
 
     # == test defaulting to 'native'
 
@@ -419,13 +423,13 @@ class TestLogins(unittest.TestCase):
         if self.admin.server_version >= (5,):
             self.skipTest("iRODS 5 does not permit sending the raw PAM password on an unencrypted connection.")
         try:
-            ses = self.tst0(ssl_opt=False, auth_opt="pam", env_opt=False)
+            session = self.tst0(ssl_opt=False, auth_opt="pam", env_opt=False)
         except PlainTextPAMPasswordError:
             pass
         else:
             # -- no exception raised (this is expected behavior in 4.3+ with the new authentication framework,
             #    but for 4.2 and previous, we expect the PlainTextPAMPasswordError to be raised.
-            if ses.server_version_without_auth() < (4, 3):
+            if session.server_version_without_auth() < (4, 3):
                 self.fail("PlainTextPAMPasswordError should have been raised")
 
     def test_7(self):
