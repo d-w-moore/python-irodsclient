@@ -28,13 +28,11 @@ RUN apt-get update && \
         unixodbc \
         gawk \
         postgresql-client-16 \
-        vim-tiny \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
 # - postgres client 16 is for pg_isready
-# TODO delete vim-tiny
 
 ARG irods_version=5.0.1
 ARG irods_package_version_suffix=-0~noble

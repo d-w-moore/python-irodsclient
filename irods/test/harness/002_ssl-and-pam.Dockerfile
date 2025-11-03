@@ -1,1 +1,0 @@
-FROM bats-python3

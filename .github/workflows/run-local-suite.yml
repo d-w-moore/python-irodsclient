@@ -7,8 +7,6 @@ on: [push, pull_request]
 
 jobs:
   tests:
-    timeout-minutes: 20
-
     name: Python ${{ matrix.python }}, iRODS ${{ matrix.irods_server }}
     runs-on: ubuntu-latest
     defaults:

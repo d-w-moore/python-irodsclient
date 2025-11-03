@@ -4,6 +4,18 @@ set -e
 SCRIPT_DIR=$(dirname "$0")
 . "$SCRIPT_DIR"/test_support_functions
 
+report_environment_variables() {
+  echo "PRC under test with these environment variables active:"
+  python -c "
+import os, sys
+for name in ['IRODS_PACKAGE_VERSION','PYTHON_VERSION']:
+  value = os.environ.get(name)
+  print(f'  {name}=[{value}]')
+print(f'{sys.executable = }')
+print(f'{sys.version = }')
+  "
+}
+
 run_tests() {
   setup_pyN
   su - testuser -c "
@@ -17,8 +29,9 @@ run_tests() {
     user rods \
     zone tempZone \
     password rods
-  echo ; echo 'PRC under test: === iRODS [$IRODS_PACKAGE_VERSION] ; Python [$PYTHON_VERSION]'
-  python runner.py --output_tests_skipped /tmp/skipped.txt -e PYTHON_RULE_ENGINE_INSTALLED --tests irods.test.rule_test
+  $(declare -f report_environment_variables)
+  report_environment_variables
+  python runner.py --output_tests_skipped /tmp/skipped.txt -e PYTHON_RULE_ENGINE_INSTALLED
   "
 
   # Install PREP (Python Rule Engine Plugin).
@@ -35,6 +48,8 @@ run_tests() {
   set -e
   source /pyN/bin/activate
   cd /prc.rw/irods/test
+  $(declare -f report_environment_variables)
+  report_environment_variables
   env PYTHON_RULE_ENGINE_INSTALLED=yes python runner.py --tests_file /tmp/skipped.txt
   "
 }

@@ -44,6 +44,7 @@ except irods.client_init.irodsA_already_exists:
 
     # Now delete the already existing irodsA and repeat without negating overwrite.
     TIMESTAMP_0=$(stat -c%Y $auth_file)
+    # The sleep ensures the mtime of $auth_file will change if/when it is rewritten.
     sleep 2
     $PYTHON -c "import irods.client_init; irods.client_init.write_pam_irodsA_file('$ALICES_NEW_PAM_PASSWD')"
     TIMESTAMP=$(stat -c%Y $auth_file)

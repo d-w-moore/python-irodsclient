@@ -24,7 +24,6 @@ MOD_SERVER_CONFIG=/tmp/server_config.json.$$
 
 chown -R irods:irods /irods_shared
 
-#TODO ensure this is done for 4.3+ only. 4.2 doesn't have this server config key
 {
     [ -f ~/provider-address.do_not_remove ] || {
     jq <$ORIG_SERVER_CONFIG >$MOD_SERVER_CONFIG \

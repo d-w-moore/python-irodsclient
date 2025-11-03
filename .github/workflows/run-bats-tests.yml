@@ -1,5 +1,11 @@
 # Run a set of tests, each in its own container and with a potentially customized setup.
-# (Documentation and implementation for the test harness may be found in `irods/test/harness`.)
+
+# To this end, each test is launched via docker_container_driver.sh, part of the single-node
+# test harness machinery whose implementation and documentation is to be found in the
+# `irods/test/harness` directory.
+
+# A test may be written as a Bash or BATS script, but the only real requirement is that it be
+# executable.
 
 name: run-bats-tests
 
@@ -7,8 +13,6 @@ on: [push, pull_request]
 
 jobs:
   tests:
-    timeout-minutes: 20
-
     name: Python ${{ matrix.python }}, iRODS ${{ matrix.irods_server }}
     runs-on: ubuntu-latest
     defaults:

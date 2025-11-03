@@ -57,4 +57,4 @@ $REPO_ROOT/irods/test/harness/docker_container_driver.sh $REPO_ROOT/irods/test/s
 ```
 
 For both builder and driver script, the environment variable `DOCKER` may be set to `podman` to run
-the alternative container engine.  Otherwise it default to a value of `docker`.
+the alternative container engine.  Otherwise it defaults to a value of `docker`.
