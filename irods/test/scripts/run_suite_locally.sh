@@ -18,7 +18,7 @@ run_tests() {
     zone tempZone \
     password rods
   echo ; echo 'PRC under test: === iRODS [$IRODS_PACKAGE_VERSION] ; Python [$PYTHON_VERSION]'
-  python runner.py --output_tests_skipped /tmp/skipped.txt -e PYTHON_RULE_ENGINE_INSTALLED --tests irods.test.rule_test
+  python runner.py --output_tests_skipped /tmp/skipped.txt -e PYTHON_RULE_ENGINE_INSTALLED # --tests irods.test.rule_test
   "
 
   # Install PREP (Python Rule Engine Plugin).
