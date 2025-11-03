@@ -50,15 +50,19 @@ if [ "$server_hup" = y ]; then
   # wait for server to be ready after configuration reload
   while true; do
     sleep 2
-    if ils >/dev/null 2>&1; then
+#####if ils >/dev/null 2>&1; then
+    ILS_OUT=$(ils >/dev/null 2>&1)
+    if [ $? -eq 0 ] ; then
       break
     else
-      # Allow ~16 secs of total wait time.
-      [ $((++server_check)) -gt 8 ] && {
+      echo "DWM : Waiting ... ILS_OUT=[$ILS_OUT]"
+      [ $((++server_check)) -gt 150 ] && {
         echo >&2 "Timed out on server reload"; exit 3; }
     fi
   done
 fi
+
+echo "DWM: server_check = $server_check"
 
 if [ -n "$ORIGINAL_SCRIPT_RELATIVE_TO_ROOT" ]; then
   original_script="/prc/$ORIGINAL_SCRIPT_RELATIVE_TO_ROOT"
