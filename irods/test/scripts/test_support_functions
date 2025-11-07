@@ -1,7 +1,7 @@
-# This is effectively a group of utility functions to be sourced from tests 
-# written in BATS or in straight Bash.  Many or most have to do either with:
+# This file may be sourced from a test script written in Bash or BATS.  It 
+# contains a number of utility functions, most of which have to do with:
 #
-#  1. implementing common tasks, most often setup or configuration wrt iRODS, or
+#  1. implementing common tasks, often setup or configuration wrt iRODS; or
 #  2. more primitive functions e.g. string manipulations or comparisons, etc.
 
 SCRIPTDIR=${BASH_SOURCE[0]}
