@@ -37,7 +37,7 @@ run_tests() {
   # Install PREP (Python Rule Engine Plugin).
   (
       set -e
-      cd "$SCRIPT_DIR/../harness"
+      cd "/prc/test_harness/single/"
       apt update
       ./install_python_rule_engine
       su irods -c './setup_python_rule_engine --wait'

@@ -8,7 +8,7 @@
 setup() {
   [ -f /tmp/test010_one_time_initialize_flag ] || {
       rm -fr ~/.irods
-      $BATS_TEST_DIRNAME/iinit.py host localhost \
+      /prc/test_harness/iinit.py host localhost \
           port 1247     \
           zone tempZone \
           user rods     \

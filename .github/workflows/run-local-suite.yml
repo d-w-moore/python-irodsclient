@@ -26,4 +26,4 @@ jobs:
 
       - name: run tests
         run: |
-          ./docker_container_driver.sh -V ../scripts/run_suite_locally.sh
+          ./docker_container_driver.sh -V /prc.rw/irods/test/scripts/run_suite_locally.sh
