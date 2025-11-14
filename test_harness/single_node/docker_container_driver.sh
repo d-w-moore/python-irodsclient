@@ -21,53 +21,52 @@ EXPLICIT_WORKDIR=""
 INTERACTIVE_OPTION=""
 VERBOSITY=0
 
-usage() {
-echo "Usage:
-  $0 [options] external/path/to/test/script
-"'
-Options:
-  -V            (extra verbosity).  Prints out useful stuff including VERSION information
-  -u USERNAME   run test in container as this USERNAME
-  -i            invoke container with -i and -t
-  -c            verbosely prints the container name
-  -L            leaks the container (i.e. does not kill it after the test run)
-  -p "/path/value"         sets the IRODS_CONTROL_PATH for changing where iRODS server control scripts are looked for
-  -r "remove_option_value" (default: "--rm") may be used to suppress ("") automatic removal of container when stopped
-  -w "explicit_workdir"    specify a work directory when running the test
-'
-exit 2
-}
+# Options in force:
 
-[ $# = 1 ] || usage
+# -V            (extra verbosity).  Prints out useful stuff including VERSION information
+# -u USERNAME   run test in container as this USERNAME
+
+# Options currently used for troubleshooting only:
+
+# -i            invoke container with -i and -t
+# -c            verbosely prints the container name
+# -L            leaks the container (i.e. does not kill it after the test run)
+# -p "/path/value"         sets the IRODS_CONTROL_PATH for changing where iRODS server control scripts are looked for
+# -r "remove_option_value" (default: "--rm") may be used to suppress ("") automatic removal of container when stopped
+# -w "explicit_workdir"    specify a work directory when running the test
 
 while [[ $1  = -* ]]; do
     if [ "$1" = -i ]; then
         INTERACTIVE_OPTION="-it"
         shift
-    elif [ "$1" = -V ]; then
+    fi
+    if [ "$1" = -V ]; then
         VERBOSITY=1
         shift
-    elif [ "$1" = -c ]; then
+    fi
+    if [ "$1" = -c ]; then
         ECHO_CONTAINER=1
         shift
-    elif [ "$1" = -L ]; then
+    fi
+    if [ "$1" = -L ]; then
         KILL_TEST_CONTAINER=0
         shift
-    elif [ "$1" = -p ]; then
+    fi
+    if [ "$1" = -p ]; then
         IRODS_CONTROL_PATH="$2"
         shift 2
-    elif [ "$1" = -u ]; then
+    fi
+    if [ "$1" = -u ]; then
         RUN_AS_USER="$2"
         shift 2
-    elif [ "$1" = -r ]; then
+    fi
+    if [ "$1" = -r ]; then
         REMOVE_OPTION="$2"
         shift 2
-    elif [ "$1" = -w ]; then
+    fi
+    if [ "$1" = -w ]; then
         EXPLICIT_WORKDIR="$2"
         shift 2
-    else
-        echo >&2 "bad option '$1'"
-        usage
     fi
 done
 
