@@ -21,6 +21,11 @@ done
     exit 2
 }
 
+IRODS_VERSION="$(imiscsvrinfo | sed -n 's/\(relVersion=rods\)\(.*\)/\2/p')"
+echo "************************"
+echo "*** IRODS $IRODS_VERSION"
+echo "************************"
+
 setup_preconnect_preference DONT_CARE
 
 add_irods_to_system_pam_configuration

@@ -215,7 +215,7 @@ activate_virtual_env_with_prc_installed()
     sudo su - -c "source /${py_venv}/bin/activate && cp -rp /prc /prc-copy && \
                   pip install '/prc-copy[tests]' && sudo rm -fr /prc-copy" && \
     source /${py_venv}/bin/activate && \
-    echo "---> Python virtual environment activated.  Interpreter Version is: $(python -V)" && \
+    echo "---> Python virtual environment activated.\n*** PYTHON $(python -V)" && \
     python -c 'import irods' || { echo >&2 "ERROR: python-irodsclient install failed."; false; }
 }
 
