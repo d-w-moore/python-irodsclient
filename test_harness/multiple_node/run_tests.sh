@@ -41,4 +41,4 @@ $PYTHON '$DIR'/../utility/iinit.py \
     user rods \
     password rods \
     zone tempZone
-$PYTHON '$REPO'/irods/test/runner.py $*"
+$PYTHON '$REPO'/irods/test/runner.py --print-python-version --print-irods-version $*"

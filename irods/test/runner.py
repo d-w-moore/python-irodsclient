@@ -59,12 +59,26 @@ if __name__ == "__main__":
                     type=str,
                     help='Name of a file into which to write names  of skipped tests.')
 
+    parser.add_argument('--print-irods-version', action='store_true')
+    parser.add_argument('--print-python-version', action='store_true')
+#   parser.add_argument('--quit-prematurely', action='store_true')
+
     parser.add_argument('--tests_file', '-f',
                     metavar='TESTS_FILE',
                     dest='tests_file',
                     help='Name of a file containing a list of tests to run.')
 
     args = parser.parse_args()
+
+    if args.print_irods_version:
+        import irods.helpers
+        print('IRODS_SERVER_VERSION = ',irods.helpers.make_session().server_version_without_auth())
+#       if args.quit_prematurely: exit()
+
+    if args.print_python_version:
+        print(f'{sys.executable = }')
+        print(f'PYTHON_VERSION = {".".join(str(_) for _ in sys.version_info[:3])}')
+#       if args.quit_prematurely: exit()
 
     if args.tests_file:
         if args.tests:

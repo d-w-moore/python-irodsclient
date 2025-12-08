@@ -31,7 +31,7 @@ run_tests() {
     password rods
   $(declare -f report_environment_variables)
   report_environment_variables
-  python runner.py --output_tests_skipped /tmp/skipped.txt -e PYTHON_RULE_ENGINE_INSTALLED
+  python runner.py  --print-python-version --print-irods-version --output_tests_skipped /tmp/skipped.txt -e PYTHON_RULE_ENGINE_INSTALLED
   "
 
     # Install PREP (Python Rule Engine Plugin).
@@ -50,7 +50,7 @@ run_tests() {
   cd /prc.rw/irods/test
   $(declare -f report_environment_variables)
   report_environment_variables
-  env PYTHON_RULE_ENGINE_INSTALLED=yes python runner.py --tests_file /tmp/skipped.txt
+  env PYTHON_RULE_ENGINE_INSTALLED=yes python runner.py  --print-python-version --print-irods-version --tests_file /tmp/skipped.txt
   "
 }
 
