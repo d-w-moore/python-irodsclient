@@ -45,6 +45,8 @@ activate_virtual_env_with_prc_installed >/dev/null 2>&1 || {
     exit 1
 }
 
+echo "*** PYTHON_N_VERSION $PYTHON_N_VERSION"
+
 server_hup=
 if irods_server_version ge 5.0.0; then
     server_hup="y"
