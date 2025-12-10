@@ -20,10 +20,16 @@ from queue import Queue, Full, Empty
 
 transfer_managers = weakref.WeakKeyDictionary()
 
+# Keep last active synchronous manager(s) here.
+# TODO - Might have to protect with mutex.
+current_mgr = {}
 
-def abort_asynchronous_transfers():
-    for mgr in transfer_managers:
-        mgr.quit()
+def abort_parallel_transfers(dry_run = False):
+    if not dry_run:
+        for mgr in transfer_managers:
+            mgr.quit()
+    else:
+        return dict(transfer_managers)
 
 
 logger = logging.getLogger(__name__)
@@ -472,10 +478,11 @@ def _io_multipart_threaded(
             bytecounts = [f.result() for f in futures]
             if None not in bytecounts:
                 bytes_transferred = sum(bytecounts)
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             if any(not f.done() for f in futures):
-                # Induce any threads still alive to quit the transfer and exit.
-                mgr.quit()
+                transfer_managers.update( current_mgr )
+                current_mgr.clear()
+                current_mgr[mgr] = 1
             raise
         return bytes_transferred, total_size
 
