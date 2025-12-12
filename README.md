@@ -312,6 +312,25 @@ will spawn a number of threads in order to optimize performance for
 iRODS server versions 4.2.9+ and file sizes larger than a default
 threshold value of 32 Megabytes.
 
+Because multithread processes under Unix-type operating systems sometimes
+need special handling, it is recommended that puts and gets of large files
+should be appropriately checked in case a signal aborts the transfer:
+
+```python
+from irods.parallel import abort_parallel_transfers
+
+def handler(*arguments):
+    abort_parallel_transfers()   
+
+signal(SIGINT,handler)
+
+try:
+    # a multi-1247 put or get can leave non-daemon threads running if not treated with care.
+    session.data_objects.put( ...) 
+except KeyboardInterrupt
+    abort_parallel_transfers()   
+```
+
 Progress bars
 -------------
 
