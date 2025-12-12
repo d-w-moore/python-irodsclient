@@ -17,19 +17,13 @@ from irods.exception import DataObjectDoesNotExist
 import irods.keywords as kw
 from queue import Queue, Full, Empty
 
-
 transfer_managers = weakref.WeakKeyDictionary()
-
-# Keep last active synchronous manager(s) here.
-# TODO - Might have to protect with mutex.
-current_mgr = {}
 
 def abort_parallel_transfers(dry_run = False):
     if not dry_run:
         for mgr in transfer_managers:
             mgr.quit()
-    else:
-        return dict(transfer_managers)
+    return dict(transfer_managers)
 
 
 logger = logging.getLogger(__name__)
@@ -259,6 +253,7 @@ def _copy_part(src, dst, length, queueObject, debug_info, mgr, updatables=()):
     bytecount = 0
     accum = 0
     while True and bytecount < length:
+        print (('T' if mgr._quit  else 'F'), end = '', flush=True)
         if mgr._quit:
             bytecount = None
             break
@@ -296,16 +291,30 @@ class _Multipart_close_manager:
 
     """
 
-    def __init__(self, initial_io_, exit_barrier_):
+    def __init__(self, initial_io_, exit_barrier_, executor = None):
         self._quit = False
         self.exit_barrier = exit_barrier_
         self.initial_io = initial_io_
         self.__lock = threading.Lock()
         self.aux = []
+        self.futures = set()
+        self.executor = executor
+
+    def add_future(self, future): self.futures.add(future)
+
+    @property
+    def active_futures(self):
+        return tuple(_ for _ in self.futures if not _.done())
+
+    def shutdown(self):
+        if self.executor:
+            self.executor.shutdown(cancel_futures = True)
 
     def quit(self):
         self._quit = True
         self.exit_barrier.abort()
+        self.shutdown()
+        return self.active_futures
 
     def __contains__(self, Io):
         with self.__lock:
@@ -323,6 +332,7 @@ class _Multipart_close_manager:
     # data object to flush write operations (if any) in a timely fashion.  It also
     # synchronizes all of the parallel threads just before exit, so that we know
     # exactly when to perform a finalizing close on the data object
+
 
     def remove_io(self, Io):
         is_initial = True
@@ -424,7 +434,7 @@ def _io_multipart_threaded(
     futures = []
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=num_threads)
     num_threads = min(num_threads, len(ranges))
-    mgr = _Multipart_close_manager(Io, Barrier(num_threads))
+    mgr = _Multipart_close_manager(Io, Barrier(num_threads), executor)
     counter = 1
     gen_file_handle = lambda: open(
         fname, Operation.disk_file_mode(initial_open=(counter == 1))
@@ -456,7 +466,7 @@ def _io_multipart_threaded(
         if File is None:
             File = gen_file_handle()
         futures.append(
-            executor.submit(
+            f := executor.submit(
                 _io_part,
                 Io,
                 byte_range,
@@ -467,6 +477,7 @@ def _io_multipart_threaded(
                 **thread_opts
             )
         )
+        mgr.add_future(f)
         counter += 1
         Io = File = None
 
@@ -475,15 +486,16 @@ def _io_multipart_threaded(
     else:
         bytes_transferred = 0
         try:
+            transfer_managers[mgr] = 1
             bytecounts = [f.result() for f in futures]
             if None not in bytecounts:
                 bytes_transferred = sum(bytecounts)
-        except (KeyboardInterrupt, SystemExit):
-            if any(not f.done() for f in futures):
-                transfer_managers.update( current_mgr )
-                current_mgr.clear()
-                current_mgr[mgr] = 1
+        except (KeyboardInterrupt, #SystemExit
+):
+            print ('\nraising KBI\n')
             raise
+        finally:
+            pass
         return bytes_transferred, total_size
 
 
