@@ -311,6 +311,15 @@ class _Multipart_close_manager:
             self.executor.shutdown(cancel_futures = True)
 
     def quit(self):
+        from irods.manager.data_object_manager import ManagedBufferedRandom
+        # remove all descriptors from consideration for auto_close.
+        import irods.session
+        with irods.session._fds_lock:
+            for fd in self.aux + [self.initial_io]:
+                irods.session._fds.pop(fd, ())
+                if type(fd) is ManagedBufferedRandom:
+                    fd.no_close = True
+        # abort threads.
         self._quit = True
         self.exit_barrier.abort()
         self.shutdown()
