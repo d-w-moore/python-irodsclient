@@ -18,7 +18,7 @@ import irods.keywords as kw
 from queue import Queue, Full, Empty
 
 
-transfer_managers: weakref.WeakKeyDictionary[_Multipart_close_manager, Any] = weakref.WeakKeyDictionary()
+transfer_managers: weakref.WeakKeyDictionary["_Multipart_close_manager", Any] = weakref.WeakKeyDictionary()
 
 def abort_parallel_transfers(dry_run = False):
     if not dry_run:
