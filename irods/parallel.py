@@ -9,7 +9,7 @@ import contextlib
 import concurrent.futures
 import threading
 import multiprocessing
-from typing import List, Union
+from typing import List, Union, Any
 import weakref
 
 from irods.data_object import iRODSDataObject
@@ -17,7 +17,8 @@ from irods.exception import DataObjectDoesNotExist
 import irods.keywords as kw
 from queue import Queue, Full, Empty
 
-transfer_managers = weakref.WeakKeyDictionary()
+
+transfer_managers: weakref.WeakKeyDictionary[_Multipart_close_manager, Any] = weakref.WeakKeyDictionary()
 
 def abort_parallel_transfers(dry_run = False):
     if not dry_run:
