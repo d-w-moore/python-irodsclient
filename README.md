@@ -313,8 +313,9 @@ iRODS server versions 4.2.9+ and file sizes larger than a default
 threshold value of 32 Megabytes.
 
 Because multithread processes under Unix-type operating systems sometimes
-need special handling, it is recommended that puts and gets of large files
-should be appropriately checked in case a signal aborts the transfer:
+need special handling, it is recommended that any put or get of a large file
+be appropriately handled in the case that a terminating signal aborts the
+transfer:
 
 ```python
 from irods.parallel import abort_parallel_transfers
