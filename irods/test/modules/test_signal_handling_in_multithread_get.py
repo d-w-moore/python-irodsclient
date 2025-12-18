@@ -9,6 +9,7 @@ import time
 import irods
 import irods.helpers
 from irods.test import modules as test_modules
+from irods.parallel import abort_parallel_transfers
 
 OBJECT_SIZE = 2 * 1024**3
 OBJECT_NAME = "data_get_issue__722"
@@ -39,52 +40,55 @@ def test(test_case, signal_names=("SIGTERM", "SIGINT")):
 
     for signal_name in signal_names:
 
-        test_case.subTest(f"Testing with signal {signal_name}")
+        with test_case.subTest(f"Testing with signal {signal_name}"):
 
-        # Call into this same module as a command.  This will initiate another Python process that
-        # performs a lengthy data object "get" operation (see the main body of the script, below.)
-        process = subprocess.Popen(
-            [sys.executable, program],
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            text=True,
-        )
-
-        # Wait for download process to reach the point of spawning data transfer threads.  In Python 3.9+ versions
-        # of the concurrent.futures module, these are nondaemon threads and will block the exit of the main thread
-        # unless measures are taken (#722).
-        localfile = process.stdout.readline().strip()
-        test_case.assertTrue(
-            wait_till_true(
-                lambda: os.path.exists(localfile)
-                and os.stat(localfile).st_size > OBJECT_SIZE // 2
-            ),
-            "Parallel download from data_objects.get() probably experienced a fatal error before spawning auxiliary data transfer threads.",
-        )
-
-        sig = getattr(signal, signal_name)
-
-        # Interrupt the subprocess with the given signal.
-        process.send_signal(sig)
-        # Assert that this signal is what killed the subprocess, rather than a timed out process "wait" or a natural exit
-        # due to misproper or incomplete handling of the signal.
-        try:
-            test_case.assertEqual(
-                process.wait(timeout=15),
-                -sig,
-                "Unexpected subprocess return code.",
+            # Call into this same module as a command.  This will initiate another Python process that
+            # performs a lengthy data object "get" operation (see the main body of the script, below.)
+            process = subprocess.Popen(
+                [sys.executable, program],
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                text=True,
             )
-        except subprocess.TimeoutExpired as timeout_exc:
-            test_case.fail(
-                f"Subprocess timed out before terminating.  "
-                "Non-daemon thread(s) probably prevented subprocess's main thread from exiting."
-            )
-        # Assert that in the case of SIGINT, the process registered a KeyboardInterrupt.
-        if sig == signal.SIGINT:
+
+            # Wait for download process to reach the point of spawning data transfer threads.  In Python 3.9+ versions
+            # of the concurrent.futures module, these are nondaemon threads and will block the exit of the main thread
+            # unless measures are taken (#722).
+            localfile = process.stdout.readline().strip()
             test_case.assertTrue(
-                re.search("KeyboardInterrupt", process.stderr.read()),
-                "Did not find expected string 'KeyboardInterrupt' in log output.",
+                wait_till_true(
+                    lambda: os.path.exists(localfile)
+                    and os.stat(localfile).st_size > OBJECT_SIZE // 2
+                ),
+                "Parallel download from data_objects.get() probably experienced a fatal error before spawning auxiliary data transfer threads.",
             )
+
+            sig = getattr(signal, signal_name)
+
+            translate_return_code = lambda s: 128 - s if s < 0 else s
+
+            # Interrupt the subprocess with the given signal.
+            process.send_signal(sig)
+
+            # Assert that this signal is what killed the subprocess, rather than a timed out process "wait" or a natural exit
+            # due to misproper or incomplete handling of the signal.
+            try:
+                test_case.assertEqual(
+                    translate_return_code(process.wait(timeout=15)),
+                    128 + sig,
+                    "Unexpected subprocess return code.",
+                )
+            except subprocess.TimeoutExpired as timeout_exc:
+                test_case.fail(
+                    f"Subprocess timed out before terminating.  "
+                    "Non-daemon thread(s) probably prevented subprocess's main thread from exiting."
+                )
+            # Assert that in the case of SIGINT, the process registered a KeyboardInterrupt.
+            if sig == signal.SIGINT:
+                test_case.assertTrue(
+                    re.search("KeyboardInterrupt", process.stderr.read()),
+                    "Did not find expected string 'KeyboardInterrupt' in log output.",
+                )
 
 
 if __name__ == "__main__":
@@ -110,8 +114,19 @@ if __name__ == "__main__":
         print(local_path)
         sys.stdout.flush()
 
-        # "get" the object
-        session.data_objects.get(object_path, local_path)
+        def handler(sig,*_):
+            abort_parallel_transfers()
+            exit(128+sig)
+
+        signal.signal(signal.SIGTERM, handler)
+
+        try:
+            # download the object
+            session.data_objects.get(object_path, local_path)
+        except KeyboardInterrupt:
+            abort_parallel_transfers()
+            raise
+            
     finally:
         # Clean up, whether or not the download succeeded.
         if local_path is not None and os.path.exists(local_path):
