@@ -65,7 +65,8 @@ def test(test_case, signal_names=("SIGTERM", "SIGINT")):
 
             sig = getattr(signal, signal_name)
 
-            translate_return_code = lambda s: 128 - s if s < 0 else s
+            signal_offset_return_code = lambda s: 128 - s if s < 0 else s
+            signal_plus_128 = lambda sig: 128 + sig
 
             # Interrupt the subprocess with the given signal.
             process.send_signal(sig)
@@ -73,10 +74,11 @@ def test(test_case, signal_names=("SIGTERM", "SIGINT")):
             # Assert that this signal is what killed the subprocess, rather than a timed out process "wait" or a natural exit
             # due to misproper or incomplete handling of the signal.
             try:
+                translated_return_code = signal_offset_return_code(process.wait(timeout=15))
                 test_case.assertEqual(
-                    translate_return_code(process.wait(timeout=15)),
-                    128 + sig,
-                    "Unexpected subprocess return code.",
+                    translated_return_code,
+                    signal_plus_128(sig),
+                    f"Expected subprocess return code of {signal_plus_128(sig) = }; got {translated_return_code = }",
                 )
             except subprocess.TimeoutExpired as timeout_exc:
                 test_case.fail(
