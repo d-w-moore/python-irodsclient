@@ -54,10 +54,13 @@ def test(test_case, signal_names=("SIGTERM", "SIGINT")):
             # of the concurrent.futures module, these are nondaemon threads and will block the exit of the main thread
             # unless measures are taken (#722).
             localfile = process.stdout.readline().strip()
+            # Use timeout of 10 minutes for test transfer, which should be more than enough.
+            GENEROUS_TIMEOUT = 10*60
             test_case.assertTrue(
                 wait_till_true(
                     lambda: os.path.exists(localfile)
-                    and os.stat(localfile).st_size > OBJECT_SIZE // 2
+                    and os.stat(localfile).st_size > OBJECT_SIZE // 2,
+                    timeout=GENEROUS_TIMEOUT
                 ),
                 "Parallel download from data_objects.get() probably experienced a fatal error before spawning auxiliary data transfer threads.",
             )
