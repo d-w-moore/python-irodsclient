@@ -6,7 +6,6 @@ import sys
 import tempfile
 import time
 
-import irods
 import irods.helpers
 from irods.test import modules as test_modules
 from irods.parallel import abort_parallel_transfers
