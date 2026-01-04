@@ -328,7 +328,7 @@ signal(SIGINT,handler)
 try:
     # a multi-1247 put or get can leave non-daemon threads running if not treated with care.
     session.data_objects.put( ...) 
-except KeyboardInterrupt
+except KeyboardInterrupt:
     abort_parallel_transfers()   
 ```
 
