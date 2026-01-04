@@ -254,7 +254,6 @@ def _copy_part(src, dst, length, queueObject, debug_info, mgr, updatables=()):
     bytecount = 0
     accum = 0
     while True and bytecount < length:
-        print (('T' if mgr._quit  else 'F'), end = '', flush=True)
         if mgr._quit:
             bytecount = None
             break
@@ -319,7 +318,7 @@ class _Multipart_close_manager:
             for fd in self.aux + [self.initial_io]:
                 irods.session._fds.pop(fd, ())
                 if type(fd) is ManagedBufferedRandom:
-                    fd.no_close = True
+                    fd.do_close = False
         # abort threads.
         self._quit = True
         self.exit_barrier.abort()
@@ -502,7 +501,6 @@ def _io_multipart_threaded(
                 bytes_transferred = sum(bytecounts)
         except (KeyboardInterrupt, #SystemExit
 ):
-            print ('\nraising KBI\n')
             raise
         finally:
             pass

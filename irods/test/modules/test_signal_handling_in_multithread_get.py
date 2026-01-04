@@ -17,8 +17,9 @@ LOCAL_TEMPFILE_NAME = "data_object_for_issue_722.dat"
 
 _clock_polling_interval = max(0.01, time.clock_getres(time.CLOCK_BOOTTIME))
 
+LARGE_TEST_TIMEOUT = (10 * 60.0) # ten minutes.
 
-def wait_till_true(function, timeout=None):
+def wait_till_true(function, timeout=LARGE_TEST_TIMEOUT):
     start_time = time.clock_gettime_ns(time.CLOCK_BOOTTIME)
     while not (truth_value := function()):
         if (

@@ -131,13 +131,13 @@ class ManagedBufferedRandom(io.BufferedRandom):
         self._iRODS_session = kwd.pop("_session", None)
         super(ManagedBufferedRandom, self).__init__(*a, **kwd)
         import irods.session
-        self.no_close = False
+        self.do_close = True
 
         with irods.session._fds_lock:
             irods.session._fds[self] = None
 
     def __del__(self):
-        if not self.no_close and not self.closed:
+        if self.do_close and not self.closed:
             self.close()
         call___del__if_exists(super(ManagedBufferedRandom, self))
 
