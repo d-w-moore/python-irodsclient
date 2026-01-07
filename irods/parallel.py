@@ -165,6 +165,7 @@ class AsyncNotify:
         with self._lock:
             self._futures_done[future] = future.result()
             if len(self._futures) == len(self._futures_done):
+                # If a future returns None rather than an integer byte count, it has aborted the transfer.
                 self.__invoke_futures_done_logic(
                     skip_user_callback=(None in self._futures_done.values())
                 )
@@ -255,6 +256,9 @@ def _copy_part(src, dst, length, queueObject, debug_info, mgr, updatables=()):
     accum = 0
     while True and bytecount < length:
         if mgr._quit:
+            # Indicate by the return value that we are aborting (this part of) the data transfer.
+            # In the great majority of cases, this should be seen by the application as an overall
+            # abort of the PUT or GET of the requested object.
             bytecount = None
             break
         buf = src.read(min(COPY_BUF_SIZE, length - bytecount))
@@ -497,6 +501,9 @@ def _io_multipart_threaded(
         try:
             transfer_managers[mgr] = 1
             bytecounts = [f.result() for f in futures]
+
+            # If, rather than an integer byte-count, the "None" object was included as one of futures' return values, this
+            # is an indication that the PUT or GET operation should be marked as aborted, i.e. no bytes transferred.
             if None not in bytecounts:
                 bytes_transferred = sum(bytecounts)
         except (KeyboardInterrupt, #SystemExit
