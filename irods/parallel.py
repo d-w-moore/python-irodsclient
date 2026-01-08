@@ -498,23 +498,14 @@ def _io_multipart_threaded(
         return futures, queueObject, mgr
     else:
         bytes_transferred = 0
-        try:
-            transfer_managers[mgr] = 1
-            bytecounts = [f.result() for f in futures]
+        transfer_managers[mgr] = 1
+        bytecounts = [f.result() for f in futures]
 
-            # If, rather than an integer byte-count, the "None" object was included as one of futures' return values, this
-            # is an indication that the PUT or GET operation should be marked as aborted, i.e. no bytes transferred.
-            if None not in bytecounts:
-                bytes_transferred = sum(bytecounts)
-####### TODO - remove (seems to be a NO-OP if all we do is raise again)
-        #except(KeyboardInterrupt, #SystemExit
-        #):
-####### TODO - remove debug
-        except BaseException as e:
-            print(f'An Exception interrupted futures wait:\n***\n\t{e!r}\n***')
-            raise
-        finally:
-            pass
+        # If, rather than an integer byte-count, the "None" object was included as one of futures' return values, this
+        # is an indication that the PUT or GET operation should be marked as aborted, i.e. no bytes transferred.
+        if None not in bytecounts:
+            bytes_transferred = sum(bytecounts)
+
         return bytes_transferred, total_size
 
 
