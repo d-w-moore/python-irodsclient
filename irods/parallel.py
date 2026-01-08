@@ -506,8 +506,12 @@ def _io_multipart_threaded(
             # is an indication that the PUT or GET operation should be marked as aborted, i.e. no bytes transferred.
             if None not in bytecounts:
                 bytes_transferred = sum(bytecounts)
-        except (KeyboardInterrupt, #SystemExit
-):
+####### TODO - remove (seems to be a NO-OP if all we do is raise again)
+        #except(KeyboardInterrupt, #SystemExit
+        #):
+####### TODO - remove debug
+        except BaseException as e:
+            print(f'An Exception interrupted futures wait:\n***\n\t{e!r}\n***')
             raise
         finally:
             pass
