@@ -1,6 +1,6 @@
 import os
 import re
-import signal
+from signal import setitimer, SIGALRM, signal, SIG_DFL, ITIMER_REAL, SIGUSR1
 import subprocess
 import sys
 import tempfile
@@ -32,11 +32,17 @@ class Test(unittest.TestCase):
              f.write(TESTFILE_FILL)
              local_path = f.name
 
-         for signal_name in signal_names:
+         def _abort_them(*_):
+             print ("aborted1")
+             abort_parallel_transfers()
+             print ("aborted2")
 
+         if True:
             #with test_case.subTest(f"Testing with signal {signal_name}"):
-
-            sig = getattr(signal, signal_name)
+#           signal(SIGALRM,
+#                   _abort_them)
+            signal(SIGUSR1,
+                    _abort_them)
 
             session = irods.helpers.make_session()
             hc = irods.helpers.home_collection(session)
@@ -47,25 +53,21 @@ class Test(unittest.TestCase):
         
                 # Tell the parent process the name of the local file being "get"ted (got) from iRODS
         
-                def handler(sig_number,*_):
-                    abort_parallel_transfers()
-        
-                signal.signal(sig, handler)
-
                 tsession = session.clone()
-                data_object_exists = lambda : tsession.data_objects.exists(object_path)
-                pid = os.getpid()
+                data_object_exists = lambda:tsession.data_objects.exists(object_path)
+                pid=os.getpid()
                 def signal_after_object_exists():
-                    while not data_object_exists(): time.sleep(.1)
-                    os.kill(pid, sig)
-                threading.Thread(target = signal_after_object_exists).start()
+                    while not data_object_exists():
+                      print('*',flush=True,end='')
+                      time.sleep(.1)
+                    #setitimer(ITIMER_REAL,0.01)
+                    print("killsent")
+                    os.kill(pid,SIGUSR1)
+                    #abort_parallel_transfers()
+                    #session.cleanup()
 
-                try:
-                    # download the object
-                    session.data_objects.put(local_path, object_path)
-                except KeyboardInterrupt:
-                    abort_parallel_transfers()
-                    raise
+                threading.Thread(target = signal_after_object_exists).start()
+                session. data_objects. put(local_path, object_path)
 
                 # Assert that transfer threads terminate.
                 self.assertTrue(
@@ -74,10 +76,7 @@ class Test(unittest.TestCase):
                        10*60.0))
             finally:
                 # Clean up, whether or not the download succeeded.
-                signal.signal(sig, signal.SIG_DFL)
                 pass
-#               if local_path is not None and os.path.exists(local_path):
-#                   os.unlink(local_path)
 #               if session.data_objects.exists(object_path):
 #                   session.data_objects.unlink(object_path, force=True)
 #               ))               
