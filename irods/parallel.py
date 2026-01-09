@@ -462,6 +462,7 @@ def _io_multipart_threaded(
         "queueObject": queueObject,
     }
 
+    transfer_managers[mgr] = 1
     for byte_range in ranges:
         if Io is None:
             Io = session.data_objects.open(
@@ -493,6 +494,7 @@ def _io_multipart_threaded(
                 **thread_opts
             )
         )
+        print(f'added future {f}...')
         mgr.add_future(f)
         counter += 1
         Io = File = None
@@ -501,7 +503,7 @@ def _io_multipart_threaded(
         return futures, queueObject, mgr
     else:
         bytes_transferred = 0
-        transfer_managers[mgr] = 1
+        #transfer_managers[mgr] = 1
         bytecounts = [f.result() for f in futures]
         print (f'{bytecounts =}')
         # If, rather than an integer byte-count, the "None" object was included as one of futures' return values, this
