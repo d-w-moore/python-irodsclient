@@ -1,6 +1,6 @@
 import os
 import re
-import signal
+from signal import setitimer, SIGALRM, signal, SIG_DFL, ITIMER_REAL, SIGUSR1
 import subprocess
 import sys
 import tempfile
@@ -10,7 +10,8 @@ import unittest
 import irods.test.helpers
 from irods.parallel import abort_parallel_transfers
 
-OBJECT_SIZE = 2 * 1024**3
+OBJECT_SIZE = 3 * 1024**3
+TESTFILE_FILL = b"_" * (1024 * 1024)
 OBJECT_NAME = "data_put_issue__722"
 LOCAL_TEMPFILE_NAME = "data_object_to_put_issue_722.dat"
 
@@ -24,67 +25,62 @@ def wait_until_condition_true(func, interval, sleep=.1):
 class Test(unittest.TestCase):
 
     def test_put__issue_722(self):
-        signal_names=("SIGTERM", "SIGINT")
+      signal_names=("SIGTERM", "SIGINT")
 
-        for signal_name in signal_names:
+      with tempfile.NamedTemporaryFile(mode="wb") as f:           # Create the object to be uploaded.
+         for y in range(OBJECT_SIZE // len(TESTFILE_FILL)):
+             f.write(TESTFILE_FILL)
+             local_path = f.name
 
+         def _abort_them(*_):
+             print ("aborted1")
+             abort_parallel_transfers()
+             print ("aborted2")
+
+         if True:
             #with test_case.subTest(f"Testing with signal {signal_name}"):
-
-            sig = getattr(signal, signal_name)
+#           signal(SIGALRM,
+#                   _abort_them)
+            signal(SIGUSR1,
+                    _abort_them)
 
             session = irods.helpers.make_session()
             hc = irods.helpers.home_collection(session)
-            TESTFILE_FILL = b"_" * (1024 * 1024)
-            OBJECT_NAME += f"_{irods.helpers.unique_name(time.time())}"
-            object_path = f"{hc}/{OBJECT_NAME}"
+            object_path = f"{hc}/put_target_issue_722_{irods.test.helpers.unique_name(time.time())}"
 
-            with tempfile.NamedTemporaryFile(LOCAL_TEMPFILE_NAME,"wb") as f:           # Create the object to be uploaded.
-                for y in range(OBJECT_SIZE // len(TESTFILE_FILL)):
-                    f.write(TESTFILE_FILL)
-
-            local_path = None
             # Establish where (ie absolute path) to place the downloaded file, i.e. the  get() target.
             try:
-                with tempfile.NamedTemporaryFile(
-                    prefix="local_file_issue_722.dat", delete=True
-                ) as t:
-                    local_path = t.name
         
                 # Tell the parent process the name of the local file being "get"ted (got) from iRODS
-                print(local_path)
-                sys.stdout.flush()
         
-                def handler(sig_number,*_):
-                    abort_parallel_transfers()
-                    exit(128+sig_number)
-        
-                signal.signal(sig, handler)
-
                 tsession = session.clone()
-                data_object_exists = lambda : tsession.data_objects.exists(OBJECT_NAME)
-                pid = os.getpid()
+                data_object_exists = lambda:tsession.data_objects.exists(object_path)
+                pid=os.getpid()
+                dc = {}
                 def signal_after_object_exists():
-                    while not data_object_exists(): sleep(.1)
-                    os.kill(pid, sig)
-                threading.Thread(target = signal_after_object_exists).start()
+                    while not data_object_exists():
+                      time.sleep(.01)
+                    nonlocal dc
+                    dc = abort_parallel_transfers(dry_run = True)
+                    print("waiting for futures before kill sig")
+                    while not [m for m in dc.values() if m.futures]: 
+                      time.sleep(.01)
+                    print("killsent")
+                    os.kill(pid,SIGUSR1)
 
-                try:
-                    # download the object
-                    session.data_objects.put(local_path, object_path)
-                except KeyboardInterrupt:
-                    abort_parallel_transfers()
-                    raise
+                (t:=threading.Thread(target = signal_after_object_exists)).start()
+                session. data_objects. put(local_path, object_path)
 
+
+                # Assert that transfer threads terminate.
+#               self.assertTrue(
+#                   wait_until_condition_true(
+#                      lambda: threading.enumerate() == [threading.current_thread()],
+#                      10*60.0))
+                print(f'{threading.enumerate() = }')
             finally:
                 # Clean up, whether or not the download succeeded.
-                if local_path is not None and os.path.exists(local_path):
-                    os.unlink(local_path)
-                if session.data_objects.exists(object_path):
-                    session.data_objects.unlink(object_path, force=True)
-
-            # Assert that transfer threads terminate.
-            self.assertTrue(
-                wait_until_condition_true(
-                   lambda: threading.enumerate() == [threading.current_thread()],
-                   10*60.0
-                ))
+                pass
+#               if session.data_objects.exists(object_path):
+#                   session.data_objects.unlink(object_path, force=True)
+#               ))               

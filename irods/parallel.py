@@ -17,14 +17,20 @@ from irods.exception import DataObjectDoesNotExist
 import irods.keywords as kw
 from queue import Queue, Full, Empty
 
-
+paths_active: weakref.WeakValueDictionary[str,"AsyncNotify"] = weakref.WeakValueDictionary()
 transfer_managers: weakref.WeakKeyDictionary["_Multipart_close_manager", Any] = weakref.WeakKeyDictionary()
 
-def abort_parallel_transfers(dry_run = False):
+def abort_parallel_transfers(dry_run=False, filter_function=None):
+    """'cls' should be tuple to extract the current synchronous transfer."""
+    mgrs = dict(filter(filter_function, transfer_managers.items()))
     if not dry_run:
-        for mgr in transfer_managers:
-            mgr.quit()
-    return dict(transfer_managers)
+        for mgr, item in mgrs.items():
+            if isinstance(item,tuple):
+                quit_func,args = item[:2]
+                quit_func(*args)
+            else:
+                mgr.quit()
+    return mgrs
 
 
 logger = logging.getLogger(__name__)
@@ -322,6 +328,7 @@ class _Multipart_close_manager:
             for fd in self.aux + [self.initial_io]:
                 irods.session._fds.pop(fd, ())
                 if type(fd) is ManagedBufferedRandom:
+                    print(f'will not close {fd}.')
                     fd.do_close = False
         # abort threads.
         self._quit = True
@@ -459,55 +466,83 @@ def _io_multipart_threaded(
         "queueObject": queueObject,
     }
 
-    for byte_range in ranges:
-        if Io is None:
-            Io = session.data_objects.open(
-                Data_object.path,
-                Operation.data_object_mode(initial_open=False),
-                create=False,
-                finalize_on_close=False,
-                allow_redirect=False,
-                **{
-                    kw.NUM_THREADS_KW: str(num_threads),
-                    kw.DATA_SIZE_KW: str(total_size),
-                    kw.RESC_HIER_STR_KW: hier_str,
-                    kw.REPLICA_TOKEN_KW: replica_token,
-                }
-            )
-        mgr.add_io(Io)
-        logger.debug("target_host = %s", Io.raw.session.pool.account.host)
-        if File is None:
-            File = gen_file_handle()
-        futures.append(
-            f := executor.submit(
-                _io_part,
-                Io,
-                byte_range,
-                File,
-                Operation,
-                mgr,
-                thread_debug_id=str(counter),
-                **thread_opts
-            )
-        )
-        mgr.add_future(f)
-        counter += 1
-        Io = File = None
+    transfer_managers[mgr] = (_quit_current_transfer, [id(mgr)])
 
-    if Operation.isNonBlocking():
-        return futures, queueObject, mgr
-    else:
-        bytes_transferred = 0
-        transfer_managers[mgr] = 1
-        bytecounts = [f.result() for f in futures]
+    try:
+        transfer_aborted = False
 
-        # If, rather than an integer byte-count, the "None" object was included as one of futures' return values, this
-        # is an indication that the PUT or GET operation should be marked as aborted, i.e. no bytes transferred.
-        if None not in bytecounts:
-            bytes_transferred = sum(bytecounts)
+        for byte_range in ranges:
+            if Io is None:
+                Io = session.data_objects.open(
+                    Data_object.path,
+                    Operation.data_object_mode(initial_open=False),
+                    create=False,
+                    finalize_on_close=False,
+                    allow_redirect=False,
+                    **{
+                        kw.NUM_THREADS_KW: str(num_threads),
+                        kw.DATA_SIZE_KW: str(total_size),
+                        kw.RESC_HIER_STR_KW: hier_str,
+                        kw.REPLICA_TOKEN_KW: replica_token,
+                    }
+                )
+            mgr.add_io(Io)
+            logger.debug("target_host = %s", Io.raw.session.pool.account.host)
+            if File is None:
+                File = gen_file_handle()
+            try:
+                f = None
+                futures.append(
+                    f := executor.submit(
+                        _io_part,
+                        Io,
+                        byte_range,
+                        File,
+                        Operation,
+                        mgr,
+                        thread_debug_id=str(counter),
+                        **thread_opts
+                    )
+                )
+            except RuntimeError as error: 
+                # Executor was probably shut down before parallel transfer could be initiated.
+                transfer_aborted = True
+                break
+            else:
+                mgr.add_future(f)
 
-        return bytes_transferred, total_size
+            counter += 1
+            Io = File = None
 
+        if transfer_aborted:
+            return ((bytes_transferred:=0), total_size)
+
+        if Operation.isNonBlocking():
+            transfer_managers[mgr] = None
+            return (futures, mgr, queueObject)
+        else:
+            bytes_transferred = 0
+            # Enable user attempts to cancel the current synchronous transfer.
+            # At any given time, only one transfer manager key should map to a tuple object T.
+            # You should be able to quit all threads of the current transfer by calling T[0](*T[1]).
+            bytecounts = [f.result() for f in futures]
+            # If, rather than an integer byte-count, the "None" object was included as one of futures' return values, this
+            # is an indication that the PUT or GET operation should be marked as aborted, i.e. no bytes transferred.
+            if None not in bytecounts:
+                bytes_transferred = sum(bytecounts)
+
+        return (bytes_transferred, total_size)
+
+    except BaseException as e:
+#       if isinstance(e, (SystemExit, KeyboardInterrupt)):
+#         mgr.quit()
+        print(f'caught and re-raised {e!r}')
+        raise
+
+def _quit_current_transfer(obj_id):
+    l = [_ for _ in transfer_managers if id(_) == obj_id] 
+    if l:
+        l[0].quit()
 
 def io_main(session, Data, opr_, fname, R="", **kwopt):
     """
@@ -619,18 +654,21 @@ def io_main(session, Data, opr_, fname, R="", **kwopt):
 
     if Operation.isNonBlocking():
 
-        (futures, chunk_notify_queue, mgr) = retval
-        transfer_managers[mgr] = None
+#       if queueLength > 0:
+        (futures, mgr, chunk_notify_queue) = retval
+#       else:
+#           futures = retval
+            # TODO: investigate: Huh? Why were we zeroing out total_bytes when there is no progress queue? 
+            #chunk_notify_queue = total_bytes = None
 
-        if queueLength <= 0:
-            chunk_notify_queue = total_bytes = None
-
-        return AsyncNotify(
+        transfer_managers[mgr] = Data.path
+        paths_active[Data.path] = async_notify = AsyncNotify(
             futures,  # individual futures, one per transfer thread
             progress_Queue=chunk_notify_queue,  # for notifying the progress indicator thread
             total=total_bytes,  # total number of bytes for parallel transfer
             keep_={"mgr": mgr},
         )  # an open raw i/o object needing to be persisted, if any
+        return async_notify
     else:
         (_bytes_transferred, _bytes_total) = retval
         return _bytes_transferred == _bytes_total
