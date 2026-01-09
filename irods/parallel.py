@@ -22,8 +22,10 @@ transfer_managers: weakref.WeakKeyDictionary["_Multipart_close_manager", Any] = 
 
 def abort_parallel_transfers(dry_run = False):
     if not dry_run:
+        print(f'call quit on {[_ for _ in transfer_managers] =}')
         for mgr in transfer_managers:
             mgr.quit()
+            print(f'call quit on {mgr}')
     return dict(transfer_managers)
 
 
@@ -322,6 +324,7 @@ class _Multipart_close_manager:
             for fd in self.aux + [self.initial_io]:
                 irods.session._fds.pop(fd, ())
                 if type(fd) is ManagedBufferedRandom:
+                    print(f'will not close {fd}.')
                     fd.do_close = False
         # abort threads.
         self._quit = True
@@ -500,7 +503,7 @@ def _io_multipart_threaded(
         bytes_transferred = 0
         transfer_managers[mgr] = 1
         bytecounts = [f.result() for f in futures]
-
+        print (f'{bytecounts =}')
         # If, rather than an integer byte-count, the "None" object was included as one of futures' return values, this
         # is an indication that the PUT or GET operation should be marked as aborted, i.e. no bytes transferred.
         if None not in bytecounts:
