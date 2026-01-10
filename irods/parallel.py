@@ -22,6 +22,8 @@ paths_active = weakref.WeakValueDictionary()
 transfer_managers: weakref.WeakKeyDictionary["_Multipart_close_manager", Any] = weakref.WeakKeyDictionary()
 
 def abort_parallel_transfers(dry_run = False):
+    print ('***********************\n'*5)
+    print ('         abort         ')
     if not dry_run:
         print(f'call quit on {[_ for _ in transfer_managers] =}')
         for mgr in transfer_managers:
