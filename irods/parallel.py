@@ -464,7 +464,7 @@ def _io_multipart_threaded(
         "queueObject": queueObject,
     }
 
-    transfer_managers[mgr] = 1 # maybe this value could be a func object to call quit() on the current mgr
+    transfer_managers[mgr] = (_quit_current_transfer, [id(mgr)])
 
     try:
 
@@ -504,13 +504,13 @@ def _io_multipart_threaded(
             Io = File = None
 
         if Operation.isNonBlocking():
+            transfer_managers[mgr] = None
             return (futures, mgr, queueObject)
         else:
             bytes_transferred = 0
             # Enable user attempts to cancel the current synchronous transfer.
             # At any given time, only one transfer manager key should map to a tuple object T.
             # You should be able to quit all threads of the current transfer by calling T[0](*T[1]).
-            transfer_managers[mgr] = (_quit_current_transfer, [id(mgr)])
             bytecounts = [f.result() for f in futures]
             # If, rather than an integer byte-count, the "None" object was included as one of futures' return values, this
             # is an indication that the PUT or GET operation should be marked as aborted, i.e. no bytes transferred.
