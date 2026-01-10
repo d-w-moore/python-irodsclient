@@ -500,7 +500,7 @@ def _io_multipart_threaded(
         Io = File = None
 
     if Operation.isNonBlocking():
-        return futures, queueObject, mgr
+        return (futures, mgr, queueObject)
     else:
         bytes_transferred = 0
         #transfer_managers[mgr] = 1
@@ -623,10 +623,12 @@ def io_main(session, Data, opr_, fname, R="", **kwopt):
 
     if Operation.isNonBlocking():
 
-        (futures, chunk_notify_queue, mgr) = retval
-
-        if queueLength <= 0:
-            chunk_notify_queue = total_bytes = None
+#       if queueLength > 0:
+        (futures, mgr, chunk_notify_queue) = retval
+#       else:
+#           futures = retval
+            # TODO: investigate: Huh? Why were we zeroing out total_bytes when there is no progress queue? 
+            #chunk_notify_queue = total_bytes = None
 
         transfer_managers[mgr] = Data.path
         paths_active[Data.path] = async_notify = AsyncNotify(
