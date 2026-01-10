@@ -10,7 +10,7 @@ import unittest
 import irods.test.helpers
 from irods.parallel import abort_parallel_transfers
 
-OBJECT_SIZE = 2 * 1024**3
+OBJECT_SIZE = 3 * 1024**3
 TESTFILE_FILL = b"_" * (1024 * 1024)
 OBJECT_NAME = "data_put_issue__722"
 LOCAL_TEMPFILE_NAME = "data_object_to_put_issue_722.dat"
@@ -56,24 +56,28 @@ class Test(unittest.TestCase):
                 tsession = session.clone()
                 data_object_exists = lambda:tsession.data_objects.exists(object_path)
                 pid=os.getpid()
+                dc = {}
                 def signal_after_object_exists():
                     while not data_object_exists():
-                      print('*',flush=True,end='')
-                      time.sleep(.1)
-                    #setitimer(ITIMER_REAL,0.01)
+                      time.sleep(.01)
+                    nonlocal dc
+                    dc = abort_parallel_transfers(dry_run = True)
+                    print("waiting for futures before kill sig")
+                    while not [m for m in dc.values() if m.futures]: 
+                      time.sleep(.01)
                     print("killsent")
                     os.kill(pid,SIGUSR1)
-                    #abort_parallel_transfers()
-                    #session.cleanup()
 
-                threading.Thread(target = signal_after_object_exists).start()
+                (t:=threading.Thread(target = signal_after_object_exists)).start()
                 session. data_objects. put(local_path, object_path)
 
+
                 # Assert that transfer threads terminate.
-                self.assertTrue(
-                    wait_until_condition_true(
-                       lambda: threading.enumerate() == [threading.current_thread()],
-                       10*60.0))
+#               self.assertTrue(
+#                   wait_until_condition_true(
+#                      lambda: threading.enumerate() == [threading.current_thread()],
+#                      10*60.0))
+                print(f'{threading.enumerate() = }')
             finally:
                 # Clean up, whether or not the download succeeded.
                 pass

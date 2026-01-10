@@ -18,6 +18,7 @@ import irods.keywords as kw
 from queue import Queue, Full, Empty
 
 
+PATHS_ACTIVE = weakref.WeakValueDictionary()
 transfer_managers: weakref.WeakKeyDictionary["_Multipart_close_manager", Any] = weakref.WeakKeyDictionary()
 
 def abort_parallel_transfers(dry_run = False):
@@ -494,7 +495,6 @@ def _io_multipart_threaded(
                 **thread_opts
             )
         )
-        print(f'added future {f}...')
         mgr.add_future(f)
         counter += 1
         Io = File = None
@@ -505,7 +505,6 @@ def _io_multipart_threaded(
         bytes_transferred = 0
         #transfer_managers[mgr] = 1
         bytecounts = [f.result() for f in futures]
-        print (f'{bytecounts =}')
         # If, rather than an integer byte-count, the "None" object was included as one of futures' return values, this
         # is an indication that the PUT or GET operation should be marked as aborted, i.e. no bytes transferred.
         if None not in bytecounts:
@@ -625,17 +624,18 @@ def io_main(session, Data, opr_, fname, R="", **kwopt):
     if Operation.isNonBlocking():
 
         (futures, chunk_notify_queue, mgr) = retval
-        transfer_managers[mgr] = None
 
         if queueLength <= 0:
             chunk_notify_queue = total_bytes = None
 
-        return AsyncNotify(
+        transfer_managers[mgr] = Data.path
+        PATHS_ACTIVE[Data.path] = async_notify = AsyncNotify(
             futures,  # individual futures, one per transfer thread
             progress_Queue=chunk_notify_queue,  # for notifying the progress indicator thread
             total=total_bytes,  # total number of bytes for parallel transfer
             keep_={"mgr": mgr},
         )  # an open raw i/o object needing to be persisted, if any
+        return async_notify
     else:
         (_bytes_transferred, _bytes_total) = retval
         return _bytes_transferred == _bytes_total
