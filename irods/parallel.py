@@ -18,7 +18,7 @@ import irods.keywords as kw
 from queue import Queue, Full, Empty
 
 
-PATHS_ACTIVE = weakref.WeakValueDictionary()
+paths_active = weakref.WeakValueDictionary()
 transfer_managers: weakref.WeakKeyDictionary["_Multipart_close_manager", Any] = weakref.WeakKeyDictionary()
 
 def abort_parallel_transfers(dry_run = False):
@@ -629,7 +629,7 @@ def io_main(session, Data, opr_, fname, R="", **kwopt):
             chunk_notify_queue = total_bytes = None
 
         transfer_managers[mgr] = Data.path
-        PATHS_ACTIVE[Data.path] = async_notify = AsyncNotify(
+        paths_active[Data.path] = async_notify = AsyncNotify(
             futures,  # individual futures, one per transfer thread
             progress_Queue=chunk_notify_queue,  # for notifying the progress indicator thread
             total=total_bytes,  # total number of bytes for parallel transfer
