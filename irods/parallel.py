@@ -20,15 +20,17 @@ from queue import Queue, Full, Empty
 paths_active: weakref.WeakValueDictionary[str,"AsyncNotify"] = weakref.WeakValueDictionary()
 transfer_managers: weakref.WeakKeyDictionary["_Multipart_close_manager", Any] = weakref.WeakKeyDictionary()
 
-def abort_parallel_transfers(dry_run=False):
-    print ('***********************\n'*5)
-    print ('         abort         ')
+def abort_parallel_transfers(dry_run=False, filter_function=None):
+    """'cls' should be tuple to extract the current synchronous transfer."""
+    mgrs = dict(filter(filter_function, transfer_managers.items()))
     if not dry_run:
-        print(f'call quit on {[_ for _ in transfer_managers] =}')
-        for mgr in transfer_managers:
-            mgr.quit()
-            print(f'call quit on {mgr}')
-    return dict(transfer_managers)
+        for mgr, item in mgrs.items():
+            if isinstance(item,tuple):
+                quit_func,args = item[:2]
+                quit_func(*args)
+            else:
+                mgr.quit()
+    return mgrs
 
 
 logger = logging.getLogger(__name__)
