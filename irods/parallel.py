@@ -469,6 +469,7 @@ def _io_multipart_threaded(
     transfer_managers[mgr] = (_quit_current_transfer, [id(mgr)])
 
     try:
+        transfer_aborted = False
 
         for byte_range in ranges:
             if Io is None:
@@ -489,21 +490,32 @@ def _io_multipart_threaded(
             logger.debug("target_host = %s", Io.raw.session.pool.account.host)
             if File is None:
                 File = gen_file_handle()
-            futures.append(
-                f := executor.submit(
-                    _io_part,
-                    Io,
-                    byte_range,
-                    File,
-                    Operation,
-                    mgr,
-                    thread_debug_id=str(counter),
-                    **thread_opts
+            try:
+                f = None
+                futures.append(
+                    f := executor.submit(
+                        _io_part,
+                        Io,
+                        byte_range,
+                        File,
+                        Operation,
+                        mgr,
+                        thread_debug_id=str(counter),
+                        **thread_opts
+                    )
                 )
-            )
-            mgr.add_future(f)
+            except RuntimeError as error: 
+                # Executor was probably shut down before parallel transfer could be initiated.
+                transfer_aborted = True
+                break
+            else:
+                mgr.add_future(f)
+
             counter += 1
             Io = File = None
+
+        if transfer_aborted:
+            return ((bytes_transferred:=0), total_size)
 
         if Operation.isNonBlocking():
             transfer_managers[mgr] = None
@@ -519,7 +531,7 @@ def _io_multipart_threaded(
             if None not in bytecounts:
                 bytes_transferred = sum(bytecounts)
 
-        return bytes_transferred, total_size
+        return (bytes_transferred, total_size)
 
     except BaseException as e:
 #       if isinstance(e, (SystemExit, KeyboardInterrupt)):
