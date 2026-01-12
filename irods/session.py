@@ -35,6 +35,16 @@ _sessions = None
 _sessions_lock = threading.Lock()
 
 
+def _exclude_fds_from_auto_close(fds):
+        """Remove all descriptors from consideration for auto_close."""
+        from irods.manager.data_object_manager import ManagedBufferedRandom
+        import irods.session
+        with irods.session._fds_lock:
+            for fd in fds:
+                irods.session._fds.pop(fd, None)
+                if isinstance(fd, ManagedBufferedRandom):
+                    fd.do_close = False
+
 def _cleanup_remaining_sessions():
     for fd in list((_fds or {}).keys()):
         if not fd.closed:

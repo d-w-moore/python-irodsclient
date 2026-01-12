@@ -3322,10 +3322,17 @@ class TestDataObjOps(unittest.TestCase):
 
     def test_handling_of_termination_signals_during_multithread_get__issue_722(self):
         from irods.test.modules.test_signal_handling_in_multithread_get import (
-            test as test__issue_722,
+            test as test_get__issue_722,
         )
 
-        test__issue_722(self)
+        test_get__issue_722(self)
+
+    def test_handling_of_termination_signals_during_multithread_put__issue_722(self):
+        from irods.test.modules.test_signal_handling_in_multithread_put import (
+            test as test_put__issue_722,
+        )
+
+        test_put__issue_722(self)
 
 
 if __name__ == "__main__":

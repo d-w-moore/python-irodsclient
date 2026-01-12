@@ -10,7 +10,7 @@ import irods.helpers
 from irods.test import modules as test_modules
 from irods.parallel import abort_parallel_transfers
 
-OBJECT_SIZE = 2 * 1024**3
+OBJECT_SIZE = 4 * 1024**3
 OBJECT_NAME = "data_get_issue__722"
 LOCAL_TEMPFILE_NAME = "data_object_for_issue_722.dat"
 

@@ -321,15 +321,9 @@ class _Multipart_close_manager:
             self.executor.shutdown(cancel_futures = True)
 
     def quit(self):
-        from irods.manager.data_object_manager import ManagedBufferedRandom
-        # remove all descriptors from consideration for auto_close.
-        import irods.session
-        with irods.session._fds_lock:
-            for fd in self.aux + [self.initial_io]:
-                irods.session._fds.pop(fd, ())
-                if type(fd) is ManagedBufferedRandom:
-                    print(f'will not close {fd}.')
-                    fd.do_close = False
+        from irods.session import _exclude_fds_from_auto_close
+        _exclude_fds_from_auto_close(self.aux + [self.initial_io])
+
         # abort threads.
         self._quit = True
         self.exit_barrier.abort()
@@ -534,9 +528,12 @@ def _io_multipart_threaded(
         return (bytes_transferred, total_size)
 
     except BaseException as e:
-#       if isinstance(e, (SystemExit, KeyboardInterrupt)):
-#         mgr.quit()
-        print(f'caught and re-raised {e!r}')
+
+        # TODO - examine this experimentally restored code, as
+        # library should react to these two exception types(and perhaps others) by quitting all transfer threads
+
+        if isinstance(e, (SystemExit, KeyboardInterrupt)):
+            mgr.quit()
         raise
 
 def _quit_current_transfer(obj_id):
