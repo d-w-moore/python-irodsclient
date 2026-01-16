@@ -9,7 +9,7 @@ import contextlib
 import concurrent.futures
 import threading
 import multiprocessing
-from typing import List, Union, Any
+from typing import List, Union, Any, Optional
 import weakref
 
 from irods.data_object import iRODSDataObject
@@ -330,12 +330,12 @@ class _Multipart_close_manager:
         if self.executor:
             self.executor.shutdown(cancel_futures = True)
 
-    def quit(self):
+    def quit(self, exception: Optional[Exception] = None):
         from irods.session import _exclude_fds_from_auto_close
         _exclude_fds_from_auto_close(self.aux + [self.initial_io])
 
         # abort threads.
-        self._quit = True
+        self._quit = exception if (exception is not None) else True
         self.exit_barrier.abort()
         self.shutdown()
         return self.active_futures
@@ -509,8 +509,12 @@ def _io_multipart_threaded(
                     )
                 )
             except RuntimeError as error: 
+############### TODO : wonder if we should just re-raise, or raise Interrupted style exception from 'error'
+###############        b/c quite honestly, the 'transfer_aborted' logic below is a hot mess.
+
                 # Executor was probably shut down before parallel transfer could be initiated.
                 transfer_aborted = True
+               
                 break
             else:
                 mgr.add_future(f)
@@ -518,20 +522,25 @@ def _io_multipart_threaded(
             counter += 1
             Io = File = None
 
+        bytes_transferred = 0
+
         if transfer_aborted:
-            return ((bytes_transferred:=0), total_size)
+            return (bytes_transferred, total_size)
 
         if Operation.isNonBlocking():
             transfer_managers[mgr] = None
             return (futures, mgr, queueObject)
         else:
-            bytes_transferred = 0
             # Enable user attempts to cancel the current synchronous transfer.
             # At any given time, only one transfer manager key should map to a tuple object T.
             # You should be able to quit all threads of the current transfer by calling T[0](*T[1]).
             bytecounts = [f.result() for f in futures]
-            if mgr._quit:
-                raiseDataTransferInterrupted
+
+            if isinstance(mgr._quit, Exception):
+                raise DataTransferInterrupted from mgr._quit
+            elif mgr._quit:
+                raise DataTransferInterrupted
+                
             # If, rather than an integer byte-count, the "None" object was included as one of futures' return values, this
             # is an indication that the PUT or GET operation should be marked as aborted, i.e. no bytes transferred.
             if None not in bytecounts:
