@@ -21,7 +21,17 @@ paths_active: weakref.WeakValueDictionary[str,"AsyncNotify"] = weakref.WeakValue
 transfer_managers: weakref.WeakKeyDictionary["_Multipart_close_manager", Any] = weakref.WeakKeyDictionary()
 
 def abort_parallel_transfers(dry_run=False, filter_function=None):
-    """'cls' should be tuple to extract the current synchronous transfer."""
+    """
+    If no explicit arguments are given, all ongoing parallel puts and gets are cancelled 
+    as soon as possible.  The corresponding threads are signalled to exit by calling the
+    quit() method on their corresponding transfer-manager objects.
+
+    Setting dry_run=True results in no such cancellation being performed, but a dictionary
+    object is returned containing, as its keys, the transfer-manager which would have been so affected.
+
+    filter_function is usually left to its default value of None.  Otherwise the effect will be to 
+    limit which transfers are to be aborted (or returned in a call with dry_run=True).
+    """
     mgrs = dict(filter(filter_function, transfer_managers.items()))
     if not dry_run:
         for mgr, item in mgrs.items():
