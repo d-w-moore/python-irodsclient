@@ -34,7 +34,7 @@ from irods.data_object import (
 import irods.client_configuration as client_config
 import irods.keywords as kw
 import irods.parallel as parallel
-from irods.parallel import deferred_call
+from irods.parallel import deferred_call, DataTransferInterrupted
 
 
 logger = logging.getLogger(__name__)
@@ -246,15 +246,19 @@ class DataObjectManager(Manager):
             if self.should_parallelize_transfer(
                 num_threads, o, open_options=options.items()
             ):
-                if not self.parallel_get(
-                    (obj, o),
-                    local_file,
-                    num_threads=num_threads,
-                    target_resource_name=options.get(kw.RESC_NAME_KW, ""),
-                    data_open_returned_values=data_open_returned_values_,
-                    updatables=updatables,
-                ):
-                    raise RuntimeError("parallel get failed")
+                fail_exc = RuntimeError("parallel get failed")
+                try:
+                    if not self.parallel_get(
+                        (obj, o),
+                        local_file,
+                        num_threads=num_threads,
+                        target_resource_name=options.get(kw.RESC_NAME_KW, ""),
+                        data_open_returned_values=data_open_returned_values_,
+                        updatables=updatables,
+                    ):
+                        raise fail_exc  
+                except DataTransferInterrupted as e:
+                    raise fail_exc from e
             else:
                 with open(local_file, "wb") as f:
                     for chunk in chunks(o, self.READ_BUFFER_SIZE):
@@ -354,17 +358,21 @@ class DataObjectManager(Manager):
             ):
                 o = deferred_call(self.open, (obj, "w"), options)
                 f.close()
-                if not self.parallel_put(
-                    local_path,
-                    (obj, o),
-                    total_bytes=sizelist[0],
-                    num_threads=num_threads,
-                    target_resource_name=options.get(kw.RESC_NAME_KW, "")
-                    or options.get(kw.DEST_RESC_NAME_KW, ""),
-                    open_options=options,
-                    updatables=updatables,
-                ):
-                    raise RuntimeError("parallel put failed")
+                fail_exc = RuntimeError("parallel put failed")
+                try:
+                    if not self.parallel_put(
+                        local_path,
+                        (obj, o),
+                        total_bytes=sizelist[0],
+                        num_threads=num_threads,
+                        target_resource_name=options.get(kw.RESC_NAME_KW, "")
+                        or options.get(kw.DEST_RESC_NAME_KW, ""),
+                        open_options=options,
+                        updatables=updatables,
+                    ):
+                        raise fail_exc  
+                except DataTransferInterrupted as e:
+                    raise fail_exc from e
             else:
                 with self.open(obj, "w", **options) as o:
                     # Set operation type to trigger acPostProcForPut

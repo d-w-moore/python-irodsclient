@@ -530,12 +530,13 @@ def _io_multipart_threaded(
             # At any given time, only one transfer manager key should map to a tuple object T.
             # You should be able to quit all threads of the current transfer by calling T[0](*T[1]).
             bytecounts = [f.result() for f in futures]
+            if mgr._quit:
+                raiseDataTransferInterrupted
             # If, rather than an integer byte-count, the "None" object was included as one of futures' return values, this
             # is an indication that the PUT or GET operation should be marked as aborted, i.e. no bytes transferred.
             if None not in bytecounts:
                 bytes_transferred = sum(bytecounts)
-
-        return (bytes_transferred, total_size)
+            return (bytes_transferred, total_size)
 
     except BaseException as e:
 
@@ -545,6 +546,8 @@ def _io_multipart_threaded(
         if isinstance(e, (SystemExit, KeyboardInterrupt)):
             mgr.quit()
         raise
+
+class DataTransferInterrupted(Exception): pass
 
 def _quit_current_transfer(obj_id):
     l = [_ for _ in transfer_managers if id(_) == obj_id] 
