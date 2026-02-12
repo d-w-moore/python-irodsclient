@@ -1,0 +1,15 @@
+# This action is based on Github's default starter workflow for Python at
+# https://github.com/actions/starter-workflows/blob/master/ci/python-package.yml
+# (C) Github, MIT License
+
+name: "Windows testing"
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    steps:
+    - name: Run windows container
+      run: |
+        docker run -it ://mcr.microsoft.com cmd.exe
+
