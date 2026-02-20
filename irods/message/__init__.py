@@ -187,6 +187,10 @@ logger = logging.getLogger(__name__)
 
 _IRODS_VERSION = (5, 0, 2, "d")
 
+# This alias exists as a backward-compatible duplicate, but it is slated for deprecation.
+# The symbol is for internal use in testing only, so it should be prefixed with an underline.
+IRODS_VERSION = _IRODS_VERSION
+
 UNICODE = str
 
 _METADATA_FIELD_TYPES = {str, UNICODE, bytes}
