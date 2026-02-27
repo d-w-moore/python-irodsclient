@@ -14,6 +14,7 @@ from collections import namedtuple
 import os
 import ast
 import threading
+from warnings import warn
 from .message import Message
 from .property_types import (
     BinaryProperty,
@@ -185,11 +186,18 @@ logger = logging.getLogger(__name__)
 # We avail ourselves of this macro in running tests to abort if the session has connected
 # to a server that is too new.
 
+# The symbol 'IRODS_VERSION' was for internal use in testing only, so it should be prefixed
+# with an underline.
+
 _IRODS_VERSION = (5, 0, 2, "d")
 
-# This alias exists as a backward-compatible duplicate, but it is slated for deprecation.
-# The symbol is for internal use in testing only, so it should be prefixed with an underline.
-IRODS_VERSION = _IRODS_VERSION
+_deprecated_names = {"IRODS_VERSION": _IRODS_VERSION}
+
+def __getattr__(name):
+    if name in _deprecated_names:
+        warn(f"{name} is deprecated", DeprecationWarning)
+        return _deprecated_names[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 UNICODE = str
 
