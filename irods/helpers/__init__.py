@@ -1,9 +1,10 @@
 import contextlib
 import os
 import sys
-from irods import env_filename_from_keyword_args
+
 import irods.exception as ex
-from irods.message import ET, XML_Parser_Type, _IRODS_VERSION
+from irods import env_filename_from_keyword_args
+from irods.message import _IRODS_VERSION, ET, XML_Parser_Type
 from irods.path import iRODSPath
 from irods.session import iRODSSession
 
