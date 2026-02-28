@@ -2114,8 +2114,22 @@ Code Samples and Tests
 Additional code samples are available in the [test
 directory](https://github.com/irods/python-irodsclient/tree/main/irods/test)
 
-Testing
-=======
+Automatic Testing
+---------------
+
+The above mentioned directory contains the main test suite; see the instructions
+below for how to run them manually.  The suite is also run by a Github Action in
+response to any new commits pushed to Github-hosted branches or included within
+pull requests within the official repository.  Note that the  suite will
+prematurely fail when run against a server deemed too recent.  This version threshold
+is determined by the value of `irods.message._IRODS_VERSION`.  (The threshold was
+previously referred to as `IRODS_VERSION`, i.e. without a leading underscore,
+but that variable has been deprecated as of v3.3.0.)
+
+In addition to the test suite, a number of scripts are also provided to support
+custom test cases that require more extensive list of steps for setup.  These
+are also automatically and routinely run within Github to validate each new
+submission of code to the official repository.
 
 Setting up and running tests
 ----------------------------
