@@ -194,6 +194,7 @@ logger = logging.getLogger(__name__)
 
 _IRODS_VERSION = (5, 0, 2, "d")
 
+# This is the older, now deprecated, symbol.
 _deprecated_names = {"IRODS_VERSION": _IRODS_VERSION}
 
 
