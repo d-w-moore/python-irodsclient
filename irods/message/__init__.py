@@ -200,9 +200,9 @@ _deprecated_names = {"IRODS_VERSION": _IRODS_VERSION}
 
 def __getattr__(name):
     if name in _deprecated_names:
-        warn(f"{name} is deprecated", DeprecationWarning)
+        warn(f"{name} is deprecated", DeprecationWarning, stacklevel=2)
         return _deprecated_names[name]
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}", stacklevel=2)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 UNICODE = str
 
