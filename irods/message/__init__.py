@@ -1,29 +1,32 @@
 """Define objects related to communication with iRODS server API endpoints."""
 
-import struct
-import logging
-import socket
-import json
-import irods.exception as ex
-from typing import Optional
-import xml.etree.ElementTree as ET_xml
-import defusedxml.ElementTree as ET_secure_xml
-from . import quasixml as ET_quasi_xml
-from ..api_number import api_number
-from collections import namedtuple
-import os
 import ast
+import json
+import logging
+import os
+import socket
+import struct
 import threading
+import xml.etree.ElementTree as ET_xml
+from collections import namedtuple
+from typing import Optional
 from warnings import warn
+
+import defusedxml.ElementTree as ET_secure_xml
+
+import irods.exception as ex
+
+from . import quasixml as ET_quasi_xml
 from .message import Message
 from .property_types import (
+    ArrayProperty,
     BinaryProperty,
-    StringProperty,
     IntegerProperty,
     LongProperty,
-    ArrayProperty,
+    StringProperty,
     SubmessageProperty,
 )
+from ..api_number import api_number
 
 
 class Bad_AVU_Field(ValueError):
@@ -193,11 +196,12 @@ _IRODS_VERSION = (5, 0, 2, "d")
 
 _deprecated_names = {"IRODS_VERSION": _IRODS_VERSION}
 
+
 def __getattr__(name):
     if name in _deprecated_names:
         warn(f"{name} is deprecated", DeprecationWarning)
         return _deprecated_names[name]
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}", stacklevel=2)
 
 UNICODE = str
 
