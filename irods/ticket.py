@@ -37,13 +37,16 @@ class Ticket:
             if result:
                 ticket = result[TicketQuery.Ticket.string]
                 for attr, value in TicketQuery.Ticket.__dict__.items():
+                    if value is TicketQuery.Ticket.string: continue
+                    #print ('copying',attr)
                     if not attr.startswith("_"):
                         try:
                             setattr(self, attr, result[value])
                         except KeyError:
                             # backward compatibility with older schema versions
                             pass
-            except TypeError:
+        except TypeError:
+                        
             raise RuntimeError(
                 "If specified, 'result' parameter must be a TicketQuery.Ticket search result"
             )
