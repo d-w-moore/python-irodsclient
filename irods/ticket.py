@@ -32,7 +32,9 @@ class Ticket:
     def __init__(self, session, ticket="", result=None, allow_punctuation=False):
         self._session = session
         try:
-            if ticket and hasattr(result,'__iter__'):
+            if hasattr(result,'__getitem__') and result.get(TicketQuery.Ticket.string,''):
+                pass
+            elif ticket and hasattr(result,'__iter__'):
                 result = [_ for _ in result if _[TicketQuery.Ticket.string] == ticket][0]
             if result:
                 ticket = result[TicketQuery.Ticket.string]
