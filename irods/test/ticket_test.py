@@ -13,7 +13,7 @@ import tempfile
 from irods.session import iRODSSession
 import irods.exception as ex
 import irods.keywords as kw
-from irods.ticket import enumerate_tickets, Ticket
+from irods.ticket import ticket_iterator, Ticket
 from irods.models import TicketQuery, DataObject, Collection
 
 
@@ -497,7 +497,7 @@ class TestTicketOps(unittest.TestCase):
         self._ticket_write_helper(obj_type="coll")
 
 
-    def test_enumerate_tickets__issue_120(self):
+    def test_ticket_iterator__issue_120(self):
 
         ses = self.sess
         t = None
@@ -513,7 +513,7 @@ class TestTicketOps(unittest.TestCase):
             )
 
             # Check an id attribute is present and listed in the results from list_tickets
-            self.assertIn(t.id, (_.id for _ in enumerate_tickets(ses)))
+            self.assertIn(t.id, (_.id for _ in ticket_iterator(ses)))
         finally:
             if t:
                 t.delete()
