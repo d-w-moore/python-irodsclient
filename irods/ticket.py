@@ -27,17 +27,33 @@ def get_epoch_seconds(utc_timestamp):
     except ValueError:
         raise  # final try at conversion, so a failure is an error
 
+def ticket_iterator(ses, filter_args=()):
+    return (Ticket(ses, result=row) for row in ses.query(TicketQuery.Ticket).filter(*filter_args))
 
 class Ticket:
     def __init__(self, session, ticket="", result=None, allow_punctuation=False):
         self._session = session
         try:
+            # Process query result and set object attributes if a row result is given
             if result is not None:
-                ticket = result[TicketQuery.Ticket.string]
+                if (_ticket:=result[TicketQuery.Ticket.string]) != ticket != "":
+                    raise RuntimeError(
+                        "ticket parameter does not match query result"
+                    )
+                ticket = _ticket
+                for attr, value in TicketQuery.Ticket.__dict__.items():
+                    if value is TicketQuery.Ticket.string: continue
+                    if not attr.startswith("_"):
+                        try:
+                            setattr(self, attr, result[value])
+                        except KeyError:
+                            # backward compatibility with older schema versions
+                            pass
         except TypeError:
             raise RuntimeError(
                 "If specified, 'result' parameter must be a TicketQuery.Ticket search result"
             )
+
         self._ticket = (
             ticket if ticket else self._generate(allow_punctuation=allow_punctuation)
         )
