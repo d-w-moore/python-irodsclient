@@ -34,17 +34,6 @@ def gmtime_to_timestamp(gmt_struct):
     )
 
 
-def delete_tickets(session, dry_run = False):
-    for res in session.query(TicketQuery.Ticket):
-        t = Ticket(session, result=res)
-        if dry_run in (False, None):
-            t.delete(**{kw.ADMIN_KW: ""})
-        elif isinstance(dry_run, list):
-            dry_run.append(t)
-        else:
-            logger.info('Found ticket: %s',t.string)
-
-
 def delete_my_tickets(session):
     my_userid = session.users.get(session.username).id
     my_tickets = session.query(TicketQuery.Ticket).filter(
