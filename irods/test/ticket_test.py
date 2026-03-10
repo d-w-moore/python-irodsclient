@@ -70,10 +70,11 @@ class TestRodsUserTicketOps(unittest.TestCase):
         self.alice = self.bob = None
 
         with helpers.make_session() as ses:
-            u = ses.users.get(rods_admin_name := ses.username)
+            u = ses.users.get(ses.username)
             if u.type != "rodsadmin":
                 self.skipTest("""Test runnable only by rodsadmin.""")
-            self.rods_admin_name = rods_admin_name 
+            self.rods_admin_name = ses.username
+
             self.host = ses.host
             self.port = ses.port
             self.zone = ses.zone
