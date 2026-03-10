@@ -2,7 +2,6 @@
 
 import calendar
 import datetime
-import logging
 import os
 import sys
 import time
@@ -15,9 +14,6 @@ import irods.exception as ex
 import irods.keywords as kw
 from irods.ticket import ticket_iterator, Ticket
 from irods.models import TicketQuery, DataObject, Collection
-
-
-logger = logging.getLogger(__name__)
 
 
 # As with most of the modules in this test suite, session objects created via
@@ -53,7 +49,6 @@ class TestRodsUserTicketOps(unittest.TestCase):
             user=user.name,
             password=self.users[user.name],
         )
-
     @staticmethod
     def irods_homedir(sess, path_only=False):
         path = f"/{sess.zone}/home/{sess.username}"
@@ -75,9 +70,10 @@ class TestRodsUserTicketOps(unittest.TestCase):
         self.alice = self.bob = None
 
         with helpers.make_session() as ses:
-            u = ses.users.get(ses.username)
+            u = ses.users.get(rods_admin_name := ses.username)
             if u.type != "rodsadmin":
                 self.skipTest("""Test runnable only by rodsadmin.""")
+            self.rods_admin_name = rods_admin_name 
             self.host = ses.host
             self.port = ses.port
             self.zone = ses.zone
@@ -367,19 +363,17 @@ class TestRodsUserTicketOps(unittest.TestCase):
         # Specifically we are testing that 'modify_time' and 'create_time' attributes function as expected,
         # and that other attributes such as 'id' are also present.
 
-        if (admin:=helpers.make_session()).server_version < (4, 3, 0):
-            self.skipTest('"create_time" and "modify_time" not supported for Ticket')
-
         bobs_ticket = None
 
         try:
             with self.login(self.bob) as bob:
-                bobs_ticket = Ticket(bob)
-                bobs_ticket.issue('write', helpers.home_collection(bob))
+                bobs_ticket = Ticket(bob).issue('write', helpers.home_collection(bob))
                 time.sleep(2)
-                bobs_ticket.modify('add', 'user', admin.username)
+                bobs_ticket.modify('add', 'user', self.rods_admin_name)
+
                 # Reload the ticket, this time with the full complement of attributes present.
                 bobs_ticket = next(ticket_iterator(bob, filter_args=[TicketQuery.Ticket.string == bobs_ticket.string]))
+
                 self.assertGreaterEqual(
                     bobs_ticket.modify_time,
                     bobs_ticket.create_time + datetime.timedelta(seconds=1)
