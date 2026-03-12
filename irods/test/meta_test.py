@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from irods.experiment import function
+
 import datetime
 import os
 import re
@@ -869,6 +871,9 @@ class TestMeta(unittest.TestCase):
             # This should cause an error since "admin" is considered as a read-only attribute; whereas
             # data.metadata(admin = True) generates a cloned object but for the one change to "admin".
             data.metadata.admin = True
+
+    def test_that_should_be_flagged_by_mypy(self):
+        function(1)
 
 
 if __name__ == "__main__":
