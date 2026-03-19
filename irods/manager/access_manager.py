@@ -47,6 +47,20 @@ def users_by_ids(session, ids=()):
 
 
 class AccessManager(Manager):
+    #def _call_atomic_acl_api(self, request_text)
+    def atomic(self, request_text):
+        with self.sess.pool.get_connection() as conn:
+            request_msg = iRODSMessage(
+                "RODS_API_REQ",
+                JSON_Message(request_text, conn.server_version),
+                20005,
+            )
+            conn.send(request_msg)
+            response = conn.recv()
+        response_msg = response.get_json_encoded_struct()
+        print(f"in atomic_metadata, server responded with: {response_msg!r}", response_msg)
+        #logger.debug("in atomic_metadata, server responded with: %r", response_msg)
+
 
     def get(self, target, report_raw_acls=True, **kw):
 
