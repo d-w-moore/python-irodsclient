@@ -497,6 +497,43 @@ class TestAccess(unittest.TestCase):
             self.sess,
         )
 
+    def test_atomic_acls_505(self):
+        #import pdb;pdb.set_trace()
+        ses = self.sess
+        zone = user1 = user2 = group = None
+        try:
+            zone = ses.zones.create("twilight","remote")
+            user1 = ses.users.create("test_user_505", "rodsuser")
+            user2 = ses.users.create("rod_serling_505#twilight", "rodsuser")
+            group = ses.groups.create("test_group_505")
+            ses.acls._call_atomic_acl_api(
+                self.coll_path,
+                a1:=iRODSAccess("write", "",  user1.name,  user1.zone),
+                a2:=iRODSAccess("read", "", user2.name, user2.zone),
+                a3:=iRODSAccess("read", "", group.name),
+            )
+
+            accesses = ses.acls.get(self.coll)
+
+            # For purposes of equality tests, assign the path name of interest into each ACL.
+            for p in (a1, a2, a3):
+                p.path = self.coll_path
+
+            # Assert that the ACLs we added are among those listed for the object in the catalog.
+            normalize = lambda access: access.copy(decanonicalize=True, ref_zone=ses.zone)
+            self.assertLess(
+                set(normalize(_) for _ in (a1,a2,a3)),
+                set(normalize(_) for _ in accesses)
+            )
+        finally:
+            if user1:
+                user1.remove()
+            if user2:
+                user2.remove()
+            if group:
+                group.remove()
+            if zone:
+                zone.remove()
 
 if __name__ == "__main__":
     # let the tests find the parent irods lib

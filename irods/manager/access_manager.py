@@ -2,7 +2,7 @@ from os.path import basename, dirname
 
 from irods.manager import Manager
 from irods.api_number import api_number
-from irods.message import ModAclRequest, iRODSMessage
+from irods.message import ModAclRequest, iRODSMessage, JSON_Message
 from irods.data_object import iRODSDataObject, irods_dirname, irods_basename
 from irods.collection import iRODSCollection
 from irods.models import (
@@ -14,6 +14,7 @@ from irods.models import (
     CollectionAccess,
 )
 from irods.access import iRODSAccess
+import irods.exception as ex
 from irods.column import In
 from irods.user import iRODSUser
 
@@ -36,6 +37,33 @@ def users_by_ids(session, ids=()):
 
 
 class AccessManager(Manager):
+
+    def _ACL_operation(self, op_input: iRODSAccess):
+        return {
+            "acl": op_input.access_name,
+            "entity_name": op_input.user_name,
+            **(
+                {} if not (z := op_input.user_zone)
+                else {"zone": z}
+            )
+        }
+
+    def _call_atomic_acl_api(self, logical_path : str, *operations, admin=False):
+        request_text = {"logical_path": logical_path}
+        request_text["admin_mode"] = admin
+        request_text["operations"] = [self._ACL_operation(op) for op in operations]
+
+        with self.sess.pool.get_connection() as conn:
+            request_msg = iRODSMessage(
+                "RODS_API_REQ",
+                JSON_Message(request_text, conn.server_version),
+                int_info=20005,
+            )
+            conn.send(request_msg)
+            response = conn.recv()
+        response_msg = response.get_json_encoded_struct()
+        logger.debug("in atomic ACL api, server responded with: %r", response_msg)
+
     def get(self, target, report_raw_acls=True, **kw):
 
         if report_raw_acls:

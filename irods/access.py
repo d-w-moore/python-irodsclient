@@ -102,7 +102,7 @@ class iRODSAccess(metaclass=_Access_LookupMeta):
     def __hash__(self):
         return hash((self.access_name, iRODSPath(self.path), self.user_name, self.user_zone))
 
-    def copy(self, decanonicalize=False):
+    def copy(self, decanonicalize=False, ref_zone=''):
         other = copy.deepcopy(self)
         if decanonicalize:
             replacement_string = {
@@ -112,6 +112,9 @@ class iRODSAccess(metaclass=_Access_LookupMeta):
                 "modify_object": "write",
             }.get(self.access_name)
             other.access_name = replacement_string if replacement_string is not None else self.access_name
+            if '' != ref_zone == other.user_zone:
+                other.user_zone = ''
+
         return other
 
     def __repr__(self):
