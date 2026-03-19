@@ -2,7 +2,7 @@ from os.path import basename, dirname
 
 from irods.manager import Manager
 from irods.api_number import api_number
-from irods.message import ModAclRequest, iRODSMessage
+from irods.message import ModAclRequest, iRODSMessage, JSON_Message
 from irods.data_object import iRODSDataObject, irods_dirname, irods_basename
 from irods.collection import iRODSCollection
 from irods.models import (
@@ -53,8 +53,9 @@ class AccessManager(Manager):
             request_msg = iRODSMessage(
                 "RODS_API_REQ",
                 JSON_Message(request_text, conn.server_version),
-                20005,
+                int_info=20005,
             )
+            #import pdb;pdb.set_trace()
             conn.send(request_msg)
             response = conn.recv()
         response_msg = response.get_json_encoded_struct()
