@@ -14,6 +14,7 @@ from irods.models import (
     CollectionAccess,
 )
 from irods.access import iRODSAccess
+import irods.exception as ex
 from irods.column import In
 from irods.user import iRODSUser
 
@@ -55,13 +56,12 @@ class AccessManager(Manager):
         try:
             if self.sess.users.get(entity, zone).type == "rodsgroup":
                 zone = ""
-        except UserDoesNotExist:
+        except ex.UserDoesNotExist:
            return {}
         return {
             **{"acl": access, "entity_name": entity},
             **({} if not zone else {"zone":zone})
         }
-
 
 
     def _call_atomic_acl_api(self, logical_path : str, *operations, admin=False):
