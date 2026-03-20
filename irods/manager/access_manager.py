@@ -53,7 +53,7 @@ class AccessManager(Manager):
         entity = op_input.user_name
         zone = op_input.user_zone
         try:
-            if self.sess.users.get(op_input.user_name, op_input.user_zone).type == "rodsgroup":
+            if self.sess.users.get(entity, zone).type == "rodsgroup":
                 zone = ""
         except UserDoesNotExist:
            return {}
