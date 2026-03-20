@@ -47,21 +47,41 @@ def users_by_ids(session, ids=()):
 
 
 class AccessManager(Manager):
-    #def _call_atomic_acl_api(self, request_text)
-    def atomic(self, request_text):
+
+    def _ACL_operation(self, op_input: iRODSAccess):
+        access = op_input.access_name
+        entity = op_input.user_name
+        zone = op_input.user_zone
+        try:
+            if self.sess.users.get(op_input.user_name, op_input.user_zone).type == "rodsgroup":
+                zone = ""
+        except UserDoesNotExist:
+           return {}
+        return {
+            **{"acl": access, "entity_name": entity},
+            **({} if not zone else {"zone":zone})
+        }
+
+
+    
+    def _call_atomic_acl_api(self, logical_path : str, *operations, admin=False):
+        request_text = {"logical_path": logical_path}
+        request_text["admin_mode"] = admin
+        request_text["operations"] = [self._ACL_operation(op) for op in operations]       
+
         with self.sess.pool.get_connection() as conn:
             request_msg = iRODSMessage(
                 "RODS_API_REQ",
                 JSON_Message(request_text, conn.server_version),
                 int_info=20005,
             )
-            #import pdb;pdb.set_trace()
             conn.send(request_msg)
             response = conn.recv()
         response_msg = response.get_json_encoded_struct()
-        print(f"in atomic_metadata, server responded with: {response_msg!r}", response_msg)
+        print(f"in atomic_metadata, server responded with: {response_msg!r}")
         #logger.debug("in atomic_metadata, server responded with: %r", response_msg)
 
+    atomic = _call_atomic_acl_api 
 
     def get(self, target, report_raw_acls=True, **kw):
 
