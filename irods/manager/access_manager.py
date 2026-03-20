@@ -63,11 +63,11 @@ class AccessManager(Manager):
         }
 
 
-    
+
     def _call_atomic_acl_api(self, logical_path : str, *operations, admin=False):
         request_text = {"logical_path": logical_path}
         request_text["admin_mode"] = admin
-        request_text["operations"] = [self._ACL_operation(op) for op in operations]       
+        request_text["operations"] = [self._ACL_operation(op) for op in operations]
 
         with self.sess.pool.get_connection() as conn:
             request_msg = iRODSMessage(
@@ -81,7 +81,7 @@ class AccessManager(Manager):
         print(f"in atomic_metadata, server responded with: {response_msg!r}")
         #logger.debug("in atomic_metadata, server responded with: %r", response_msg)
 
-    atomic = _call_atomic_acl_api 
+    atomic = _call_atomic_acl_api
 
     def get(self, target, report_raw_acls=True, **kw):
 
