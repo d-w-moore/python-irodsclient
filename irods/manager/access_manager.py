@@ -14,7 +14,6 @@ from irods.models import (
     CollectionAccess,
 )
 from irods.access import iRODSAccess
-import irods.exception as ex
 from irods.column import In
 from irods.user import iRODSUser
 
@@ -37,27 +36,26 @@ def users_by_ids(session, ids=()):
 
 
 class AccessManager(Manager):
-
-    def _ACL_operation(self, op_input: iRODSAccess):
+    @staticmethod
+    def _to_acl_operation_json(op_input: iRODSAccess):
         return {
             "acl": op_input.access_name,
             "entity_name": op_input.user_name,
-            **(
-                {} if not (z := op_input.user_zone)
-                else {"zone": z}
-            )
+            **({} if not (z := op_input.user_zone) else {"zone": z}),
         }
 
-    def _call_atomic_acl_api(self, logical_path : str, *operations, admin=False):
-        request_text = {"logical_path": logical_path}
-        request_text["admin_mode"] = admin
-        request_text["operations"] = [self._ACL_operation(op) for op in operations]
+    def apply_atomic_operations(self, logical_path: str, *operations, admin=False):
+        request_text = {
+            "logical_path": logical_path,
+            "admin_mode": admin,
+            "operations": [self._to_acl_operation_json(op) for op in operations],
+        }
 
         with self.sess.pool.get_connection() as conn:
             request_msg = iRODSMessage(
                 "RODS_API_REQ",
                 JSON_Message(request_text, conn.server_version),
-                int_info=20005,
+                int_info=api_number["ATOMIC_APPLY_ACL_OPERATIONS_APN"],
             )
             conn.send(request_msg)
             response = conn.recv()

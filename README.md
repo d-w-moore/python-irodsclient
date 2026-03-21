@@ -2118,6 +2118,34 @@ membership, this can be achieved with another query.
 `<session>.permissions` was therefore removed in v2.0.0
 in favor of `<session>.acls`.
 
+Atomic ACLs
+-----------
+
+A list of permissions may be added to an object atomically using
+the AccessManager's apply_atomic_operations method:
+```
+from irods.access import ACLOperation
+from irods.helpers import home_collection
+session = irods.helpers.make_session()
+myCollection = session.collections.create(f"{home_collection(session).path}/newCollection")
+
+session.acls.apply_atomic_operations(myCollection.path,
+   *[ACLOperation("read", "public"),
+     ACLOperation("write", "bob", "otherZone")
+    ])
+```
+ACLOperation objects form a linear order with iRODSAccess objects, and
+indeed are subclassed from them as well, allowing equivalency testing:
+
+Thus, for example:
+```
+ACLOperation('read','public') in sess.acls.get(object)
+```
+is a valid operation. Consequently, any client application that habitually
+caches object permissions could use similar code to check new ACLOperations against the cache
+and conceivably be able to optimize size of an atomic ACLs request by eliminating
+any ACLOperations that might have been redundant.
+
 Quotas (v2.0.0)
 ---------------
 

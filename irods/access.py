@@ -5,6 +5,22 @@ from irods.data_object import iRODSDataObject
 from irods.path import iRODSPath
 
 
+_ichmod_listed_permissions = (
+    "own",
+    "delete_object",
+    "write",
+    "modify_object",
+    "create_object",
+    "delete_metadata",
+    "modify_metadata",
+    "create_metadata",
+    "read",
+    "read_object",
+    "read_metadata",
+    "null",
+)
+
+
 class _Access_LookupMeta(type):
     def __getitem__(self, key):
         return self.codes[key]
@@ -28,6 +44,7 @@ class iRODSAccess(metaclass=_Access_LookupMeta):
     def to_string(cls, key):
         return cls.strings[key]
 
+    # noqa: RUF012 - Cannot change in minor release
     codes = collections.OrderedDict(
         (key_, value_)
         for key_, value_ in sorted(
@@ -55,24 +72,10 @@ class iRODSAccess(metaclass=_Access_LookupMeta):
             ).items(),
             key=lambda _: _[1],
         )
-        if key_
-        in (
-            # These are copied from ichmod help text.
-            "own",
-            "delete_object",
-            "write",
-            "modify_object",
-            "create_object",
-            "delete_metadata",
-            "modify_metadata",
-            "create_metadata",
-            "read",
-            "read_object",
-            "read_metadata",
-            "null",
-        )
+        if key_ in _ichmod_listed_permissions
     )
 
+    # noqa: RUF012 - Cannot change in minor release
     strings = collections.OrderedDict((number, string) for string, number in codes.items())
 
     def __init__(self, access_name, path, user_name="", user_zone="", user_type=None):
@@ -91,6 +94,14 @@ class iRODSAccess(metaclass=_Access_LookupMeta):
         self.user_zone = user_zone
         self.user_type = user_type
 
+    def __lt__(self, other):
+        return (self.access_name, self.user_name, self.user_zone, iRODSPath(self.path)) < (
+            other.access_name,
+            other.user_name,
+            other.user_zone,
+            iRODSPath(other.path),
+        )
+
     def __eq__(self, other):
         return (
             self.access_name == other.access_name
@@ -102,8 +113,9 @@ class iRODSAccess(metaclass=_Access_LookupMeta):
     def __hash__(self):
         return hash((self.access_name, iRODSPath(self.path), self.user_name, self.user_zone))
 
-    def copy(self, decanonicalize=False, ref_zone=''):
+    def copy(self, decanonicalize=False, implied_zone=''):
         other = copy.deepcopy(self)
+
         if decanonicalize:
             replacement_string = {
                 "read object": "read",
@@ -112,8 +124,10 @@ class iRODSAccess(metaclass=_Access_LookupMeta):
                 "modify_object": "write",
             }.get(self.access_name)
             other.access_name = replacement_string if replacement_string is not None else self.access_name
-            if '' != ref_zone == other.user_zone:
-                other.user_zone = ''
+
+        # Useful if we wish to force an explicitly specified local zone to an implicit zone spec in the copy, for equality testing:
+        if '' != implied_zone == other.user_zone:
+            other.user_zone = ''
 
         return other
 
@@ -122,6 +136,56 @@ class iRODSAccess(metaclass=_Access_LookupMeta):
         access_name = self.access_name.replace(" ", "_")
         user_type_hint = ("({user_type})" if object_dict.get("user_type") is not None else "").format(**object_dict)
         return f"<iRODSAccess {access_name} {self.path} {self.user_name}{user_type_hint} {self.user_zone}>"
+
+
+class ACLOperation(iRODSAccess):
+    def __init__(self, access_name: str, user_name: str = "", user_zone: str = ""):
+        super().__init__(
+            access_name=access_name,
+            path="",
+            user_name=user_name,
+            user_zone=user_zone,
+        )
+
+    def __eq__(self, other):
+        return (
+            self.access_name,
+            self.user_name,
+            self.user_zone,
+        ) == (
+            other.access_name,
+            other.user_name,
+            other.user_zone,
+        )
+
+    def __lt__(self, other):
+        return (
+            self.access_name,
+            self.user_name,
+            self.user_zone,
+        ) < (
+            other.access_name,
+            other.user_name,
+            other.user_zone,
+        )
+
+    def __repr__(self):
+        return f"<ACLOperation {self.access_name} {self.user_name} {self.user_zone}>"
+
+
+(
+    _ichmod_synonym_mapping := {
+        # syn : canonical
+        "write": "modify_object",
+        "read": "read_object",
+    }
+).update((key.replace("_", " "), key) for key in iRODSAccess.codes.keys())
+
+
+all_permissions = {
+    **iRODSAccess.codes,
+    **{key: iRODSAccess.codes[_ichmod_synonym_mapping[key]] for key in _ichmod_synonym_mapping},
+}
 
 
 class _iRODSAccess_pre_4_3_0(iRODSAccess):
