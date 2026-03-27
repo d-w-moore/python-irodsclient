@@ -2141,10 +2141,9 @@ Thus, for example:
 ```
 ACLOperation('read','public') in sess.acls.get(object)
 ```
-is a valid operation. Consequently, any client application that habitually
-caches object permissions could use similar code to check new ACLOperations against the cache
-and conceivably be able to optimize size of an atomic ACLs request by eliminating
-any ACLOperations that might have been redundant.
+is a valid operation, so that an application that tends to cache object
+permissions client-side might use such checks in optimizing atomic ACL
+requests against the inclusion of any redundant ACLOperations.
 
 Quotas (v2.0.0)
 ---------------

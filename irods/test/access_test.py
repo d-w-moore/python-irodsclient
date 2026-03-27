@@ -508,13 +508,14 @@ class TestAccess(unittest.TestCase):
             group = ses.groups.create("test_group_505")
             ses.acls.apply_atomic_operations(
                 self.coll_path,
-                a1:=ACLOperation("write", user1.name, user1.zone),
-                a2:=ACLOperation("read", user2.name, user2.zone),
-                a3:=ACLOperation("read", user3.name),
-                a4:=ACLOperation("read", group.name),
+                a1 := ACLOperation("write", user1.name, user1.zone),
+                a2 := ACLOperation("read", user2.name, user2.zone),
+                a3 := ACLOperation("read", user3.name),
+                a4 := ACLOperation("read", group.name),
             )
 
-            normalize = lambda access: access.copy(decanonicalize=True, implied_zone=ses.zone)
+            def normalize(access):
+                return access.copy(decanonicalize=True, implied_zone=ses.zone)
 
             accesses = [normalize(acl) for acl in ses.acls.get(self.coll)]
 

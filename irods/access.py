@@ -26,42 +26,42 @@ class _Access_LookupMeta(type):
     @staticmethod
     def _codes():
         return collections.OrderedDict(
-        (key_, value_)
-        for key_, value_ in sorted(
-            dict(
-                # copied from iRODS source code in
-                #   ./server/core/include/irods/catalog_utilities.hpp:
-                null=1000,
-                execute=1010,
-                read_annotation=1020,
-                read_system_metadata=1030,
-                read_metadata=1040,
-                read_object=1050,
-                write_annotation=1060,
-                create_metadata=1070,
-                modify_metadata=1080,
-                delete_metadata=1090,
-                administer_object=1100,
-                create_object=1110,
-                modify_object=1120,
-                delete_object=1130,
-                create_token=1140,
-                delete_token=1150,
-                curate=1160,
-                own=1200,
-            ).items(),
-            key=lambda _: _[1],
+            (key_, value_)
+            for key_, value_ in sorted(
+                dict(
+                    # copied from iRODS source code in
+                    #   ./server/core/include/irods/catalog_utilities.hpp:
+                    null=1000,
+                    execute=1010,
+                    read_annotation=1020,
+                    read_system_metadata=1030,
+                    read_metadata=1040,
+                    read_object=1050,
+                    write_annotation=1060,
+                    create_metadata=1070,
+                    modify_metadata=1080,
+                    delete_metadata=1090,
+                    administer_object=1100,
+                    create_object=1110,
+                    modify_object=1120,
+                    delete_object=1130,
+                    create_token=1140,
+                    delete_token=1150,
+                    curate=1160,
+                    own=1200,
+                ).items(),
+                key=lambda _: _[1],
+            )
+            if key_ in _ichmod_listed_permissions
         )
-        if key_ in _ichmod_listed_permissions
-    )
 
     @property
-    def codes(metaclass_target): return metaclass_target._codes()
+    def codes(metaclass_target):
+        return metaclass_target._codes()
 
     @property
     def strings(metaclass_target):
-        return collections.OrderedDict((number, string) for string, number in 
-            metaclass_target._codes().items())
+        return collections.OrderedDict((number, string) for string, number in metaclass_target._codes().items())
 
     def __getitem__(self, key):
         return self.codes[key]
@@ -76,7 +76,7 @@ class _Access_LookupMeta(type):
         return list(zip(self.keys(), self.values()))
 
 
-class iRODSAccess(metaclass=_Access_LookupMeta):
+class _iRODSAccess_base:
     @classmethod
     def to_int(cls, key):
         return cls.codes[key]
@@ -85,10 +85,7 @@ class iRODSAccess(metaclass=_Access_LookupMeta):
     def to_string(cls, key):
         return cls.strings[key]
 
-
-    def __init__(self, access_name, path, user_name="", user_zone="", user_type=None):
-        self.codes = self.__class__.codes.copy()
-        self.strings = self.__class__.strings.copy()
+    def __init__(self, access_name, path, user_name, user_zone, user_type):
         self.access_name = access_name
         if isinstance(path, (iRODSCollection, iRODSDataObject)):
             self.path = path.path
@@ -148,6 +145,13 @@ class iRODSAccess(metaclass=_Access_LookupMeta):
         return f"<iRODSAccess {access_name} {self.path} {self.user_name}{user_type_hint} {self.user_zone}>"
 
 
+class iRODSAccess(_iRODSAccess_base, metaclass=_Access_LookupMeta):
+    def __init__(self, access_name, path, user_name="", user_zone="", user_type=None):
+        self.codes = self.__class__.codes
+        self.strings = self.__class__.strings
+        super().__init__(access_name, path, user_name, user_zone, user_type)
+
+
 class ACLOperation(iRODSAccess):
     def __init__(self, access_name: str, user_name: str = "", user_zone: str = ""):
         super().__init__(
@@ -198,7 +202,7 @@ all_permissions = {
 }
 
 
-class _iRODSAccess_pre_4_3_0(iRODSAccess):
+class _iRODSAccess_pre_4_3_0(_iRODSAccess_base):
     codes = collections.OrderedDict(
         (key.replace("_", " "), value)
         for key, value in iRODSAccess.codes.items()
