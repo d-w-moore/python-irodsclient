@@ -22,30 +22,10 @@ _ichmod_listed_permissions = (
 
 
 class _Access_LookupMeta(type):
-    def __getitem__(self, key):
-        return self.codes[key]
 
-    def keys(self):
-        return list(self.codes.keys())
-
-    def values(self):
-        return list(self.codes[k] for k in self.codes.keys())
-
-    def items(self):
-        return list(zip(self.keys(), self.values()))
-
-
-class iRODSAccess(metaclass=_Access_LookupMeta):
-    @classmethod
-    def to_int(cls, key):
-        return cls.codes[key]
-
-    @classmethod
-    def to_string(cls, key):
-        return cls.strings[key]
-
-    # noqa: RUF012 - Cannot change in minor release
-    codes = collections.OrderedDict(
+    @staticmethod
+    def _codes():
+        return collections.OrderedDict(
         (key_, value_)
         for key_, value_ in sorted(
             dict(
@@ -75,10 +55,40 @@ class iRODSAccess(metaclass=_Access_LookupMeta):
         if key_ in _ichmod_listed_permissions
     )
 
-    # noqa: RUF012 - Cannot change in minor release
-    strings = collections.OrderedDict((number, string) for string, number in codes.items())
+    @property
+    def codes(metaclass_target): return metaclass_target._codes()
+
+    @property
+    def strings(metaclass_target):
+        return collections.OrderedDict((number, string) for string, number in 
+            metaclass_target._codes().items())
+
+    def __getitem__(self, key):
+        return self.codes[key]
+
+    def keys(self):
+        return list(self.codes.keys())
+
+    def values(self):
+        return list(self.codes[k] for k in self.codes.keys())
+
+    def items(self):
+        return list(zip(self.keys(), self.values()))
+
+
+class iRODSAccess(metaclass=_Access_LookupMeta):
+    @classmethod
+    def to_int(cls, key):
+        return cls.codes[key]
+
+    @classmethod
+    def to_string(cls, key):
+        return cls.strings[key]
+
 
     def __init__(self, access_name, path, user_name="", user_zone="", user_type=None):
+        self.codes = self.__class__.codes.copy()
+        self.strings = self.__class__.strings.copy()
         self.access_name = access_name
         if isinstance(path, (iRODSCollection, iRODSDataObject)):
             self.path = path.path
