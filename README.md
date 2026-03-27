@@ -2145,6 +2145,21 @@ is a valid operation, so that an application that tends to cache object
 permissions client-side might use such checks in optimizing atomic ACL
 requests against the inclusion of any redundant ACLOperations.
 
+For purposes of sorting, a `__lt__` operator is also defined that would
+allow sorting of lists of iRODSAccess, ACLOperations, or the two intermixed:
+```
+perms_list=[ACLOperation('read','bob'), iRODSAccess('read','/tempZone/home/alice','alice'), ]
+print(sorted(perms_list))
+```
+
+and, as always, a sort key may be used for custom sorting; for example,
+the following sorts the objects simply by ascending numerical value of the access:
+```
+perms = sorted([ACLOperation('read','bob'), ACLOperation('write', 'rods'), ACLOperation('read_object','alice')], 
+    key=lambda acl: iRODSAccess.codes[acl.access_name]
+)
+```
+
 Quotas (v2.0.0)
 ---------------
 
