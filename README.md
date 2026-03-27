@@ -2135,7 +2135,7 @@ session.acls.apply_atomic_operations(myCollection.path,
     ])
 ```
 ACLOperation objects form a linear order with iRODSAccess objects, and
-indeed are subclassed from them as well, allowing equivalency testing:
+indeed are subclassed from them as well, allowing equivalency testing.
 
 Thus, for example:
 ```
