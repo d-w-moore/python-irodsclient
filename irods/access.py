@@ -1,5 +1,7 @@
 import collections
 import copy
+import warnings
+
 from irods.collection import iRODSCollection
 from irods.data_object import iRODSDataObject
 from irods.path import iRODSPath
@@ -202,10 +204,26 @@ all_permissions = {
 }
 
 
-class _iRODSAccess_pre_4_3_0(_iRODSAccess_base):
-    codes = collections.OrderedDict(
-        (key.replace("_", " "), value)
-        for key, value in iRODSAccess.codes.items()
-        if key in ("own", "write", "modify_object", "read", "read_object", "null")
-    )
-    strings = collections.OrderedDict((number, string) for string, number in codes.items())
+class _deprecated:
+    class _iRODSAccess_pre_4_3_0(_iRODSAccess_base):
+        codes = collections.OrderedDict(
+            (key.replace("_", " "), value)
+            for key, value in iRODSAccess.codes.items()
+            if key in ("own", "write", "modify_object", "read", "read_object", "null")
+        )
+        strings = collections.OrderedDict((number, string) for string, number in codes.items())
+        def __init__(self, *args, **kwargs):
+            warnings.warn(
+                "_iRODSAccess_pre_4_3_0 is deprecated and will be removed in a future version. Use iRODSAccess instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            super().__init__(*args,**kwargs)
+
+_deprecated_names = {'_iRODSAccess_pre_4_3_0':_deprecated._iRODSAccess_pre_4_3_0}
+
+def __getattr__(name):
+    if name in _deprecated_names:
+        warnings.warn(f"{name} is deprecated", DeprecationWarning, stacklevel=2)
+        return _deprecated_names[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
