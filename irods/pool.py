@@ -104,11 +104,11 @@ class Pool:
                     conn.disconnect()
                     conn = Connection(self, self.account)
                     new_conn = True
-                    logger.debug(f"Created new connection with id: {id(conn)}")
+                    logger.debug("Created new connection with id: %d", id(conn))
             except KeyError:
                 conn = Connection(self, self.account)
                 new_conn = True
-                logger.debug(f"No connection found in idle set. Created a new connection with id: {id(conn)}")
+                logger.debug("No connection found in idle set. Created a new connection with id: %d", id(conn))
 
             self.active.add(conn)
 
@@ -117,15 +117,15 @@ class Pool:
                 Ticket._lowlevel_api_request(conn, "session", sess.ticket__)
                 sess.ticket_applied[conn] = True
 
-            logger.debug(f"Adding connection with id {id(conn)} to active set")
+            logger.debug("Adding connection with id %d to active set", id(conn))
 
             # If the connection we're about to make active was cached, it already has a socket object internal to it,
             # so we potentially have to modify it to have the desired timeout.
             if not new_conn:
                 _adjust_timeout_to_pool_default(conn)
 
-        logger.debug(f"num active: {len(self.active)}")
-        logger.debug(f"num idle: {len(self.idle)}")
+        logger.debug("num active: %d", len(self.active))
+        logger.debug("num idle: %d", len(self.idle))
 
         return conn
 
@@ -133,15 +133,15 @@ class Pool:
         with self._lock:
             if conn in self.active:
                 self.active.remove(conn)
-                logger.debug(f"Removed connection with id: {id(conn)} from active set")
+                logger.debug("Removed connection with id: %d from active set", id(conn))
                 if not destroy:
                     # If 'refresh_connection' flag is True, update connection's 'last_used_time'
                     if self.refresh_connection:
                         conn.last_used_time = datetime.datetime.now()
                     self.idle.add(conn)
-                    logger.debug(f"Added connection with id: {id(conn)} to idle set")
+                    logger.debug("Added connection with id: %d to idle set", id(conn))
             elif conn in self.idle and destroy:
-                logger.debug(f"Destroying connection with id: {id(conn)}")
+                logger.debug("Destroying connection with id: %d", id(conn))
                 self.idle.remove(conn)
-        logger.debug(f"num active: {len(self.active)}")
-        logger.debug(f"num idle: {len(self.idle)}")
+        logger.debug("num active: %d", len(self.active))
+        logger.debug("num idle: %d", len(self.idle))
