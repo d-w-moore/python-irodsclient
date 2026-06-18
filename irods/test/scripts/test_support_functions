@@ -120,7 +120,7 @@ _begin_pam_environment_and_password() {
     echo "$ENV" > ~/.irods/irods_environment.json
 
     if [ -n "$1" -a -z "$SKIP_IINIT_FOR_PASSWORD" ]; then
-        iinit <<<"$1" 2>/tmp/iinit_as_alice.log
+        iinit ${IINIT_TTL:+--ttl $IINIT_TTL}<<<"$1" 2>/tmp/iinit_as_alice.log
     fi
 }
 
