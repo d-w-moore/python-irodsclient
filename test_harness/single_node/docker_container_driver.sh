@@ -26,6 +26,7 @@ usage() {
     $0 [options] /external/path/to/script"
 
     echo 'Options :
+    -e SETTINGS   set in docker environment: argument is a list of env settings (format: VAR=VAL) separated by spaces
     -V            (extra verbosity).  Prints out useful stuff including VERSION information
     -u USERNAME   run test in container as this USERNAME
     -i            invoke container with -i and -t
@@ -60,6 +61,12 @@ while [[ $1 = -* ]]; do
     elif [ "$1" = -r ]; then
         REMOVE_OPTION="$2"
         shift 2
+    elif [ "$1" = -e ]; then
+        ENV_VARS="$2"
+        ENV_VAR_ARRAY=( $ENV_VARS )
+        ENV_VARS="${ENV_VAR_ARRAY[*]/#/-e }"
+        shift 2
+        #echo "[$ENV_VARS]" >&2
     elif [ "$1" = -w ]; then
         EXPLICIT_WORKDIR="$2"
         shift 2
@@ -126,7 +133,7 @@ INNER_MOUNT=/prc
 
 # Start the container.
 echo image="[$image]"
-CONTAINER=$($DOCKER run -d -v "$reporoot:$INNER_MOUNT:ro" $INTERACTIVE_OPTION $REMOVE_OPTION \
+CONTAINER=$($DOCKER run -d $ENV_VARS -v "$reporoot:$INNER_MOUNT:ro" $INTERACTIVE_OPTION $REMOVE_OPTION \
     -e "IRODS_CONTROL_PATH=$IRODS_CONTROL_PATH" $image)
 
 # Wait for iRODS and database to start up.

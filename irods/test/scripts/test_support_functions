@@ -182,12 +182,16 @@ call_irodsctl() {
 
 add_irods_to_system_pam_configuration() {
     local tempfile=/tmp/irods-pam-config.$$
-    cat <<-EOF >$tempfile
+    if [ -z "$IRODS_PAM_CONFIG_SOURCE_PATH" ]; then
+      cat <<-EOF >$tempfile
 	auth        required      pam_env.so
 	auth        sufficient    pam_unix.so
 	auth        requisite     pam_succeed_if.so uid >= 500 quiet
 	auth        required      pam_deny.so
 	EOF
+    else
+        cp IRODS_PAM_CONFIG_SOURCE_PATH /tmp/irods-pam-config.$$
+    fi
     sudo chown root.root $tempfile
     sudo mv $tempfile /etc/pam.d/irods
 }
