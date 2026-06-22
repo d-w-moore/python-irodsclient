@@ -45,15 +45,35 @@ setup() {
   touch /tmp/test012_flag
 }
 
-original_test_suite()
-{
-:
-# local USER="alice"
-# local PASSWORD="rods"
-# sudo chpasswd <<<"$USER:$PASSWORD"
-# python -m unittest irods.test.pam_interactive_test_must_run_manually
-}
+@test "pam_interactive_test_multistep_with_correct_passwords" {
+python -c"
+from unittest.mock import patch
+import getpass
 
-@test "original_pam_interactive_tests" {
-  original_test_suite
+import irods
+
+class clbl:
+    def __call__(self):
+        return lambda: 'hello\n'
+
+def getpass_new_callable(answers=()):
+    class iterate_answers:
+      def __init__(self,answers = answers ): self.answers = answers; self.count = 0
+      def __call__(self):
+        count = self.count
+        self.count += 1
+        return self.answers[count]
+    return lambda : iterate_answers()
+
+home = None
+
+with patch('getpass.getpass', new_callable=getpass_new_callable(answers=['rods','otherrods'])):
+    sess = make_session(test_server_version=False)
+    home = self.sess.collections.get(f'/{sess.zone}/home/{sess.username}')
+
+if home is None:
+    exit(2)
+if '/alice' not in home.path
+    exit(1)
+"
 }
