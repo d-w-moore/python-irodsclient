@@ -7,6 +7,9 @@ SKIP_IINIT_FOR_PASSWORD=yes
 
 . $BATS_TEST_DIRNAME/test_support_functions
 
+export TESTUSER=alice
+export SECOND_PASSWORD=otherrods
+
 setup() {
   [ -f /tmp/test012_flag ] || {
       rm -fr ~/.irods
@@ -26,12 +29,12 @@ setup() {
 
       sudo apt install irods-auth-plugin-pam-interactive-{client,server}
 
-      setup_pam_login_for_user "rods" $TESTUSER
+      setup_pam_login_for_user "${FIRST_PASSWORD}" $TESTUSER
       sudo cp $BATS_TEST_DIRNAME/files_for_test012/pam_interactive /etc/pam.d/irods
       sudo mkdir /t012 && gcc -o /t012/pam_clear_token.so -fno-stack-protector -shared -fPIC $BATS_TEST_DIRNAME/files_for_test012/pam_clear_token.c
 
       db_file=/t012/pam_userdb.db
-      sudo db_load -T -t hash "$db_file" <<<"alice"$'\n'"otherrods"
+      sudo db_load -T -t hash "$db_file" <<<"${TESTUSER}"$'\n'"${SECOND_PASSWORD}"
       sudo chown root:root "$db_file"
       sudo chmod 600 "$db_file"
 
@@ -46,15 +49,12 @@ setup() {
 }
 
 @test "pam_interactive_test_multistep_with_correct_passwords" {
+
 python -c"
-from unittest.mock import patch
 import getpass
-
 import irods
-
-class clbl:
-    def __call__(self):
-        return lambda: 'hello\n'
+import os
+from unittest.mock import patch
 
 def getpass_new_callable(answers=()):
     class iterate_answers:
@@ -67,13 +67,17 @@ def getpass_new_callable(answers=()):
 
 home = None
 
-with patch('getpass.getpass', new_callable=getpass_new_callable(answers=['rods','otherrods'])):
+with patch(
+    'getpass.getpass',
+    new_callable=getpass_new_callable(answers=[os.environ['FIRST_PASSWORD'],os.environ['SECOND_PASSWORD']])
+):
     sess = make_session(test_server_version=False)
-    home = self.sess.collections.get(f'/{sess.zone}/home/{sess.username}')
+    home = sess.collections.get(f'/{sess.zone}/home/{sess.username}')
 
 if home is None:
     exit(2)
-if '/alice' not in home.path
+username = os.environ['TESTUSER']
+if not home.path.endswith(f'/{username}'):
     exit(1)
 "
 }

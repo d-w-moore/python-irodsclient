@@ -12,6 +12,7 @@
 
 # Options:
 
+ENV_VARS=()
 IRODS_CONTROL_PATH=""
 KILL_TEST_CONTAINER=1
 RUN_AS_USER=""
@@ -26,6 +27,8 @@ usage() {
     $0 [options] /external/path/to/script"
 
     echo 'Options :
+    -E SETTING    set in docker environment: argument is a single env setting like: "ENVVAR=<value>" where
+                  <value> can may contain whitespace.  "-E" may occur multiple times.
     -e SETTINGS   set in docker environment: argument is a list of env settings (format: VAR=VAL) separated by spaces
     -V            (extra verbosity).  Prints out useful stuff including VERSION information
     -u USERNAME   run test in container as this USERNAME
@@ -61,12 +64,13 @@ while [[ $1 = -* ]]; do
     elif [ "$1" = -r ]; then
         REMOVE_OPTION="$2"
         shift 2
+    elif [ "$1" = -E ]; then
+        ENV_VARS+=(-e "$2")
+        shift 2
     elif [ "$1" = -e ]; then
-        ENV_VARS="$2"
-        ENV_VAR_ARRAY=( $ENV_VARS )
+        ENV_VAR_ARRAY=($2)
         ENV_VARS="${ENV_VAR_ARRAY[*]/#/-e }"
         shift 2
-        #echo "[$ENV_VARS]" >&2
     elif [ "$1" = -w ]; then
         EXPLICIT_WORKDIR="$2"
         shift 2
@@ -133,7 +137,7 @@ INNER_MOUNT=/prc
 
 # Start the container.
 echo image="[$image]"
-CONTAINER=$($DOCKER run $ENV_VARS -d -v "$reporoot:$INNER_MOUNT:ro" $INTERACTIVE_OPTION $REMOVE_OPTION \
+CONTAINER=$($DOCKER run "${ENV_VARS[@]}" -d -v "$reporoot:$INNER_MOUNT:ro" $INTERACTIVE_OPTION $REMOVE_OPTION \
     -e "IRODS_CONTROL_PATH=$IRODS_CONTROL_PATH" $image)
 
 # Wait for iRODS and database to start up.
