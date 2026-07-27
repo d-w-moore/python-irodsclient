@@ -7,9 +7,9 @@ SKIP_IINIT_FOR_PASSWORD=yes
 
 . $BATS_TEST_DIRNAME/test_support_functions
 
-export TESTUSER=alice
-export FIRST_PASSWORD=somerods
-export SECOND_PASSWORD=otherrods
+export TESTUSER="john"
+export FIRST_PASSWORD="=i;r@o\\d&s" # somerods
+export SECOND_PASSWORD="otherrods"
 
 setup() {
   [ -f /tmp/test012_flag ] || {
