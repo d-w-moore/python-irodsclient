@@ -3,7 +3,7 @@
 # The tests in this BATS module must be run as a (passwordless) sudo-enabled user.
 # It is also required that the python irodsclient be installed under irods' ~/.local environment.
 
-SKIP_IINIT_FOR_PASSWORD=yes
+#SKIP_IINIT_FOR_PASSWORD=yes
 
 . $BATS_TEST_DIRNAME/test_support_functions
 
@@ -30,6 +30,7 @@ setup() {
 
       sudo apt install irods-auth-plugin-pam-interactive-{client,server}
 
+      export IINIT_TTL=100
       setup_pam_login_for_user "${FIRST_PASSWORD}" $TESTUSER
       sudo cp $BATS_TEST_DIRNAME/files_for_test012/pam_interactive /etc/pam.d/irods
       sudo mkdir /t012 && sudo gcc -o /t012/pam_clear_token.so -fno-stack-protector -shared -fPIC $BATS_TEST_DIRNAME/files_for_test012/pam_clear_token.c
