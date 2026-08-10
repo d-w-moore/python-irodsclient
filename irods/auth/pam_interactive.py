@@ -38,6 +38,7 @@ AUTH_AGENT_AUTH_RESPONSE = "auth_agent_auth_response"
 
 _logger = logging.getLogger(__name__)
 
+_logger.debug("hello from paminteractive")
 
 def login(conn, **extra_opt):
     """The entry point for the pam_interactive authentication scheme."""
@@ -72,11 +73,16 @@ class _pam_interactive_ClientAuthState(authentication_base):
         resp['user_name'] = self.conn.account.proxy_user
         resp['zone_name'] = self.conn.account.proxy_zone
 
+        #TODO check handling of FORCE_PASSWORD_PROMPT -
+        # This is close to what the C++ plugin (client-side) does
         # If not forcing a prompt, check for existing credentials (.irodsA) to attempt native auth directly
         if not resp.get(FORCE_PASSWORD_PROMPT, False):
             if self.conn.account.password and self.conn.account.derived_auth_file:
                 resp[__NEXT_OPERATION__] = PERFORM_NATIVE_AUTH
                 return resp
+
+        # TODO
+        # iRODS4j removes the passworda property from the response object
 
         # Otherwise, begin the full interactive flow
         resp[__NEXT_OPERATION__] = AUTH_CLIENT_AUTH_REQUEST
@@ -199,6 +205,7 @@ class _pam_interactive_ClientAuthState(authentication_base):
         if not self.depot:
             raise RuntimeError("auth storage object was either not set, or allowed to expire prematurely.")
 
+        # TODO: review (iRODS4j doesn't do this).
         if request.get(STORE_PASSWORD_IN_MEMORY):
             self.depot.use_client_auth_file(None)
 
@@ -230,7 +237,7 @@ class _pam_interactive_ClientAuthState(authentication_base):
     def next(self, request):
         prompt = request.get("msg", {}).get("prompt", "")
         if prompt:
-            _logger.info("Server prompt: %s", prompt)
+            _logger.debug("Server prompt: %s", prompt)
 
         server_req = request.copy()
         self._patch_state(server_req)
