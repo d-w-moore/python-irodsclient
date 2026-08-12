@@ -10,6 +10,7 @@ SKIP_IINIT_FOR_PASSWORD=yes
 export TESTUSER="john"
 export FIRST_PASSWORD="=i;r@o\\d&s" # somerods
 export SECOND_PASSWORD="otherrods"
+export CLIENT_AUTH_ERROR_EXITCODE=123
 
 ssl_hash() {
   openssl passwd -6 "$1"
@@ -57,11 +58,6 @@ setup() {
       sudo cp $BATS_TEST_DIRNAME/files_for_test012/pam_interactive /etc/pam.d/
       sudo mkdir /t012 && sudo gcc -o /t012/pam_clear_token.so -fno-stack-protector -shared -fPIC $BATS_TEST_DIRNAME/files_for_test012/pam_clear_token.c
 
-      db_file=/t012/pam_userdb.db
-      sudo db_load -T -t hash "$db_file" <<<"${TESTUSER}"$'\n'"$(ssl_hash _${SECOND_PASSWORD})"
-      sudo chown root:root "$db_file"
-      sudo chmod 600 "$db_file"
-
       # Tests require only the irods_environment.json
       rm -f ~/.irods/.irodsA
 
@@ -72,9 +68,14 @@ setup() {
   touch /tmp/test012_flag
 }
 
-@test "pam_interactive_test_multistep_with_correct_passwords" {
-:
-echo "
+encode_2nd_password() {
+      db_file=/t012/pam_userdb.db
+      sudo db_load -T -t hash "$db_file" <<<"${TESTUSER}"$'\n'"$(ssl_hash ${1})"
+      sudo chown root:root "$db_file"
+      sudo chmod 600 "$db_file"
+}
+
+SCRIPT="
 import getpass
 import irods
 import os
@@ -101,21 +102,42 @@ with patch(
     new_callable=getpass_new_callable(answers=[os.environ['FIRST_PASSWORD'],os.environ['SECOND_PASSWORD']])
 ) as m:
     try:
-     sess = irods.helpers.make_session(test_server_version=False)
-     sess.set_auth_option_for_scheme('pam_interactive', FORCE_PASSWORD_PROMPT, True)
-     home = sess.collections.get(f'/{sess.zone}/home/{sess.username}')
+        sess = irods.helpers.make_session(test_server_version=False)
+        sess.set_auth_option_for_scheme('pam_interactive', FORCE_PASSWORD_PROMPT, True)
+        home = sess.collections.get(f'/{sess.zone}/home/{sess.username}')
+    except ClientAuthError as exc:
+        print('ERROR: {exc!r}')
+        exit(int(os.environ['CLIENT_AUTH_ERROR_EXITCODE']))
     finally:
-     pw_count = m.count
+        pw_count = m.count
 
-#if pw_count < 2:
-#   print(f'************************ {pw_count = } < 2')
-#   exit(3)
+# Both passwords used?
+if pw_count < 2:
+    print(f'************************ {pw_count = } < 2')
+    exit(3)
+
 if home is None:
     exit(2)
+
 username = os.environ['TESTUSER']
+
 if not home.path.endswith(f'/{username}'):
     exit(1)
-" >/tmp/test012.py
-###############################
-python /tmp/test012.py >&3 2>&1
+"
+
+#@test "x1" {
+  #:
+#}
+
+#@test "pam_interactive_test_multistep_with_incorrect_2nd_password" {
+#{
+#    encode_2nd_password "_${SECOND_PASSWORD}"
+#    OUTPUT=$(python -c "$SCRIPT" 2>/tmp/test_fd2)
+#    [ $? = $CLIENT_AUTH_ERROR_EXITCODE ]
+#    [[ $OUTPUT =~ ClientAuthError ]]
+#}
+ 
+@test "pam_interactive_test_multistep_with_correct_2nd_password" {
+  encode_2nd_password "${SECOND_PASSWORD}"
+  python -c "$SCRIPT"
 }
