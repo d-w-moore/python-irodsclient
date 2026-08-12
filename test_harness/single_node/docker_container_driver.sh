@@ -12,6 +12,7 @@
 
 # Options:
 
+DOCKER_OPTS=""
 ENV_VARS=()
 IRODS_CONTROL_PATH=""
 KILL_TEST_CONTAINER=1
@@ -137,7 +138,7 @@ INNER_MOUNT=/prc
 
 # Start the container.
 echo image="[$image]"
-CONTAINER=$($DOCKER run "${ENV_VARS[@]}" -d -v "$reporoot:$INNER_MOUNT:ro" $INTERACTIVE_OPTION $REMOVE_OPTION \
+CONTAINER=$($DOCKER run ${DOCKER_OPTS} "${ENV_VARS[@]}" -d -v "$reporoot:$INNER_MOUNT:ro" $INTERACTIVE_OPTION $REMOVE_OPTION \
     -e "IRODS_CONTROL_PATH=$IRODS_CONTROL_PATH" $image)
 
 # Wait for iRODS and database to start up.
