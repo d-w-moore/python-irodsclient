@@ -77,10 +77,11 @@ encode_2nd_password() {
 
 SCRIPT="
 import getpass
-import irods
 import os
+
+import irods
+from irods.auth import  ClientAuthError
 from unittest.mock import patch
-from irods.auth import FORCE_PASSWORD_PROMPT
 
 def getpass_new_callable(answers=()):
     class iterate_answers:
@@ -103,41 +104,39 @@ with patch(
 ) as m:
     try:
         sess = irods.helpers.make_session(test_server_version=False)
-        sess.set_auth_option_for_scheme('pam_interactive', FORCE_PASSWORD_PROMPT, True)
+        sess.set_auth_option_for_scheme('pam_interactive', irods.auth.FORCE_PASSWORD_PROMPT, True)
         home = sess.collections.get(f'/{sess.zone}/home/{sess.username}')
     except ClientAuthError as exc:
-        print('ERROR: {exc!r}')
+        print(f'ERROR: {exc!r}')
         exit(int(os.environ['CLIENT_AUTH_ERROR_EXITCODE']))
     finally:
         pw_count = m.count
 
-# Both passwords used?
+# Assert both passwords were prompted for.
 if pw_count < 2:
     print(f'************************ {pw_count = } < 2')
     exit(3)
 
+# Assert home is defined, ie a session was successfully created and used to retrieve a collection object
 if home is None:
     exit(2)
 
 username = os.environ['TESTUSER']
 
+# Assert home contains the expected username.
 if not home.path.endswith(f'/{username}'):
     exit(1)
 "
 
-#@test "x1" {
-  #:
-#}
+@test "pam_interactive_test_multistep_with_incorrect_2nd_password" {
+    encode_2nd_password "_${SECOND_PASSWORD}"
+    local STATUS=""
+    OUTPUT=$(python -c "$SCRIPT" 2>&1) || STATUS=$?
+    [ $STATUS = $CLIENT_AUTH_ERROR_EXITCODE ]
+    [[ $OUTPUT =~ ClientAuthError ]]
+}
 
-#@test "pam_interactive_test_multistep_with_incorrect_2nd_password" {
-#{
-#    encode_2nd_password "_${SECOND_PASSWORD}"
-#    OUTPUT=$(python -c "$SCRIPT" 2>/tmp/test_fd2)
-#    [ $? = $CLIENT_AUTH_ERROR_EXITCODE ]
-#    [[ $OUTPUT =~ ClientAuthError ]]
-#}
- 
 @test "pam_interactive_test_multistep_with_correct_2nd_password" {
-  encode_2nd_password "${SECOND_PASSWORD}"
-  python -c "$SCRIPT"
+    encode_2nd_password "${SECOND_PASSWORD}"
+    python -c "$SCRIPT"
 }
