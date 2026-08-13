@@ -223,18 +223,8 @@ class _pam_interactive_ClientAuthState(authentication_base):
     def native_auth(self, request):
         resp = request.copy()
 
-        # TODO: removing AUTH_PASSWORD_KEY as done in C++ and irods4j clients
-        AUTH_PASSWORD_KEY = "a_pw"  # <--- TODO: clean up by importing
-
-        resp.pop(AUTH_PASSWORD_KEY, "")
-
-        # TODO may need to define user_name and zone_name properties
-        native_auth_request = {"zone_name": resp["zone_name"],
-                               "user_name": resp["user_name"],
-                               "password": resp["request_result"]}
-
         # The native auth function will use the depot to retrieve the password token
-        _authenticate_native(self.conn, native_auth_request)
+        _authenticate_native(self.conn, request)
 
         resp[__NEXT_OPERATION__] = __FLOW_COMPLETE__
         self.loggedIn = 1
