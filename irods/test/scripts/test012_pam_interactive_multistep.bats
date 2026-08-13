@@ -11,6 +11,10 @@ export TESTUSER="john"
 export FIRST_PASSWORD="=i;r@o\\d&s" # somerods
 export SECOND_PASSWORD="otherrods"
 
+ssl_hash() {
+  openssl passwd -6 "$1"
+}
+
 setup() {
   [ -f /tmp/test012_flag ] || {
       rm -fr ~/.irods
@@ -54,7 +58,7 @@ setup() {
       sudo mkdir /t012 && sudo gcc -o /t012/pam_clear_token.so -fno-stack-protector -shared -fPIC $BATS_TEST_DIRNAME/files_for_test012/pam_clear_token.c
 
       db_file=/t012/pam_userdb.db
-      sudo db_load -T -t hash "$db_file" <<<"${TESTUSER}"$'\n'"${SECOND_PASSWORD}"
+      sudo db_load -T -t hash "$db_file" <<<"${TESTUSER}"$'\n'"$(ssl_hash _${SECOND_PASSWORD})"
       sudo chown root:root "$db_file"
       sudo chmod 600 "$db_file"
 
