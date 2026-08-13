@@ -33,7 +33,7 @@ setup() {
       jq '.irods_client_server_policy="CS_NEG_REFUSE"' >$CLIENT_JSON.$$ <$CLIENT_JSON && \
       mv  $CLIENT_JSON.$$ $CLIENT_JSON
 
-      sudo apt install irods-auth-plugin-pam-interactive-{client,server}
+      sudo apt install -y irods-auth-plugin-pam-interactive-{client,server}
       SERVER_CONFIG=server_config.json
 
       sudo -s <<-EOF
