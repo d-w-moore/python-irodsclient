@@ -98,6 +98,8 @@ def getpass_new_callable(answers=()):
 
 home = None
 
+pw_count = 0
+
 with patch(
     'getpass.getpass',
     new_callable=getpass_new_callable(answers=[os.environ['FIRST_PASSWORD'],os.environ['SECOND_PASSWORD']])
@@ -107,6 +109,8 @@ with patch(
         sess.set_auth_option_for_scheme('pam_interactive', irods.auth.FORCE_PASSWORD_PROMPT, True)
         home = sess.collections.get(f'/{sess.zone}/home/{sess.username}')
     except ClientAuthError as exc:
+        # Note:  The write to stdout, and the specific exit code, are necessary for the test assertions.
+        # in test "pam_interactive_test_multistep_with_incorrect_2nd_password" below.
         print(f'ERROR: {exc!r}')
         exit(int(os.environ['CLIENT_AUTH_ERROR_EXITCODE']))
     finally:
@@ -129,9 +133,15 @@ if not home.path.endswith(f'/{username}'):
 "
 
 @test "pam_interactive_test_multistep_with_incorrect_2nd_password" {
+
+    # We are using a deliberately munged password.
     encode_2nd_password "_${SECOND_PASSWORD}"
     local STATUS=""
     OUTPUT=$(python -c "$SCRIPT" 2>&1) || STATUS=$?
+
+    # Here, we assert the process's exit and output conform to expectation. We want to
+    # enforce that the stdout output stream contains the thrown exception name ("ClientAuthError")
+    # as well as that the process exits with a particular error status.
     [ $STATUS = $CLIENT_AUTH_ERROR_EXITCODE ]
     [[ $OUTPUT =~ ClientAuthError ]]
 }
