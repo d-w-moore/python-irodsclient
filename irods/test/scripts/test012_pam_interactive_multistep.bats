@@ -20,8 +20,8 @@ setup() {
           user rods     \
           password rods \
 
-      sudo apt update 
-      sudo apt install -y db-util libpam0g-dev
+      sudo apt update
+      sudo apt install -y db-util libpam0g-dev jq
 
       ## Because iRODS 5+ negotiates for SSL automatically:
       CLIENT_JSON=~/.irods/irods_environment.json
@@ -29,6 +29,24 @@ setup() {
       mv  $CLIENT_JSON.$$ $CLIENT_JSON
 
       sudo apt install irods-auth-plugin-pam-interactive-{client,server}
+      SERVER_CONFIG=server_config.json
+
+      sudo -s <<-EOF
+	jq '.plugin_configuration.authentication.pam_interactive = {
+	    "pam_stack_name": "pam_interactive"
+	}' <"/etc/irods/${SERVER_CONFIG}" >"/tmp/${SERVER_CONFIG}"
+	cp -rp "/etc/irods/${SERVER_CONFIG}"{,.orig}
+	mv -f "/tmp/${SERVER_CONFIG}" "/etc/irods/${SERVER_CONFIG}"
+	EOF
+      waitsrv() {
+          while true; do
+              sleep 5
+              ils >& /dev/null && break
+          done
+      }
+
+      { sudo kill -HUP `sudo cat /tmp/irods.pid` && waitsrv; } || {
+         echo "Couldn't properly bounce server after configuration change."; exit 1; }
 
       setup_pam_login_for_user "${FIRST_PASSWORD}" $TESTUSER
       sudo cp $BATS_TEST_DIRNAME/files_for_test012/pam_password    /etc/pam.d/irods
@@ -52,7 +70,7 @@ setup() {
 
 @test "pam_interactive_test_multistep_with_correct_passwords" {
 :
-python -c"
+echo "
 import getpass
 import irods
 import os
@@ -77,15 +95,23 @@ home = None
 with patch(
     'getpass.getpass',
     new_callable=getpass_new_callable(answers=[os.environ['FIRST_PASSWORD'],os.environ['SECOND_PASSWORD']])
-):
-    sess = irods.helpers.make_session(test_server_version=False)
-    sess.set_auth_option_for_scheme('pam_interactive', FORCE_PASSWORD_PROMPT, True)
-    home = sess.collections.get(f'/{sess.zone}/home/{sess.username}')
+) as m:
+    try:
+     sess = irods.helpers.make_session(test_server_version=False)
+     sess.set_auth_option_for_scheme('pam_interactive', FORCE_PASSWORD_PROMPT, True)
+     home = sess.collections.get(f'/{sess.zone}/home/{sess.username}')
+    finally:
+     pw_count = m.count
 
+#if pw_count < 2:
+#   print(f'************************ {pw_count = } < 2')
+#   exit(3)
 if home is None:
     exit(2)
 username = os.environ['TESTUSER']
 if not home.path.endswith(f'/{username}'):
     exit(1)
-"
+" >/tmp/test012.py
+###############################
+python /tmp/test012.py >&3 2>&1
 }
