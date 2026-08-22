@@ -1,22 +1,25 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import io
+import json
 import os
+import random
 import sys
-import time
 import textwrap
+import time
 import unittest
-from irods.models import DataObject
+from io import open as io_open
+
+from irods.column import Like
 from irods.exception import (
     FAIL_ACTION_ENCOUNTERED_ERR,
     RULE_ENGINE_ERROR,
     UnknowniRODSError,
 )
-import irods.test.helpers as helpers
+from irods.models import DataObject, RuleExec
 from irods.rule import Rule
-from io import open as io_open
-import io
-
+from irods.test import helpers
 
 RE_Plugins_installed_run_condition_args = (
     os.environ.get("PYTHON_RULE_ENGINE_INSTALLED", "*").lower()[:1] == "y",
@@ -435,6 +438,35 @@ class TestRule(unittest.TestCase):
         lines = self.lines_from_stdout_buf(output)
         self.assertRegex(lines[0], r"\[INTEGER\]\[5\]")
         self.assertRegex(lines[1], r"\[STRING\]\[A String\]")
+
+    def test_rule_exec_context_column_is_available_via_genquery1__issue_823(self):
+        rule_id = -1
+
+        try:
+            # Schedule a delayed rule.  The amount of delay does not matter as only its existence
+            # in the catalog matters and we'll be cancelling it immediately after the test.
+            delay_seconds = 15 * 60
+
+            # Generate a unique number for use in querying the rule.
+            random_int = random.randint(1 << 30, (1 << 31) - 1)  # noqa: S311
+            r = Rule(
+                self.sess,
+                body=f'''delay("<PLUSET>{delay_seconds}</PLUSET>") {{ writeLine("serverLog","{random_int}") }}''',
+            )
+            # Schedule the delayed rule.
+            r.execute()
+
+            # Get the delayed rule's ID, needed for cancellation.
+            results = list(self.sess.query(RuleExec).filter(Like(RuleExec.name, f'%"{random_int}"%')))
+            rule_id = results[0][RuleExec.id]
+
+            # Assert context exists, and is JSON-parsable with a non-null-length result.
+            rule_context = results[0][RuleExec.context]
+            self.assertGreater(len(json.loads(rule_context)), 0)
+        finally:
+            # Remove the delayed rule from the queue.
+            if rule_id >= 0:
+                r.remove_by_id(rule_id)
 
 
 if __name__ == "__main__":

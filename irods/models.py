@@ -33,11 +33,7 @@ class RuleExec(Model):
     last_exe_time = Column(DateTime, "RULE_EXEC_LAST_EXE_TIME", 1010)
     frequency = Column(String, "RULE_EXEC_FREQUENCY", 1006)
     priority = Column(String, "RULE_EXEC_PRIORITY", 1007)
-
-
-#   # If needed in 4.2.9, we can update the Query class to dynamically
-#   #  attach this field based on server version:
-#   context = Column(String, 'RULE_EXEC_CONTEXT', 1012)
+    context = Column(String, 'RULE_EXEC_CONTEXT', 1012, min_version=(4, 3, 0))
 
 #   # These are either unused or usually absent:
 #   exec_status = Column(String,'RULE_EXEC_STATUS', 1011)
