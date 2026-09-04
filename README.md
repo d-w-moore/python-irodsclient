@@ -41,7 +41,39 @@ Uninstalling
 Establishing a (secure) connection
 ----------------------------------
 
-One way of starting a session is to pass iRODS credentials as keyword
+An `iRODSSession` instance is the interface object through which iRODS server
+APIs can be invoked.  One way to create the session object, assuming one has
+already successfully set up an client environment via `iinit`, is by using a
+simple `make_session` call:
+
+```python
+from irods.helpers import make_session
+sess1 = make_session()
+
+# Possible patterns include:
+#    1. keeping a ready reference to the session.
+
+sess1.collections.get(f'/tempZone/home/{session.username}')
+# (... Further instances of calls to the server through sess1 may follow.)
+
+# or:
+#    2. using the session object with a context manager.
+
+with make_session() as sess2:
+  my_user = sess2.users.get(ses.username)
+  # Here, we can have other statements using sess2, and at end
+  # of code block, sess2.cleanup() is implicitly called.
+
+# sess1 retains an idle but reusable connection whereas sess2 does not; i.e.
+# sess1.pool.idle has length 1, and sess2.pool.idle is an empty set.
+# However, both sessions are equally open for further server interactions.
+```
+
+Of course, we should be careful how many still-connected `iRODSSession` objects we retain
+references to in an application, as having more of them than the system can support 
+database connections for can result in spurious failure of iRODS client connections.
+
+Another way of starting a session is to pass iRODS credentials as keyword
 arguments:
 
 ```python
