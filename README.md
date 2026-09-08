@@ -42,38 +42,60 @@ Establishing a (secure) connection
 ----------------------------------
 
 An `iRODSSession` instance is the interface object through which iRODS server
-APIs can be invoked.  One way to create the session object, assuming one has
-already successfully set up an client environment via `iinit`, is by using a
-simple `make_session` call:
+APIs can be invoked.
+
+One way to create the session object, assuming one has already successfully
+set up a client environment via `iinit`, is by using a simple `make_session`
+call:
+
+>>> from irods.helpers import make_session
+>>> session = make_session()
+
+It is also possible to use the constructor form directly, passing 
+connection and authentication options within the call parameter list:
+
+>>> from irods.session import iRODSSession
+>>> with iRODSSession(host='localhost', port=1247, user='bob', password='1234', zone='tempZone') as session:
+
+Once created, an instance can be managed with an application-appropriate choice
+from a couple of possible patterns.  Either the programmer can simply manage
+the instance quite naturally, allowing reference counting to
+let it pass out-of-scope and destruct its server connection(s) at the
+proper time:
 
 ```python
-from irods.helpers import make_session
-sess1 = make_session()
-
-# Possible patterns include:
-#    1. keeping a ready reference to the session.
-
-sess1.collections.get(f'/tempZone/home/{session.username}')
-# (... Further instances of calls to the server through sess1 may follow.)
-
-# or:
-#    2. using the session object with a context manager.
-
-with make_session() as sess2:
-  my_user = sess2.users.get(ses.username)
-  # Here, we can have other statements using sess2, and at end
-  # of code block, sess2.cleanup() is implicitly called.
-
-# sess1 retains an idle but reusable connection whereas sess2 does not; i.e.
-# sess1.pool.idle has length 1, and sess2.pool.idle is an empty set.
-# However, both sessions are equally open for further server interactions.
+home_coll = session.collections.get(f'/tempZone/home/{session.username}')
+# (... Further instances of calls to the server through 'session' may follow.)
 ```
 
-Of course, we should be careful how many still-connected `iRODSSession` objects we retain
-references to in an application, as having more of them than the system can support 
-database connections for can result in spurious failure of iRODS client connections.
+This casual approach usually ends up being the most efficient, as connection
+pooling will allow potentially disparate uses of a server connection to happen
+consecutively without harm, and without the need for disposing of or
+interrupting the connection.
 
-Another way of starting a session is to pass iRODS credentials as keyword
+Alternatively, a context manager may be employed, forcing connections to be
+temporarily cleared from the session object once a given block of code has
+executed:
+
+```python
+with make_session() as session:
+  my_user = session.users.get(session.username)
+  # Here, we can have further usage of 'session' in this code block, and at
+  # the end of it, session.cleanup() is implicitly called.
+```
+
+Either way, the instance remains available for further such use afterward,
+until destructed.
+
+We should, of course, be careful how many still-connected `iRODSSession`
+objects we retain references to in an application, as having more of them than
+the system can support database connections for can result in spurious failure
+of iRODS client connections.
+
+Finer points in connecting to the iRODS server
+----------------------------------------------
+
+iRODS credentials may also be passed as keyword
 arguments:
 
 ```python
