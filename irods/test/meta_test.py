@@ -806,6 +806,9 @@ class TestMeta(unittest.TestCase):
             user = adm.users.create("bobby", "rodsuser")
             user.modify("password", "bpass")
             sessions = []
+
+            import pdb;pdb.set_trace()
+
             for _ in range(2):
                 with iRODSSession(
                     port=adm.port,
@@ -814,14 +817,31 @@ class TestMeta(unittest.TestCase):
                     user=user.name,
                     password="bpass",
                 ) as ses:
-                    # Create a data object owned by the rodsuser.  Set AVUs in various ways and guarantee each attempt
-                    # has the desired effect.
+                    # Get a reference to a data object owned by the rodsuser, creating it if not already there.
                     d = ses.data_objects.create("/{adm.zone}/home/{user.name}/testfile".format(**locals()))
-                    if sessions:
-                        d.metadata.set('a','b')
-                    else:
+
+                    # d.metadata is a different MetadataManager instance (and d, a different session instance) on the
+                    # second iteration of the loop as compared to the first.  Thus, admin flags should not carry over.
+                    if not sessions:
                         d.metadata(admin=True)
+                    else:
+                        # Should not be applying ADMIN_KW because INSUFFICIENT_PRIVILEGE_LEVEL exception would result
+                        d.metadata.set('a','b')
                     sessions.append(ses)
+
+            # Admin option should be false after the second loop iteration.
+            self.assertFalse(d.metadata.admin)
+
+            get_call_keywords = lambda metacoll: metacoll._manager._updated_keywords((),)
+
+            # Applying admin=True should result in API flags containing ADMIN_KW among the lookup keys.
+            self.assertIn(kw.ADMIN_KW, get_call_keywords(md_modified:=d.metadata(admin=True)))
+
+            # Admin option should be on in the object options bookkeeping.
+            self.assertTrue(md_modified.admin)
+
+            # However, the unmodified source object should not reflect use of an ADMIN_KW.
+            self.assertNotIn(kw.ADMIN_KW, get_call_keywords(d.metadata)) # keyword updates not reflected in copied obj.
         finally:
             if d:
                 d.unlink(force=True)
