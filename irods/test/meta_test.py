@@ -798,6 +798,35 @@ class TestMeta(unittest.TestCase):
             # data.metadata(admin = True) generates a cloned object but for the one change to "admin".
             data.metadata.admin = True
 
+    def test_destickifying_of_admin_option__issue_833(self):
+        # Create a rodsuser, and a session for that roduser.
+        adm = self.sess
+        user = d = None
+        try:
+            user = adm.users.create("bobby", "rodsuser")
+            user.modify("password", "bpass")
+            sessions = []
+            for _ in range(2):
+                with iRODSSession(
+                    port=adm.port,
+                    zone=adm.zone,
+                    host=adm.host,
+                    user=user.name,
+                    password="bpass",
+                ) as ses:
+                    # Create a data object owned by the rodsuser.  Set AVUs in various ways and guarantee each attempt
+                    # has the desired effect.
+                    d = ses.data_objects.create("/{adm.zone}/home/{user.name}/testfile".format(**locals()))
+                    if sessions:
+                        d.metadata.set('a','b')
+                    else:
+                        d.metadata(admin=True)
+                    sessions.append(ses)
+        finally:
+            if d:
+                d.unlink(force=True)
+            if user:
+                user.remove()
 
 if __name__ == "__main__":
     # let the tests find the parent irods lib
