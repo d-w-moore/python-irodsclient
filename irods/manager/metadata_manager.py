@@ -36,12 +36,13 @@ class MetadataManager(Manager):
     def __init__(self, *_):
         self._opts = _MetadataManager_opts_initializer.copy()
         super().__init__(*_)
+        self.__kw = self.__default_kw.copy()
 
     @property
     def use_timestamps(self):
         return self._opts['timestamps']
 
-    __kw: Dict[str, Any] = {}  # default (empty) keywords
+    __default_kw: Dict[str, Any] = {}  # default (empty) keywords
 
     def _updated_keywords(self, opts):
         kw_ = self.__kw.copy()
