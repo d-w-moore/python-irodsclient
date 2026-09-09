@@ -48,17 +48,21 @@ One way to create the session object, assuming one has already successfully
 set up a client environment via `iinit`, is by using a simple `make_session`
 call:
 
+```python
 >>> from irods.helpers import make_session
 >>> session = make_session()
+```
 
 It is also possible to use the constructor form directly, passing 
 connection and authentication options within the call parameter list:
 
+```python
 >>> from irods.session import iRODSSession
 >>> with iRODSSession(host='localhost', port=1247, user='bob', password='1234', zone='tempZone') as session:
+```
 
 Once created, an instance can be managed with an application-appropriate choice
-from a couple of possible patterns.  Either the programmer can simply manage
+from a couple of possible patterns.  Firstly, the instance can be managed
 the instance quite naturally, allowing reference counting to
 let it pass out-of-scope and destruct its server connection(s) at the
 proper time:
@@ -84,10 +88,10 @@ with make_session() as session:
   # the end of it, session.cleanup() is implicitly called.
 ```
 
-Either way, the instance remains available for further such use afterward,
+Either way, the instance remains available for further use afterward,
 until destructed.
 
-We should, of course, be careful how many still-connected `iRODSSession`
+We should, of course, be mindful of how many still-connected `iRODSSession`
 objects we retain references to in an application, as having more of them than
 the system can support database connections for can result in spurious failure
 of iRODS client connections.
