@@ -42,23 +42,20 @@ Establishing a (secure) connection
 ----------------------------------
 
 An `iRODSSession` instance is the interface object through which iRODS server
-APIs can be invoked.
-
-One way to create the session object, assuming one has already successfully
-set up a client environment via `iinit`, is by using a simple `make_session`
-call:
-
-```python
->>> from irods.helpers import make_session
->>> session = make_session()
-```
-
-It is also possible to use the constructor form directly, passing 
-connection and authentication options within the call parameter list:
+APIs can be invoked. One can create the object using constructor form directly,
+passing connection and authentication options within the call parameter list:
 
 ```python
 >>> from irods.session import iRODSSession
 >>> with iRODSSession(host='localhost', port=1247, user='bob', password='1234', zone='tempZone') as session:
+```
+
+Another way to create the session object, assuming one has already successfully
+set up a client environment via `iinit`, is by using the convenience function `make_session`:
+
+```python
+>>> from irods.helpers import make_session
+>>> session = make_session()
 ```
 
 Once created, an instance can be managed with an application-appropriate choice
