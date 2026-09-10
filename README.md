@@ -48,6 +48,7 @@ passing connection and authentication options within the call parameter list:
 ```python
 >>> from irods.session import iRODSSession
 >>> with iRODSSession(host='localhost', port=1247, user='bob', password='1234', zone='tempZone') as session:
+...     # Any number of operations using the 'session' variable can go here.
 ```
 
 Another way to create the session object, assuming one has already successfully
@@ -58,10 +59,10 @@ set up a client environment via `iinit`, is by using the convenience function `m
 >>> session = make_session()
 ```
 
-Once created, an instance can be managed with an application-appropriate choice
-from a couple of possible patterns.  Firstly, the instance can be managed
-the instance quite naturally, allowing reference counting to
-let it pass out-of-scope and destruct its server connection(s) at the
+Once created, the `iRODSSession` instance can be managed from a choice between two
+possible patterns.  Firstly, one can allow references to the instance to persist as
+is natural for the application.  This allows Python interpreter's reference counting to
+let the object pass out of scope and destroy the underlying server connection(s) at the
 proper time:
 
 ```python
@@ -69,29 +70,28 @@ home_coll = session.collections.get(f'/tempZone/home/{session.username}')
 # (... Further instances of calls to the server through 'session' may follow.)
 ```
 
-This casual approach usually ends up being the most efficient, as connection
-pooling will allow potentially disparate uses of a server connection to happen
-consecutively without harm, and without the need for disposing of or
-interrupting the connection.
+This casual approach usually ends up being optimal choice in terms efficiency, since
+connections are expensive to create and destroy, and any given connection to the iRODS
+server can be employed consecutively and for disparate purposes without incident.
 
-Alternatively, a context manager may be employed, forcing connections to be
-temporarily cleared from the session object once a given block of code has
+Alternatively a context manager may be used, thus forcing connections to be
+provisionally cleared from the session object once a given block of code has
 executed:
 
 ```python
 with make_session() as session:
   my_user = session.users.get(session.username)
-  # Here, we can have further usage of 'session' in this code block, and at
-  # the end of it, session.cleanup() is implicitly called.
+  # We can have further usage of 'session' in this code block. At the end 
+  # of it, session.cleanup() is implicitly called to remove any idle connections.
 ```
 
-Either way, the instance remains available for further use afterward,
-until destructed.
+Either way, the instance remains available for further use afterward, until
+destructed.
 
 We should, of course, be mindful of how many still-connected `iRODSSession`
 objects we retain references to in an application, as having more of them than
-the system can support database connections for can result in spurious failure
-of iRODS client connections.
+the system can support database connections for can result in the spurious failure
+of new connections.
 
 Finer points in connecting to the iRODS server
 ----------------------------------------------
