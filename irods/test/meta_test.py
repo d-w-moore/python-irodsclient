@@ -806,9 +806,6 @@ class TestMeta(unittest.TestCase):
             user = adm.users.create("bobby", "rodsuser")
             user.modify("password", "bpass")
             sessions = []
-
-            import pdb;pdb.set_trace()
-
             for _ in range(2):
                 with iRODSSession(
                     port=adm.port,

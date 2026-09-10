@@ -36,7 +36,8 @@ class MetadataManager(Manager):
     def __init__(self, *_):
         self._opts = _MetadataManager_opts_initializer.copy()
         super().__init__(*_)
-        self.__kw = self.__default_kw.copy()
+        # For the iRODS-api keywords only (currently ADMIN_KW is the sole one used):
+        self.__kw = {}
 
     @property
     def use_timestamps(self):
