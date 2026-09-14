@@ -836,22 +836,31 @@ of an "imeta set \...", e.g. overwriting all AVUs with a name field
 of "key2" in a single update:
 
 ```python
->>> new_meta = iRODSMeta('key2','value5','units2')
->>> obj.metadata\[new_meta.name\] = new_meta
+>>> obj.metadata['key2'] = iRODSMeta('key2','value5','units2')
 >>> print(obj.metadata.items())
 [<iRODSMeta 13182 key1 value1 units1>, <iRODSMeta 13183 key1 value2 None>,
 <iRODSMeta 13186 key2 value5 units2>]
 ```
 
-With only one AVU on the object with a name of "key2", *get_one*
-is assured of not throwing an exception:
+Alternatively, rather than the direct call to the iRODSMeta constructor as
+shown above, there is also this slightly different approach to setting the
+same AVU -- at the same time avoiding repeat use of the key string on both
+left- and right-hand sides of the assignment:
+
+```
+>>> obj.metadata['key2'] = iRODSMeta.builder(value='value5', units='units2')
+```
+
+*get_one()* is a way of retrieving an AVU by its name field if we want to
+assert that exactly one such AVU should exist; fewer or more than 1 raises
+a KeyError.  Here, it can be used to retrieve the "key2" AVU:
 
 ```python
 >>> print(obj.metadata.get_one('key2'))
 <iRODSMeta 13186 key2 value5 units2>
 ```
 
-However, the same is not true of "key1":
+But the same is not true for "key1":
 
 ```python
 >>> print(obj.metadata.get_one('key1'))
