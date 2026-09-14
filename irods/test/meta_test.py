@@ -800,22 +800,22 @@ class TestMeta(unittest.TestCase):
 
     def test_iRODSMeta_builder__issue_835(self):
         data_path = iRODSPath(self.coll_path, helpers.unique_name(datetime.datetime.now()))  # noqa: DTZ005
-        data = None
+        data_obj = None
         try:
-            data = self.sess.data_objects.create(data_path)
+            data_obj = self.sess.data_objects.create(data_path)
             for x in map(chr,myrange:=range(ord('a'),ord('z')+1)):
-                d.metadata[x] = iRODSMeta.builder(value = str(ord(x)))
-            self.assertEqual(len(myitems:=d.metadata.items()), len(myrange))
-            for x in myitems:
-                self.assertEqual(ord(x.value), x.key)
-            d.metadata['mile'] = iRODSMeta.builder(value = '1.609', units='kilometers')
+                data_obj.metadata[x] = iRODSMeta.builder(value = str(ord(x)))
+            self.assertEqual(len(myitems:=data_obj.metadata.items()), len(myrange))
+            for avu in myitems:
+                self.assertEqual(chr(int(avu.value)), avu.name)
+            data_obj.metadata['mile'] = iRODSMeta.builder(value = '1.609', units='kilometers')
             self.assertIn(
-                iRODSMeta(name = 'mile', value = '1.609', units='kilometers')
-                d.metadata.items()
+                iRODSMeta('mile', '1.609', units='kilometers'),
+                data_obj.metadata.items()
             )
         finally:
-            if data:
-                data.unlink(force=True)
+            if data_obj:
+                data_obj.unlink(force=True)
 
 if __name__ == "__main__":
     # let the tests find the parent irods lib
