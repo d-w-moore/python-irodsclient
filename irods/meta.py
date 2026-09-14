@@ -1,8 +1,20 @@
 import base64
+import collections
 import copy
+import functools
 
+_AVU_builder = functools.partial(
+    _AVU_type:=collections.namedtuple(
+        '_AVU_type',
+        ['name','value','units']
+    ),
+    name=None, units=None
+)
 
 class iRODSMeta:
+
+    builder = staticmethod(_AVU_builder)
+
     def _to_column_triple(self):
         return (self.name, self.forward_translate(self.value)) + (
             ('',) if not self.units else (self.forward_translate(self.units),)
@@ -296,6 +308,10 @@ class iRODSMetaCollection:
         the key with a single iRODSMeta tuple
         """
         self._delete_all_values(key)
+        if isinstance(meta, _AVU_type):
+            meta = iRODSMeta(*meta)
+            if meta.name is None:
+                meta.name = key
         self.add(meta)
 
     def _delete_all_values(self, key):
