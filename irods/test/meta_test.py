@@ -817,8 +817,8 @@ class TestMeta(unittest.TestCase):
             if data_obj:
                 data_obj.unlink(force=True)
 
-    def test_iRODSMeta_subclass_assign__issue_835(self):
-        pass
+   #def test_iRODSMeta_subclass_assign__issue_835(self):
+   #   pass
         # from irods.meta import iRODSMeta, iRODSBinOrStringMeta
         # import irods
         # s=irods.helpers.make_session()
