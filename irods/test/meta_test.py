@@ -823,9 +823,18 @@ class TestMeta(unittest.TestCase):
         # import irods
         # s=irods.helpers.make_session()
         # d=s.data_objects.get('/tempZone/home/rods/b')
-        # d.metadata['a']=iRODSMeta.builder(value='C',units='D')
-        # bb=iRODSMeta.builder(b'ccaa','d',_class=iRODSBinOrStringMeta)
-        # d.metadata['laaaa'] = bb
+        # dm=d.metadata(iRODSMeta_type=iRODSBinOrStringMeta)
+        # #dm.set('a5',b'abc',b'def')
+        # dm.add('a5',b'2abc',b'def')
+        # dm['a6']=iRODSMeta.builder(value = b'abc', units = b'def')
+        # dm.add(*iRODSMeta('a7','b','c'))
+        # #dm['lad'] = bb
+        # #bb=iRODSMeta.builder(b'ccaa',b'd',)
+        # print(
+        # f"{dm['a5']=}",
+        # f"{dm['a6']=}",
+        # f"{dm['a7']=}"
+        # )
 
 if __name__ == "__main__":
     # let the tests find the parent irods lib
