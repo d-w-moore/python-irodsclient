@@ -833,10 +833,9 @@ class TestMeta(unittest.TestCase):
         data_obj = None
         try:
             data_obj = self.sess.data_objects.create(data_path)
-            d = self.sess.data_objects.get('/tempZone/home/rods/b')
 
             # Test iRODSMeta builder with custom iRODSMeta conversion subclass.
-            dm = d.metadata(iRODSMeta_type=iRODSBinOrStringMeta)
+            dm = data_obj.metadata(iRODSMeta_type=iRODSBinOrStringMeta)
             dm['myindex'] = iRODSMeta.builder(**(
                 avu_without_name := collections.OrderedDict(value=b'\3', units=b'd\0ef')
             ))
