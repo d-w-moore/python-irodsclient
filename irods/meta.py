@@ -4,12 +4,11 @@ import copy
 import functools
 
 class avubuilder:
-  def __init__(self, value, units=None, *, name=None, _class=None):
-      self._class = (_class if _class is not None else iRODSMeta)
+  def __init__(self, value, units=None, *, name=None):
       self.avu_builder = _AVU_builder(name=name, value=value, units=units)
 
   def __call__(self):
-      return self._class(*self.avu_builder)
+      return iRODSMeta(*self.avu_builder)
       
 _AVU_builder = functools.partial(
     _AVU_type:=collections.namedtuple(
