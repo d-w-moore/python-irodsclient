@@ -817,6 +817,16 @@ class TestMeta(unittest.TestCase):
             if data_obj:
                 data_obj.unlink(force=True)
 
+    def test_iRODSMeta_subclass_assign__issue_835(self):
+        pass
+        # from irods.meta import iRODSMeta, iRODSBinOrStringMeta
+        # import irods
+        # s=irods.helpers.make_session()
+        # d=s.data_objects.get('/tempZone/home/rods/b')
+        # d.metadata['a']=iRODSMeta.builder(value='C',units='D')
+        # bb=iRODSMeta.builder(b'ccaa','d',_class=iRODSBinOrStringMeta)
+        # d.metadata['laaaa'] = bb
+
 if __name__ == "__main__":
     # let the tests find the parent irods lib
     sys.path.insert(0, os.path.abspath("../.."))
