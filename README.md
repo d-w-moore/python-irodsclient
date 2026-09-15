@@ -842,25 +842,54 @@ of "key2" in a single update:
 <iRODSMeta 13186 key2 value5 units2>]
 ```
 
-Alternatively, rather than the direct call to the iRODSMeta constructor as
-shown above, there is also this slightly different approach to setting the
-same AVU -- at the same time avoiding repeat use of the key string on both
-left- and right-hand sides of the assignment:
+Alternatively, in the indexed AVU assignment, the following construction can
+be used in lieu of the direct call to the iRODSMeta constructor, thus avoiding redundant use of the
+key string on both left- and right-hand sides of the assignment:
 
 ```
 >>> obj.metadata['key2'] = iRODSMeta.builder(value='value5', units='units2')
 ```
 
+Lest there should be a misunderstanding, this statement as given will clear
+any other pre-existing AVUs with a name field of 'key2' before the requested assignment is
+actually made.
+
+Be aware that use of the indexing form on obj.metadata to retrieve AVUs
+with code such as the following:
+
+```
+x = obj.metadata['key1']
+```
+
+can also act in ways unexpected by the unwary developer. If multiple AVUs
+exist with the given name field, one will be chosen and returned at random.
+
+For this reason, the indexing form is better considered an artifact of convenience
+rather than reliable and straightforward coding practice.  For unambiguous intent, the
+canonical iRODS API endpoints should be preferred, namely with calls such as:
+
+```python
+obj.metadata.set('mykey1','myvalue1')
+obj.metadata.set('mykey2','myvalue2','myunits2')
+obj.metadata.set(*iRODSMeta('mykey3','myvalue3'))
+```
+
+(and note that the exact same usages apply for the `add` API endpoint as well.)
+
+Enforcing a "singleton" AVU
+---------------------------
 *get_one()* is a way of retrieving an AVU by its name field if we want to
-assert that exactly one such AVU should exist; fewer or more than 1 raises
-a KeyError.  Here, it can be used to retrieve the "key2" AVU:
+assert that exactly one such AVU should exist (fewer or more than 1 will raise
+a `KeyError`).  Here, it can be used to retrieve the "key2" AVU (since the indexed
+assignment from the last section has removed all but the one):
 
 ```python
 >>> print(obj.metadata.get_one('key2'))
 <iRODSMeta 13186 key2 value5 units2>
 ```
 
-But the same is not true for "key1":
+But for our present example the same is not true in the case of "key1", since
+we've left several AVUs under that name.
 
 ```python
 >>> print(obj.metadata.get_one('key1'))
