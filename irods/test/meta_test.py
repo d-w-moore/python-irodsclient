@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import collections
 import datetime
 import os
 import re
@@ -803,38 +804,47 @@ class TestMeta(unittest.TestCase):
         data_obj = None
         try:
             data_obj = self.sess.data_objects.create(data_path)
+
+            # Set and assert a number of AVUs with the iRODSMeta builder invocation.
             for x in map(chr,myrange:=range(ord('a'),ord('z')+1)):
                 data_obj.metadata[x] = iRODSMeta.builder(value = str(ord(x)))
             self.assertEqual(len(myitems:=data_obj.metadata.items()), len(myrange))
             for avu in myitems:
                 self.assertEqual(chr(int(avu.value)), avu.name)
-            data_obj.metadata['mile'] = iRODSMeta.builder(value = '1.609', units='kilometers')
-            self.assertIn(
-                iRODSMeta('mile', '1.609', units='kilometers'),
-                data_obj.metadata.items()
+
+            # Use both forms of the iRODSMeta builder invocation
+            data_obj.metadata['mile'] = iRODSMeta.builder(value = (KM_PER_MILE:='1.609344'), units='km')
+            data_obj.metadata['foot'] = iRODSMeta.builder(CM_PER_FOOT:='30.48', 'cm')
+
+            # Assert that AVUs were properly set, using < operator to mean "is a proper subset of".
+            self.assertLess(
+                {
+                    iRODSMeta('mile', KM_PER_MILE, 'km'),
+                    iRODSMeta('foot', CM_PER_FOOT, 'cm'),
+                },
+                set(data_obj.metadata.items())
             )
         finally:
             if data_obj:
                 data_obj.unlink(force=True)
 
-   #def test_iRODSMeta_subclass_assign__issue_835(self):
-   #   pass
-        # from irods.meta import iRODSMeta, iRODSBinOrStringMeta
-        # import irods
-        # s=irods.helpers.make_session()
-        # d=s.data_objects.get('/tempZone/home/rods/b')
-        # dm=d.metadata(iRODSMeta_type=iRODSBinOrStringMeta)
-        # #dm.set('a5',b'abc',b'def')
-        # dm.add('a5',b'2abc',b'def')
-        # dm['a6']=iRODSMeta.builder(value = b'abc', units = b'def')
-        # dm.add(*iRODSMeta('a7','b','c'))
-        # #dm['lad'] = bb
-        # #bb=iRODSMeta.builder(b'ccaa',b'd',)
-        # print(
-        # f"{dm['a5']=}",
-        # f"{dm['a6']=}",
-        # f"{dm['a7']=}"
-        # )
+    def test_indexed_assignments_are_iRODSMeta_subclass_compatible__issue_835(self):
+        data_path = iRODSPath(self.coll_path, helpers.unique_name(datetime.datetime.now()))  # noqa: DTZ005
+        data_obj = None
+        try:
+            data_obj = self.sess.data_objects.create(data_path)
+            d = self.sess.data_objects.get('/tempZone/home/rods/b')
+
+            # Test iRODSMeta builder with custom iRODSMeta conversion subclass.
+            dm = d.metadata(iRODSMeta_type=iRODSBinOrStringMeta)
+            dm['myindex'] = iRODSMeta.builder(**(
+                avu_without_name := collections.OrderedDict(value=b'\3', units=b'd\0ef')
+            ))
+            test_avu = iRODSMeta('myindex',*list(avu_without_name.values()))
+            self.assertEqual(test_avu, dm['myindex'])
+        finally:
+            if data_obj:
+                data_obj.unlink(force=True)
 
 if __name__ == "__main__":
     # let the tests find the parent irods lib
