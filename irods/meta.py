@@ -9,7 +9,7 @@ class avubuilder:
 
   def __call__(self):
       return iRODSMeta(*self.avu_builder)
-      
+
 _AVU_builder = functools.partial(
     _AVU_type:=collections.namedtuple(
         '_AVU_type',

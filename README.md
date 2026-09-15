@@ -861,7 +861,7 @@ with code such as
 x = obj.metadata['key1']
 ```
 
-can also act in ways unexpected by the unwary developer. If multiple AVUs 
+can also act in ways unexpected by the unwary developer. If multiple AVUs
 exist under the given name field, one will be chosen and returned at random.
 
 For these reasons, the indexed assignment may be better considered an artifact of convenience
@@ -963,7 +963,7 @@ Since v1.1.4, `set()` can be used instead:
 >>> album.metadata.set( meta )
 ```
 
-In iRODS 4.2.12 and after, a rodsadmin can apply the ADMIN_KW 
+In iRODS 4.2.12 and after, a rodsadmin can apply the ADMIN_KW
 thus allowing modification of AVUs owned by other users:
 
 ```python
