@@ -254,7 +254,6 @@ class iRODSMetaCollection:
     def _get_meta(self, *args):
         if not len(args):
             raise ValueError("Must specify an iRODSMeta object or key, value, units)")
-        #return args[0] if len(args) == 1 else self._manager._opts['iRODSMeta_type'](*args)
         return self._manager._opts['iRODSMeta_type'](*(args[0] if len(args)==1 else args))
 
     def apply_atomic_operations(self, *avu_ops):
