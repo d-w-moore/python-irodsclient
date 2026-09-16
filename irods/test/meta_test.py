@@ -803,20 +803,34 @@ class TestMeta(unittest.TestCase):
         data_path = iRODSPath(self.coll_path, helpers.unique_name(datetime.datetime.now()))  # noqa: DTZ005
         data_obj = None
         try:
+            # Create a test object on which to set metadata.
             data_obj = self.sess.data_objects.create(data_path)
 
-            # Set and assert a number of AVUs with the iRODSMeta builder invocation.
-            for x in map(chr,myrange:=range(ord('a'),ord('z')+1)):
-                data_obj.metadata[x] = iRODSMeta.builder(value = str(ord(x)))
-            self.assertEqual(len(myitems:=data_obj.metadata.items()), len(myrange))
-            for avu in myitems:
-                self.assertEqual(chr(int(avu.value)), avu.name)
+            # Set a number of metadata AVUs with the iRODSMeta builder invocation.  (Each of
+            # these AVU values follow a predictable relation defined by the test_mapping function.)
+            def test_mapping(name): return str(ord(name))
+            avu_names = [chr(_) for _ in range(ord('a'), ord('z')+1)]
+            for ch in avu_names:
+                data_obj.metadata[ch] = iRODSMeta.builder(value = test_mapping(ch))
 
-            # Use both forms of the iRODSMeta builder invocation
-            data_obj.metadata['mile'] = iRODSMeta.builder(value = (KM_PER_MILE:='1.609344'), units='km')
-            data_obj.metadata['foot'] = iRODSMeta.builder(CM_PER_FOOT:='30.48', 'cm')
+            # Assert there are as many AVUs as expected
+            self.assertEqual(
+                len(myitems := data_obj.metadata.items()),
+                len(avu_names)
+            )
 
-            # Assert that AVUs were properly set, using < operator to mean "is a proper subset of".
+            # Assert that each AVU conforms to the expected name->value mapping.
+            for avu in myitems: 
+                self.assertEqual(avu.value, test_mapping(avu.name))
+
+            # Define constants.
+            KM_PER_MILE = '1.609344'
+            CM_PER_FOOT = '30.48'
+
+            # Use both forms of the iRODSMeta builder invocation, testing that both attempts
+            # resulted in the AVU we expected. (For sets, s1 < s2 iff s1 is a proper subset of s2.)
+            data_obj.metadata['mile'] = iRODSMeta.builder(value=KM_PER_MILE, units='km')
+            data_obj.metadata['foot'] = iRODSMeta.builder(CM_PER_FOOT, 'cm')
             self.assertLess(
                 {
                     iRODSMeta('mile', KM_PER_MILE, 'km'),
@@ -825,6 +839,7 @@ class TestMeta(unittest.TestCase):
                 set(data_obj.metadata.items())
             )
         finally:
+            # Delete the test object.
             if data_obj:
                 data_obj.unlink(force=True)
 
@@ -834,13 +849,19 @@ class TestMeta(unittest.TestCase):
         try:
             data_obj = self.sess.data_objects.create(data_path)
 
-            # Test iRODSMeta builder with custom iRODSMeta conversion subclass.
+            # Test use of the iRODSMeta builder with a custom iRODSMeta-derived getter/setter (which
+            # in this case automatically performs user defined conversions to and from byte strings).
             dm = data_obj.metadata(iRODSMeta_type=iRODSBinOrStringMeta)
-            dm['myindex'] = iRODSMeta.builder(**(
+
+            # Assign a new AVU.
+            dm['test_key'] = iRODSMeta.builder(**(
                 avu_without_name := collections.OrderedDict(value=b'\3', units=b'd\0ef')
             ))
-            test_avu = iRODSMeta('myindex',*list(avu_without_name.values()))
-            self.assertEqual(test_avu, dm['myindex'])
+
+            # Test that AVU storage happened with supported by the proper conversions (within the client)
+            # to and from 'str' type required for the 'value' and 'units' fields of an AVU.
+            test_avu = iRODSMeta('test_key',*list(avu_without_name.values()))
+            self.assertEqual(test_avu, dm['test_key'])
         finally:
             if data_obj:
                 data_obj.unlink(force=True)
