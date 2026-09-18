@@ -808,7 +808,7 @@ class TestMeta(unittest.TestCase):
             user.modify("password", "bpass")
 
             # This is a convenience function to (re)instantiate the test iRODSSessions:
-            def new_session(): 
+            def new_session():
                 return iRODSSession(
                     port=adm.port,
                     zone=adm.zone,
@@ -817,13 +817,13 @@ class TestMeta(unittest.TestCase):
                     password="bpass",
                 )
 
-            with new_session() as ses:
-                d = ses.data_objects.create(data_name:="/{adm.zone}/home/{user.name}/testfile".format(**locals()))
+            with new_session() as ses1:
+                d = ses1.data_objects.create(data_name:="/{adm.zone}/home/{user.name}/testfile".format(**locals()))
                 d.metadata(admin=True)
 
-            with new_session() as ses:
+            with new_session() as ses2:
                 # Repeat the fetch of the data object using the new session, so we are clean of old references.
-                d = ses.data_objects.get(data_name)
+                d = ses2.data_objects.get(data_name)
 
                 # In this use of set(), we expect not to end up applying ADMIN_KW in the underlying API call.
                 # (Doing so as a rodsuser would raise INSUFFICIENT_PRIVILEGE_LEVEL and the test would fail.)

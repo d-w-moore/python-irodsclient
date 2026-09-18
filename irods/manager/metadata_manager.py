@@ -43,8 +43,6 @@ class MetadataManager(Manager):
     def use_timestamps(self):
         return self._opts['timestamps']
 
-    __default_kw: Dict[str, Any] = {}  # default (empty) keywords
-
     def _updated_keywords(self, opts):
         kw_ = self.__kw.copy()
         kw_.update(opts)
