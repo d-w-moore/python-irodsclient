@@ -70,7 +70,7 @@ home_coll = session.collections.get(f'/tempZone/home/{session.username}')
 # (... Further instances of calls to the server through 'session' may follow.)
 ```
 
-This casual approach usually ends up being optimal choice in terms efficiency, since
+This casual approach usually ends up being the optimal choice in terms of efficiency, since
 connections are expensive to create and destroy, and any given connection to the iRODS
 server can be employed consecutively and for disparate purposes without incident.
 
