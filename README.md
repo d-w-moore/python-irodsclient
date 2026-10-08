@@ -38,11 +38,11 @@ Uninstalling
 
     pip uninstall python-irodsclient
 
-Establishing a (secure) connection
-----------------------------------
+Establishing a connection
+-------------------------
 
 An `iRODSSession` instance is the interface object through which iRODS server
-APIs can be invoked. One can create the object using constructor form directly,
+APIs can be invoked. One can create the object using the constructor form directly,
 passing connection and authentication options within the call parameter list:
 
 ```python
@@ -63,18 +63,12 @@ Once created, the `iRODSSession` instance can be managed from a choice between t
 possible patterns.  Firstly, one can allow references to the instance to persist as
 is natural for the application.  This allows Python interpreter's reference counting to
 let the object pass out of scope and destroy the underlying server connection(s) at the
-proper time:
+proper time.  This casual approach usually ends up being generally the most efficient one,
+as connections are expensive to create and destroy; furthermore, any single connection to
+the iRODS server can freely be employed for a number of disparate server interactions,
+one after the other.
 
-```python
-home_coll = session.collections.get(f'/tempZone/home/{session.username}')
-# (... Further instances of calls to the server through 'session' may follow.)
-```
-
-This casual approach usually ends up being the optimal choice in terms of efficiency, since
-connections are expensive to create and destroy, and any given connection to the iRODS
-server can be employed consecutively and for disparate purposes without incident.
-
-Alternatively a context manager may be used, thus forcing connections to be
+Alternatively, a context manager may be used.  This forces all connections to be
 provisionally cleared from the session object once a given block of code has
 executed:
 
@@ -85,27 +79,19 @@ with make_session() as session:
   # of it, session.cleanup() is implicitly called to remove any idle connections.
 ```
 
-Either way, the instance remains available for further use afterward, until
+Either way, the session instance remains available for further use afterward, until
 destructed.
 
-We should, of course, be mindful of how many still-connected `iRODSSession`
-objects we retain references to in an application, as having more of them than
-the system can support database connections for can result in the spurious failure
-of new connections.
+Of course, we should be mindful of how many still-connected `iRODSSession`
+objects are allowed to proliferate in an application, since having more client connections
+than the server can support database connections for can result in the spurious failure
+of any new attempts to connect.
 
-Finer points in connecting to the iRODS server
-----------------------------------------------
+Basic authentication and security
+---------------------------------
 
-iRODS credentials may also be passed as keyword
-arguments:
-
-```python
->>> from irods.session import iRODSSession
->>> with iRODSSession(host='localhost', port=1247, user='bob', password='1234', zone='tempZone') as session:
-...      # workload
-...
->>>
-```
+As seen in the `iRODSSession` constructor call in the previous section, iRODS credentials may be passed
+in as keyword arguments.
 
 If you're an administrator acting on behalf of another user:
 
