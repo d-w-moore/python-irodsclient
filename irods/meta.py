@@ -4,11 +4,36 @@ import copy
 import functools
 
 class avubuilder:
-  def __init__(self, value, units=None, *, name=None):
-      self.avu_builder = _AVU_builder(name=name, value=value, units=units)
+    CHUNK=None
 
-  def __call__(self):
-      return iRODSMeta(*self.avu_builder)
+    def __init__(self, value, units=None, *, name=None):
+        self.avu_builder = _AVU_builder(name=name, value=value, units=units)
+
+    def __call__(self, key):
+        return iRODSMeta(key,*self.avu_builder[1:])
+
+class chbuilder(avubuilder):
+    CHUNK = 1024
+
+    def __init__(self,*a,**k):
+        super().__init__(*a,**k)
+        self._offset = 0
+
+    def __call__(self, key):
+        tpl = self.avu_builder
+        offs = self._offset
+        val = tpl.value[offs:offs+CHUNK]
+        uni = tpl.units[offs:offs+CHUNK]
+        suffix = "~"
+        
+        if (new_offs := offs + self.CHUNK) >= len(tpl.value) and new_offs >= len(tpl.units):
+            self._offset = -1
+            suffix=""
+        else:
+            self._offset = new_offs
+
+      return iRODSMeta(key + f"~{offs}{suffix}", val + suffix, uni)
+        
 
 _AVU_builder = functools.partial(
     _AVU_type:=collections.namedtuple(
@@ -315,11 +340,17 @@ class iRODSMetaCollection:
         the key with a single iRODSMeta tuple
         """
         self._delete_all_values(key)
+        oldmeta = None
         if isinstance(meta, iRODSMeta.builder):
-            meta = meta()
-            if meta.name is None:
-                meta.name = key
-        self.add(*meta)
+            oldmeta = meta
+            meta = meta(key)
+        
+        if not oldmeta or not isinstance(oldmeta, chbuilder):
+            self.add(*meta)
+        else:
+            while oldmeta._offset >= 0:
+                meta = oldmeta(key)
+                self.set(meta.name, meta.value, meta.units)
 
     def _delete_all_values(self, key):
         for meta in self.get_all(key):
