@@ -841,7 +841,7 @@ class TestMeta(unittest.TestCase):
                 self.assertIn(kw.ADMIN_KW, get_call_keywords(md_modified))
 
                 # The modified admin setting should be reflected when reading it back from the object's
-                # internal options # bookkeeping.
+                # internal options.
                 self.assertTrue(md_modified.admin)
 
                 # But the original (unmodified) source object should not reflect use of an ADMIN_KW.
