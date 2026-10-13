@@ -62,7 +62,7 @@ set up a client environment via `iinit`, is by using the convenience function `m
 Once created, the `iRODSSession` instance can be managed from a choice between two
 possible patterns.  Firstly, one can allow references to the instance to persist as
 is natural for the application.  This allows Python interpreter's reference counting to
-let the object pass out of scope and destroy the underlying server connection(s) at the
+let the object pass out of scope and destroy any underlying server connection(s) at the
 proper time.  This casual approach usually ends up being generally the most efficient one,
 as connections are expensive to create and destroy; furthermore, any single connection to
 the iRODS server can freely be employed for a number of disparate server interactions,
@@ -93,7 +93,7 @@ Basic authentication and security
 As seen in the `iRODSSession` constructor call in the previous section, iRODS credentials may be passed
 in as keyword arguments.
 
-If you're an administrator acting on behalf of another user:
+If you're an administrator, you can also create a session that acts on behalf of another user:
 
 ```python
 >>> from irods.session import iRODSSession
@@ -104,9 +104,9 @@ If you're an administrator acting on behalf of another user:
 >>>
 ```
 
-If no `client_zone` is provided, the `zone` parameter is used in its place.
+Note that if the `client_zone` parameter is not provided, the `zone` parameter is used in its place.
 
-Using environment files (including any SSL settings) in `~/.irods/`:
+We can name an environment file (including settings both SSL and non-SSL related) to be used in configuring the session:
 
 ```python
 >>> import os
