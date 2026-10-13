@@ -832,8 +832,9 @@ class TestMeta(unittest.TestCase):
                 # Check that the option flag for use of ADMIN_KW is not set.
                 self.assertFalse(d.metadata.admin)
 
-                # This function duplicates the way in which the client API endpoint calculates iRODS option keywords
-                # for the underlying API call:
+                # This function calls into the same routine used by the client's metadata endpoint to calculate
+                # iRODS option keywords it will send in the API call. We use this exclusively for verifying the
+                # presence of the ADMIN_KW keyword at, effectively, the handoff point to the iRODS server.
                 get_call_keywords = lambda metacoll: metacoll._manager._updated_keywords((),)
 
                 # Applying admin=True should result in API flags containing ADMIN_KW among the lookup keys.
