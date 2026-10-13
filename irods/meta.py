@@ -8,31 +8,47 @@ class avubuilder:
 
     def __init__(self, value, units=None, *, name=None):
         self.avu_builder = _AVU_builder(name=name, value=value, units=units)
+        self._offset = 0
 
-    def __call__(self, key):
-        return iRODSMeta(key,*self.avu_builder[1:])
+    def set_name(self, n):
+        old = self.avu_builder
+        self.avu_builder = _AVU_builder(name=n, value=old.value, units=old.units)
+
+    def __iter__(self):
+        return copy.copy(self)
+    
+    def __next__(self):
+        if self._offset == 0:
+            self._offset = -1
+            return iRODSMeta(*self.avu_builder)
+        else:
+            raise StopIteration
+    
 
 class chbuilder(avubuilder):
     CHUNK = 1024
 
-    def __init__(self,*a,**k):
-        super().__init__(*a,**k)
-        self._offset = 0
+    def __next__(self):
+        if self._offset < 0:
+            raise StopIteration
 
-    def __call__(self, key):
         tpl = self.avu_builder
         offs = self._offset
-        val = tpl.value[offs:offs+CHUNK]
-        uni = tpl.units[offs:offs+CHUNK]
+        val = tpl.value[offs:offs+self.CHUNK]
+        uni = tpl.units[offs:offs+self.CHUNK]
         suffix = "~"
         
         if (new_offs := offs + self.CHUNK) >= len(tpl.value) and new_offs >= len(tpl.units):
             self._offset = -1
-            suffix=""
+            suffix = ""
         else:
             self._offset = new_offs
-
-      return iRODSMeta(key + f"~{offs}{suffix}", val + suffix, uni)
+        name = self.avu_builder.name
+        return iRODSMeta(
+            ('' if name is None else name) + f"~{offs}{suffix}",
+            val + suffix,
+            uni
+        )
         
 
 _AVU_builder = functools.partial(
@@ -343,14 +359,14 @@ class iRODSMetaCollection:
         oldmeta = None
         if isinstance(meta, iRODSMeta.builder):
             oldmeta = meta
-            meta = meta(key)
+            meta = iter(meta)
+            meta.set_name(key)
         
-        if not oldmeta or not isinstance(oldmeta, chbuilder):
+        if not oldmeta:
             self.add(*meta)
         else:
-            while oldmeta._offset >= 0:
-                meta = oldmeta(key)
-                self.set(meta.name, meta.value, meta.units)
+            for m in meta:
+                self.add(m.name, m.value, m.units)
 
     def _delete_all_values(self, key):
         for meta in self.get_all(key):
