@@ -5,6 +5,7 @@ import collections
 import datetime
 import os
 import re
+import string
 import sys
 import time
 import unittest
@@ -809,7 +810,7 @@ class TestMeta(unittest.TestCase):
             # Set a number of metadata AVUs with the iRODSMeta builder invocation.  (Each of
             # these AVU values follow a predictable relation defined by the test_mapping function.)
             def test_mapping(name): return str(ord(name))
-            avu_names = [chr(_) for _ in range(ord('a'), ord('z')+1)]
+            avu_names = [_ for _ in string.ascii_lowercase]
             for ch in avu_names:
                 data_obj.metadata[ch] = iRODSMeta.builder(value = test_mapping(ch))
 
