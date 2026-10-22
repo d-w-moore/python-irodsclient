@@ -3,6 +3,7 @@
 import logging
 from os.path import basename, dirname
 
+from irods.query import AutoAliasedSpecificQuery
 from irods.access import iRODSAccess
 from irods.api_number import api_number
 from irods.collection import iRODSCollection
@@ -34,8 +35,99 @@ def users_by_ids(session, ids=()):
     cond = () if not ids else ((In(User.id, list(map(int, ids))),) if len(ids) > 1 else (User.id == int(ids[0]),))
     return [iRODSUser(session.users, i) for i in session.query(User.id, User.name, User.type, User.zone).filter(*cond)]
 
+class UserAccessTypeQuery(AutoAliasedSpecificQuery):
+  SQL='''
+WITH target_user AS (
+    SELECT user_id
+    FROM r_user_main
+    WHERE user_name = ?
+      AND zone_name = ?
+),
+resolved_object AS (
+    -- The path names a collection
+    SELECT coll_id AS object_id
+    FROM r_coll_main
+    WHERE coll_name = ?
 
+    UNION
+
+    -- The path names a data object: collection path + '/' + data name
+    SELECT d.data_id AS object_id
+    FROM r_data_main AS d
+    JOIN r_coll_main AS c ON c.coll_id = d.coll_id
+    WHERE CONCAT(c.coll_name, '/', d.data_name) = ?
+),
+grants AS (
+    -- Direct grants
+    SELECT a.access_type_id
+    FROM r_objt_access AS a
+    JOIN target_user AS u ON u.user_id = a.user_id
+    JOIN resolved_object AS o ON o.object_id = a.object_id
+
+    UNION ALL
+
+    -- Grants to groups the user belongs to
+    SELECT a.access_type_id
+    FROM r_user_group AS ug
+    JOIN target_user AS u ON u.user_id = ug.user_id
+    JOIN r_objt_access AS a ON a.user_id = ug.group_user_id
+    JOIN resolved_object AS o ON o.object_id = a.object_id
+)
+SELECT access_type_id
+FROM grants
+ORDER BY access_type_id DESC
+LIMIT 1;
+'''
+
+class QueryError(ValueError): pass
+#
 class AccessManager(Manager):
+
+    def get_max_access(self, user, coll=None, data=None):
+        from irods.models import Group, User
+
+        try:
+            specific_query = SpecificQuery(alias='findQueryByAlias',args=('getUserAccessType',))
+        except CAT_NO_ROWS_FOUND:
+            specific_query = None
+
+        if not specific_query and self.sess.type == 'rodsadmin':
+            specific_query = UserAccessTypeQuery(ses)
+
+        if specific_query:
+            return self._get_max_access(
+                specific_query,
+                user.name,
+                user.zone,
+                coll.path,
+                data.path)
+        else:
+            res = None
+            groups = {g[Group.id] for g in self.sess.query(Group, User).filter(User.id == user.id)}
+            if data:
+                collN=irods_dirname(data.path)
+                dataN=irods_basename(data.path)
+                res = [_[DataAccess.type] for _ in
+                  self.sess.query(DataAccess.type).filter(Collection.name==collN,DataObject.name==dataN).order_by(DataAccess.type,order='desc')]
+                return  res
+            elif coll:
+                res = [_[CollectionAccess.type] for _ in 
+                  self.sess.query(CollectionAccess.type).filter(Collection.name==coll.name).order_by(CollectionAccess.type,order='desc')]
+            else:
+               msg = 'Need a collection or data object'
+               raise QueryError(msg)
+            return res
+
+
+    def _get_max_access(query,username,zone,coll,data):
+        denullify = lambda _: str(_) if _ != "" else "null"
+        try:
+            row = next(query.execute(args=[username, zone, denullify(coll), denullify(data)]))
+        except CAT_NO_ROWS_FOUND:
+            row = {}
+            
+        return row.get(0)
+
     @staticmethod
     def _to_acl_operation_json(op_input: iRODSAccess):
         return {

@@ -1,4 +1,6 @@
 from collections import OrderedDict
+import copy
+import uuid
 
 from irods import MAX_SQL_ROWS
 from irods.models import Model
@@ -313,7 +315,10 @@ class SpecificQuery:
             response = conn.recv()
         return response
 
-    def execute(self, limit=MAX_SQL_ROWS, offset=0, options=0, conditions=None):
+    def execute(self, limit=MAX_SQL_ROWS, offset=0, options=0, conditions=None, instance=None):
+        if instance is not None:
+            self = instance
+
         target = self._alias or self._sql
 
         if conditions is None:
@@ -361,6 +366,47 @@ class SpecificQuery:
         for result_set in self.get_batches():
             for result in result_set:
                 yield result
+
+
+class AutoAliasedSpecificQuery(SpecificQuery):
+    # Subclasses should set this to a nonzero length string in valid SQL.
+    SQL = None
+
+    def __init__(self, sess, **kw):
+        self.__alias = None
+
+        if 'sql' not in kw:
+            kw['sql'] = getattr(self,'SQL') or 'select 1'
+
+        if kw.get('alias') is None:
+            kw['alias'] = self.__alias = str(uuid.uuid1())
+
+        super().__init__(sess,**kw)
+
+        if self.__alias:
+            self.register()
+
+    def _clone(self):
+        q = copy.copy(self)
+
+        # So that the _clone's destruction does not remove the query from the catalog:
+        q.__alias = None
+        return q
+
+    def __del__(self):
+        if self.__alias is not None:
+            SpecificQuery(self.session, alias=self.__alias).remove()
+
+    def execute(self, args=(), **kw):
+        # Support independent iterators.
+        q = self._clone()
+        if not q._args:
+            q._args = list(args)
+        results = super().execute(instance=q, **kw)
+        return results
+
+    @property
+    def auto_alias(self): return self.__alias
 
 
 # Record a copy of the original value of IRODS_QUERY_LIMIT for possible future access.
