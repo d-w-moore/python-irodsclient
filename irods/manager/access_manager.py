@@ -104,7 +104,7 @@ class AccessManager(Manager):
                 data.path)
         else:
             res = None
-            groups = {g[Group.id] for g in self.sess.query(Group, User).filter(User.id == user.id)}
+            groups = {g[Group.id] for g in ses.query(Group, User).filter(User.id == user.id)}
             if data:
                 collN=irods_dirname(data.path)
                 dataN=irods_basename(data.path)
