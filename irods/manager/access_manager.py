@@ -3,7 +3,7 @@
 import logging
 from os.path import basename, dirname
 
-from irods.query import AutoAliasedSpecificQuery
+from irods.query import AutoAliasedSpecificQuery, SpecificQuery
 from irods.access import iRODSAccess
 from irods.api_number import api_number
 from irods.collection import iRODSCollection
@@ -17,8 +17,10 @@ from irods.models import (
     CollectionUser,
     DataAccess,
     DataObject,
+    Group,
     User,
 )
+from irods.exception import CAT_NO_ROWS_FOUND
 from irods.user import iRODSUser
 
 logger = logging.getLogger(__name__)
@@ -80,18 +82,17 @@ LIMIT 1;
 '''
 
 class QueryError(ValueError): pass
-#
+
 class AccessManager(Manager):
 
     def get_max_access(self, user, coll=None, data=None):
-        from irods.models import Group, User
-
+        ses = self.sess
         try:
-            specific_query = SpecificQuery(alias='findQueryByAlias',args=('getUserAccessType',))
+            specific_query = SpecificQuery(ses, alias='findQueryByAlias',args=('getUserAccessType',))
         except CAT_NO_ROWS_FOUND:
             specific_query = None
 
-        if not specific_query and self.sess.type == 'rodsadmin':
+        if not specific_query and ses.users.get(ses.username).type == 'rodsadmin':
             specific_query = UserAccessTypeQuery(ses)
 
         if specific_query:
@@ -108,24 +109,34 @@ class AccessManager(Manager):
                 collN=irods_dirname(data.path)
                 dataN=irods_basename(data.path)
                 res = [_[DataAccess.type] for _ in
-                  self.sess.query(DataAccess.type).filter(Collection.name==collN,DataObject.name==dataN).order_by(DataAccess.type,order='desc')]
+                    ses.query(DataAccess.type).filter(Collection.name==collN,DataObject.name==dataN).order_by(DataAccess.type,order='desc')]
                 return  res
             elif coll:
-                res = [_[CollectionAccess.type] for _ in 
-                  self.sess.query(CollectionAccess.type).filter(Collection.name==coll.name).order_by(CollectionAccess.type,order='desc')]
+                res = [_[CollectionAccess.type] for _ in
+                  ses.query(CollectionAccess.type).filter(Collection.name==coll.name).order_by(CollectionAccess.type,order='desc')]
             else:
                msg = 'Need a collection or data object'
                raise QueryError(msg)
             return res
 
 
-    def _get_max_access(query,username,zone,coll,data):
-        denullify = lambda _: str(_) if _ != "" else "null"
+    def _get_max_access(query, username, zone, coll, data):
+        denullify_logical_path = lambda _: str(_) if _ != "" else "null"
+
         try:
-            row = next(query.execute(args=[username, zone, denullify(coll), denullify(data)]))
-        except CAT_NO_ROWS_FOUND:
+            row = next(iter(
+                query.execute(
+                    args=[
+                        username,
+                        zone,
+                        denullify_logical_path(coll),
+                        denullify_logical_path(data)
+                    ]
+                )
+            ))
+        except StopIteration:
             row = {}
-            
+
         return row.get(0)
 
     @staticmethod
