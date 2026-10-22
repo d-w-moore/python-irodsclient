@@ -532,6 +532,57 @@ class TestAccess(unittest.TestCase):
             if zone:
                 zone.remove()
 
+    def test_get_maximum_permission_for_path__issue_561(self):
+        user = group = coll = None
+        ses = self.sess
+        try:
+            coll = ses.collections.create('/tempZone/home/public/folder')
+            data = ses.data_objects.create('/tempZone/home/public/folder/file')
+            user = ses.users.create('bob','rodsuser')
+            group = ses.groups.create('lab')
+
+            # Set up test scenario with a new user and group, the group having deliberately higher permission
+            # so as to be able to account for the effect of group membership in the query results.
+            USER_PERM = 'modify_metadata'
+            GROUP_PERM = 'modify_object'
+            test_perms = { user.name: USER_PERM, group.name: GROUP_PERM }
+            for obj in (coll, data):
+                ses.acls.set(iRODSAccess(USER_PERM, obj.path, user.name))
+                ses.acls.set(iRODSAccess(GROUP_PERM, obj.path, group.name))
+
+            for is_member in (False, True):
+                if is_member:
+                    group.addmember(user.name,user.zone)
+                for usr in (user,group):
+                    maxusr = user if user not in group.members else group
+                    expected_permission = test_perms[maxusr.name]
+                    for obj_type, obj in (
+                        ("coll", coll),
+                        ("coll", coll.path),
+                        ("data", data),
+                        ("data", data.path),
+                    ):
+                        for query_type in ('general', 'specific'):
+                            with self.subTest(f"{is_member=}, testing {usr} {obj} {query_type}"):
+                                force_genquery_option = {'general': True, 'specific': False}[query_type]
+                                feedback = []
+                                permission = ses.acls.get_maximum_permission_for_path(
+                                    usr,
+                                    feedback=feedback,
+                                    force_genquery=force_genquery_option,
+                                    **{obj_type: obj},
+                                )
+                                self.assertEqual(perm, expected_permission)
+                                self.assertEqual(feedback[0], query_type)
+        finally:
+            if coll:
+                # Removes test data object as well.
+                coll.remove(force=True, recurse=True)
+            if user:
+                user.remove()
+            if group:
+                group.remove()
+
 
 if __name__ == "__main__":
     # let the tests find the parent irods lib

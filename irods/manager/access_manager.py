@@ -3,11 +3,13 @@
 import logging
 from os.path import basename, dirname
 
-from irods.access import iRODSAccess
+import irods.access
+from irods.access import iRODSAccess, return_type
 from irods.api_number import api_number
 from irods.collection import iRODSCollection
 from irods.column import In
 from irods.data_object import irods_basename, irods_dirname, iRODSDataObject
+from irods.exception import CAT_NO_ROWS_FOUND
 from irods.manager import Manager
 from irods.message import JSON_Message, ModAclRequest, iRODSMessage
 from irods.models import (
@@ -16,9 +18,11 @@ from irods.models import (
     CollectionUser,
     DataAccess,
     DataObject,
+    Group,
     User,
 )
-from irods.user import iRODSUser
+from irods.query import AutoAliasedSpecificQuery, SpecificQuery
+from irods.user import iRODSUser, iRODSGroup
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +38,167 @@ def users_by_ids(session, ids=()):
     cond = () if not ids else ((In(User.id, list(map(int, ids))),) if len(ids) > 1 else (User.id == int(ids[0]),))
     return [iRODSUser(session.users, i) for i in session.query(User.id, User.name, User.type, User.zone).filter(*cond)]
 
+class UserAccessTypeQuery(AutoAliasedSpecificQuery):
+  SQL='''
+WITH target_user AS (
+    SELECT user_id
+    FROM r_user_main
+    WHERE user_name = ?
+      AND zone_name = ?
+),
+resolved_object AS (
+    -- The path names a collection
+    SELECT coll_id AS object_id
+    FROM r_coll_main
+    WHERE coll_name = ?
+
+    UNION
+
+    -- The path names a data object: collection path + '/' + data name
+    SELECT d.data_id AS object_id
+    FROM r_data_main AS d
+    JOIN r_coll_main AS c ON c.coll_id = d.coll_id
+    WHERE CONCAT(c.coll_name, '/', d.data_name) = ?
+),
+grants AS (
+    -- Direct grants
+    SELECT a.access_type_id
+    FROM r_objt_access AS a
+    JOIN target_user AS u ON u.user_id = a.user_id
+    JOIN resolved_object AS o ON o.object_id = a.object_id
+
+    UNION ALL
+
+    -- Grants to groups the user belongs to
+    SELECT a.access_type_id
+    FROM r_user_group AS ug
+    JOIN target_user AS u ON u.user_id = ug.user_id
+    JOIN r_objt_access AS a ON a.user_id = ug.group_user_id
+    JOIN resolved_object AS o ON o.object_id = a.object_id
+)
+SELECT access_type_id
+FROM grants
+ORDER BY access_type_id DESC
+LIMIT 1;
+'''
+
+class QueryParameterError(ValueError): pass
 
 class AccessManager(Manager):
+
+    def get_maximum_permission_for_path(self,
+        user, 
+        coll=None, 
+        data=None, 
+        force_genquery=False, 
+        feedback=None,
+        return_type = irods.access.return_type.INTEGER
+    ):
+        ses = self.sess
+        specific_query = None
+
+        # Mainly for testing to assure success in guiding the query method to be 'general' or 'specific'
+        def feedback_method(string):
+            if isinstance(feedback,list): feedback[:0]=[string]
+            
+        # Convert user or group to object.  Need to know if we are dealing with a rodsadmin
+        if isinstance(user, (iRODSUser, iRODSGroup)):
+            pass
+        else:
+            msg = "'user' argument should be of type iRODSUser or iRODSGroup."
+            raise QueryParameterError(msg)
+
+        denullify = lambda s: s if s else "x"
+
+        if not force_genquery:
+            specific_query_args = [
+                user.name,
+                getattr(user,'zone',ses.zone),
+                denullify(coll.path if isinstance(coll, iRODSCollection) else coll),
+                denullify(data.path if isinstance(data, iRODSDataObject) else data),
+            ]
+
+            # Find out if the query is already registered.
+            try:
+                specific_query = SpecificQuery(ses, alias='findQueryByAlias', args=('getUserAccessType',))
+                specific_query.execute()
+            except CAT_NO_ROWS_FOUND:
+                specific_query = None
+            else:
+                specific_query = SpecificQuery(ses, alias='getUserAccessType', args=specific_query_args)
+
+            # If there is no canned query available, and we are a rodsadmin, then install our own:
+            if not specific_query and ses.users.get(ses.username).type == 'rodsadmin':
+                specific_query = UserAccessTypeQuery(ses, args=specific_query_args)
+
+        # Dispatch to the available/chosen query method.
+        if specific_query:
+            feedback_method('specific')
+            max_permission = self._get_maximum_permission_for_path_via_SpecificQuery(specific_query)
+            res = [max_permission]
+        else:
+            feedback_method('general')
+            res = None
+            groups = {g[Group.id] for g in ses.query(Group, User).filter(Group.id != user.id, User.id == user.id)}
+            groups |= {user.id}
+
+            if data:
+                if isinstance(data, str):
+                    collN = irods_dirname(data)
+                    dataN = irods_basename(data)
+                    join_criteria = [DataObject.name == dataN, Collection.name == collN]
+                elif isinstance(data, iRODSDataObject):
+                    join_criteria = [ DataAccess.data_id == data.id]
+                else:
+                    msg="data must be full logical path or data object"
+                    raise ValueError(msg)
+
+                q = ses.query(DataAccess.type).filter(
+                    In(DataAccess.user_id, groups),
+                    *join_criteria
+                ).order_by(DataAccess.type,order='desc')
+
+                res = [_[DataAccess.type] for _ in q]
+
+            elif coll:
+                if isinstance(coll, str):
+                    join_criteria = [Collection.name == coll]
+                elif isinstance(coll, iRODSCollection):
+                    join_criteria = [CollectionAccess.access_id == coll.id] # TODO: access_id is not an accurate name, should be coll_id
+                else:
+                    msg="data must be full logical path or collection object"
+                    raise ValueError(msg)
+
+                q=ses.query(CollectionAccess).filter(
+                        In(CollectionAccess.user_id, groups),
+                        *join_criteria
+                    ).order_by(CollectionAccess.type,order='desc')
+
+                res = [_[CollectionAccess.type] for _ in q]
+
+            else:
+                msg = 'Need a collection or data object'
+                raise QueryParameterError(msg)
+
+        retval_transform = (
+            (lambda _: iRODSAccess.strings[_]) if return_type == irods.access.return_type.STRING else (lambda _:_)
+        )
+        res = res[0] if res else None
+        return retval_transform(res) if isinstance(res, int) else None
+
+
+    @staticmethod
+    def _get_maximum_permission_for_path_via_SpecificQuery(spec_query):
+        try:
+            row = next(iter(
+                spec_query.execute()
+            ))
+        except StopIteration:
+            row = {}
+
+        highest_perm = row.get(0)
+        return None if highest_perm is None else int(highest_perm)
+
     @staticmethod
     def _to_acl_operation_json(op_input: iRODSAccess):
         return {
