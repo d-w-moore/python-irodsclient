@@ -85,44 +85,90 @@ class QueryError(ValueError): pass
 
 class AccessManager(Manager):
 
-    def get_max_access(self, user, coll=None, data=None):
+    def get_user_access_type(self, user, coll=None, data=None, force_genquery=False, feedback=None):
         ses = self.sess
-        try:
-            specific_query = SpecificQuery(ses, alias='findQueryByAlias',args=('getUserAccessType',))
-        except CAT_NO_ROWS_FOUND:
-            specific_query = None
+        specific_query = None
 
-        if not specific_query and ses.users.get(ses.username).type == 'rodsadmin':
-            specific_query = UserAccessTypeQuery(ses)
+        # Mainly for testing to assure success in guiding the query method to be 'general' or 'specific'
+        def feedback_method(string):
+            if isinstance(feedback,list): feedback[:0]=[string]
+            
+        # Convert user or group to object.  Need to know if we are dealing with a rodsadmin
+        if isinstance(user, (iRODSUser, iRODSGroup)):
+            pass
+        elif isinstance(user,str):
+            user=self.sess.users.get(user)
+        else:
+            msg = "Need a string or irods{Group,User} argument for 'user'"
+            raise QueryError(msg)
+
+        if not force_genquery:
+            # Find out if the query is already registered, and if not (and an admin) then register now.
+            try:
+                specific_query = SpecificQuery(ses, alias='findQueryByAlias',args=('getUserAccessType',))
+            except CAT_NO_ROWS_FOUND:
+                pass
+
+            if not specific_query and ses.users.get(ses.username).type == 'rodsadmin':
+                specific_query = UserAccessTypeQuery(ses)
 
         if specific_query:
-            return self._get_max_access(
+            feedback_method('specific')
+            return self._get_user_access_type_via_SpecificQuery(
                 specific_query,
                 user.name,
                 user.zone,
-                coll.path,
-                data.path)
+                coll.path if isinstance(coll, iRODSCollection) else coll,
+                data.path if isinstance(data, iRODSDataObject) else data,
+            )
         else:
+            feedback_method('general')
             res = None
             groups = {g[Group.id] for g in ses.query(Group, User).filter(User.id == user.id)}
+
             if data:
-                collN=irods_dirname(data.path)
-                dataN=irods_basename(data.path)
-                res = [_[DataAccess.type] for _ in
-                    ses.query(DataAccess.type).filter(Collection.name==collN,DataObject.name==dataN).order_by(DataAccess.type,order='desc')]
-                return  res
+                if isinstance(data, str):
+                    collN = irods_dirname(data)
+                    dataN = irods_basename(data)
+                    join_criteria = [DataObject.name == dataN, Collection.name == collN]
+                elif isinstance(data, iRODSDataObject):
+                    join_criteria = [ DataAccess.data_id == data.id]
+                else:
+                    msg="data must be full logical path or data object"
+                    raise ValueError(msg)
+
+                q = ses.query(DataAccess.type).filter(
+                    In(DataAccess.user_id, groups),
+                    *join_criteria
+                ).order_by(DataAccess.type,order='desc')
+
+                res = [_[DataAccess.type] for _ in q]
+
             elif coll:
-                res = [_[CollectionAccess.type] for _ in
-                  ses.query(CollectionAccess.type).filter(Collection.name==coll.name).order_by(CollectionAccess.type,order='desc')]
+                if isinstance(coll, str):
+                    join_criteria = [Collection.name == coll]
+                elif isinstance(coll, iRODSCollection):
+                    join_criteria = [CollectionAccess.access_id == coll.id] # TODO: access_id is not an accurate name!
+                else:
+                    msg="data must be full logical path or collection object"
+                    raise ValueError(msg)
+
+                q=ses.query(CollectionAccess).filter(
+                        In(CollectionAccess.user_id, groups),
+                        *join_criteria
+                    ).order_by(CollectionAccess.type,order='desc')
+
+                res = [_[CollectionAccess.type] for _ in q]
+
             else:
-               msg = 'Need a collection or data object'
-               raise QueryError(msg)
-            return res
+                msg = 'Need a collection or data object'
+                raise QueryError(msg)
+
+            return res[0] if res else None
 
 
-    def _get_max_access(query, username, zone, coll, data):
+    def _get_user_access_type_via_SpecificQuery(query, username, zone, coll, data):
         denullify_logical_path = lambda _: str(_) if _ != "" else "null"
-
         try:
             row = next(iter(
                 query.execute(
