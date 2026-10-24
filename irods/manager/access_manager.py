@@ -3,12 +3,12 @@
 import logging
 from os.path import basename, dirname
 
-from irods.query import AutoAliasedSpecificQuery, SpecificQuery
 from irods.access import iRODSAccess
 from irods.api_number import api_number
 from irods.collection import iRODSCollection
 from irods.column import In
 from irods.data_object import irods_basename, irods_dirname, iRODSDataObject
+from irods.exception import CAT_NO_ROWS_FOUND
 from irods.manager import Manager
 from irods.message import JSON_Message, ModAclRequest, iRODSMessage
 from irods.models import (
@@ -20,8 +20,8 @@ from irods.models import (
     Group,
     User,
 )
-from irods.exception import CAT_NO_ROWS_FOUND
-from irods.user import iRODSUser
+from irods.query import AutoAliasedSpecificQuery, SpecificQuery
+from irods.user import iRODSUser, iRODSGroup
 
 logger = logging.getLogger(__name__)
 
@@ -103,24 +103,27 @@ class AccessManager(Manager):
             raise QueryError(msg)
 
         if not force_genquery:
-            # Find out if the query is already registered, and if not (and an admin) then register now.
-            try:
-                specific_query = SpecificQuery(ses, alias='findQueryByAlias',args=('getUserAccessType',))
-            except CAT_NO_ROWS_FOUND:
-                pass
-
-            if not specific_query and ses.users.get(ses.username).type == 'rodsadmin':
-                specific_query = UserAccessTypeQuery(ses)
-
-        if specific_query:
-            feedback_method('specific')
-            return self._get_user_access_type_via_SpecificQuery(
-                specific_query,
+            specific_query_args = [
                 user.name,
                 user.zone,
                 coll.path if isinstance(coll, iRODSCollection) else coll,
                 data.path if isinstance(data, iRODSDataObject) else data,
-            )
+            ]
+            # Find out if the query is already registered, and if not (and an admin) then register now.
+            try:
+                specific_query = SpecificQuery(ses, alias='findQueryByAlias', args=('getUserAccessType',))
+                specific_query.execute()
+            except CAT_NO_ROWS_FOUND:
+                specific_query = None
+            else:
+                specific_query = SpecificQuery(ses, alias='getUserAccessType', args=specific_query_args)
+
+            if not specific_query and ses.users.get(ses.username).type == 'rodsadmin':
+                specific_query = UserAccessTypeQuery(ses, args=specific_query_args)
+
+        if specific_query:
+            feedback_method('specific')
+            return self._get_user_access_type_via_SpecificQuery(specific_query)
         else:
             feedback_method('general')
             res = None
@@ -167,18 +170,10 @@ class AccessManager(Manager):
             return res[0] if res else None
 
 
-    def _get_user_access_type_via_SpecificQuery(query, username, zone, coll, data):
-        denullify_logical_path = lambda _: str(_) if _ != "" else "null"
+    def _get_user_access_type_via_SpecificQuery(spec_query):
         try:
             row = next(iter(
-                query.execute(
-                    args=[
-                        username,
-                        zone,
-                        denullify_logical_path(coll),
-                        denullify_logical_path(data)
-                    ]
-                )
+                spec_query.execute()
             ))
         except StopIteration:
             row = {}
