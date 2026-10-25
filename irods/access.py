@@ -1,5 +1,6 @@
 import collections
 import copy
+import enum
 import warnings
 
 from irods.collection import iRODSCollection
@@ -20,6 +21,9 @@ _permissions = (
     "null",
 )
 
+class return_type(enum.Enum):
+    INTEGER = 1
+    STRING = 2
 
 class _Access_LookupMeta(type):
     @staticmethod

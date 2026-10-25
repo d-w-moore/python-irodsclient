@@ -532,7 +532,45 @@ class TestAccess(unittest.TestCase):
             if zone:
                 zone.remove()
 
+    def test_user_has_access(self):
+        user = group = coll = None
+        ses = self.sess
+        try:
+            coll = ses.collections.create('/tempZone/home/public/folder')
+            data = ses.data_objects.create('/tempZone/home/public/folder/file')
+            user = ses.users.create('dan','rodsuser')
+            group = ses.users.create('lab')
+            USER_PERM = 'modify_metadata'
+            GROUP_PERM = 'modify_object'
+            test_perms = { user: USER_PERM, group: GROUP_PERM }
 
+            #TODO: partition as subtests
+            for is_member in (False, True):
+                if is_member:
+                    group.addmember(user)
+                for usr in (user,user.name,group,group.name):
+                    maxusr = user if user not in group.members else group
+                    expected_permission = test_perms[maxusr]
+                    for coll in (coll,coll.path):
+                        for data in (data,data.path):
+                            for query_type in ('general', 'specific'):
+                                query_option = { 'general': True, 'specific': False }[query_type]
+                                feedback = []
+                                permission = ses.acls.get_user_access_type(
+                                    usr,
+                                    coll=coll,
+                                    data=data,
+                                    feedback=feedback,
+                                    force_genquery=query_option
+                                )
+                                self.assertEqual(perm, expected_permission)
+                                self.assertEqual(feedback[0], query_type)
+        finally:
+            if coll: coll.remove(force=True, recurse=True)
+            if user: user.remove()
+            if group: group.remove()
+
+                    
 if __name__ == "__main__":
     # let the tests find the parent irods lib
     sys.path.insert(0, os.path.abspath("../.."))

@@ -3,7 +3,8 @@
 import logging
 from os.path import basename, dirname
 
-from irods.access import iRODSAccess
+import irods.access
+from irods.access import iRODSAccess, return_type
 from irods.api_number import api_number
 from irods.collection import iRODSCollection
 from irods.column import In
@@ -85,7 +86,14 @@ class QueryError(ValueError): pass
 
 class AccessManager(Manager):
 
-    def get_user_access_type(self, user, coll=None, data=None, force_genquery=False, feedback=None):
+    def get_user_access_type(self,
+        user, 
+        coll=None, 
+        data=None, 
+        force_genquery=False, 
+        feedback=None,
+        return_type = irods.access.return_type.INTEGER
+    ):
         ses = self.sess
         specific_query = None
 
@@ -96,8 +104,8 @@ class AccessManager(Manager):
         # Convert user or group to object.  Need to know if we are dealing with a rodsadmin
         if isinstance(user, (iRODSUser, iRODSGroup)):
             pass
-        elif isinstance(user,str):
-            user=self.sess.users.get(user)
+#       elif isinstance(user,str):
+#           user=self.sess.users.get(user)
         else:
             msg = "Need a string or irods{Group,User} argument for 'user'"
             raise QueryError(msg)
@@ -124,11 +132,12 @@ class AccessManager(Manager):
         if specific_query:
             feedback_method('specific')
             max_permission = self._get_user_access_type_via_SpecificQuery(specific_query)
-            return max_permission
+            res = [max_permission]
         else:
             feedback_method('general')
             res = None
-            groups = {g[Group.id] for g in ses.query(Group, User).filter(User.id == user.id)}
+            groups = {g[Group.id] for g in ses.query(Group, User).filter(Group.id != user.id, User.id == user.id)}
+            groups |= {user.id}
 
             if data:
                 if isinstance(data, str):
@@ -152,7 +161,7 @@ class AccessManager(Manager):
                 if isinstance(coll, str):
                     join_criteria = [Collection.name == coll]
                 elif isinstance(coll, iRODSCollection):
-                    join_criteria = [CollectionAccess.access_id == coll.id] # TODO: access_id is not an accurate name!
+                    join_criteria = [CollectionAccess.access_id == coll.id] # TODO: access_id is not an accurate name, should be coll_id
                 else:
                     msg="data must be full logical path or collection object"
                     raise ValueError(msg)
@@ -168,7 +177,11 @@ class AccessManager(Manager):
                 msg = 'Need a collection or data object'
                 raise QueryError(msg)
 
-            return res[0] if res else None
+            retval_transform = (
+                (lambda _: iRODSAccess.strings[_]) if return_type == irods.access.return_type.STRING else (lambda _:_)
+            )
+            res = res[0] if res else None
+            return retval_transform(res) if isinstance(res, int) else None
 
 
     @staticmethod
