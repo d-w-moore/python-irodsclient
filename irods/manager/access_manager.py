@@ -123,7 +123,8 @@ class AccessManager(Manager):
 
         if specific_query:
             feedback_method('specific')
-            return self._get_user_access_type_via_SpecificQuery(specific_query)
+            max_permission = self._get_user_access_type_via_SpecificQuery(specific_query)
+            return max_permission
         else:
             feedback_method('general')
             res = None
@@ -170,6 +171,7 @@ class AccessManager(Manager):
             return res[0] if res else None
 
 
+    @staticmethod
     def _get_user_access_type_via_SpecificQuery(spec_query):
         try:
             row = next(iter(
@@ -178,7 +180,8 @@ class AccessManager(Manager):
         except StopIteration:
             row = {}
 
-        return row.get(0)
+        highest_perm = row.get(0)
+        return None if highest_perm is None else int(highest_perm)
 
     @staticmethod
     def _to_acl_operation_json(op_input: iRODSAccess):
