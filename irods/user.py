@@ -17,6 +17,10 @@ class iRODSUser:
     def set_quota(self, amount, resource="total"):
         self.manager.set_quota(self.name, amount, resource=resource)
 
+    # TODO: add issue for iRODSUser & iRODSGroup equality operators
+    def __eq__(self, other_user):
+        return (self.name, self.zone) == (other_user.name, other_user.zone)
+
     def __init__(self, manager, result=None):
         self.manager = manager
         if result:
@@ -81,6 +85,9 @@ class iRODSGroup:
 
     def set_quota(self, amount, resource="total"):
         self.manager.set_quota(self.name, amount, resource=resource)
+
+    def __eq__(self, other_group):
+        return self.name == other_group.name
 
     def __init__(self, manager, result=None):
         self.manager = manager
