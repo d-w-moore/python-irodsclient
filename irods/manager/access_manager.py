@@ -120,7 +120,7 @@ class AccessManager(Manager):
 
             # Find out if the query is already registered.
             try:
-                specific_query = SpecificQuery(ses, alias='findQueryByAlias', args=('getUserAccessType',))
+                specific_query = SpecificQuery(ses, alias='findQueryByAlias', args=('getMaximumPermissionForPath',))
                 specific_query.execute()
             except CAT_NO_ROWS_FOUND:
                 specific_query = None
