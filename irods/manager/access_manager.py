@@ -150,7 +150,7 @@ class AccessManager(Manager):
                 elif isinstance(data, iRODSDataObject):
                     join_criteria = [ DataAccess.data_id == data.id]
                 else:
-                    msg="data must be full logical path or data object"
+                    msg="'data' parameter must be full logical path or data object"
                     raise ValueError(msg)
 
                 q = ses.query(DataAccess.type).filter(
@@ -166,7 +166,7 @@ class AccessManager(Manager):
                 elif isinstance(coll, iRODSCollection):
                     join_criteria = [CollectionAccess.access_id == coll.id] # TODO: access_id is not an accurate name, should be coll_id
                 else:
-                    msg="data must be full logical path or collection object"
+                    msg="'coll' parameter must be full logical path or collection object"
                     raise ValueError(msg)
 
                 q=ses.query(CollectionAccess).filter(

@@ -19,7 +19,7 @@ class iRODSUser:
 
     # TODO: add issue for iRODSUser & iRODSGroup equality operators
     def __eq__(self, other_user):
-        return (self.name, self.zone) == (other_user.name, other_user.zone)
+        return isinstance(other_user, iRODSUser) and (self.name, self.zone) == (other_user.name, other_user.zone)
 
     def __init__(self, manager, result=None):
         self.manager = manager

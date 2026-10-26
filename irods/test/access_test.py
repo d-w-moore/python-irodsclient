@@ -4,6 +4,7 @@ import os
 import sys
 import unittest
 
+import irods.access
 from irods.access import ACLOperation, iRODSAccess
 from irods.collection import iRODSCollection
 from irods.column import In, Like
@@ -536,8 +537,8 @@ class TestAccess(unittest.TestCase):
         user = group = coll = None
         ses = self.sess
         try:
-            coll = ses.collections.create('/tempZone/home/public/folder')
-            data = ses.data_objects.create('/tempZone/home/public/folder/file')
+            coll = ses.collections.create('/tempZone/home/public/folder_561')
+            data = ses.data_objects.create('/tempZone/home/public/folder_561/file')
             user = ses.users.create('bob','rodsuser')
             group = ses.groups.create('lab')
 
@@ -553,9 +554,9 @@ class TestAccess(unittest.TestCase):
             for is_member in (False, True):
                 if is_member:
                     group.addmember(user.name,user.zone)
-                for usr in (user,group):
-                    maxusr = user if user not in group.members else group
-                    expected_permission = test_perms[maxusr.name]
+                for usr in (user, group):
+                    max_user = usr if usr not in group.members else group
+                    expected_permission = test_perms[max_user.name]
                     for obj_type, obj in (
                         ("coll", coll),
                         ("coll", coll.path),
@@ -570,9 +571,10 @@ class TestAccess(unittest.TestCase):
                                     usr,
                                     feedback=feedback,
                                     force_genquery=force_genquery_option,
+                                    return_type=irods.access.return_type.STRING,
                                     **{obj_type: obj},
                                 )
-                                self.assertEqual(perm, expected_permission)
+                                self.assertEqual(permission, expected_permission)
                                 self.assertEqual(feedback[0], query_type)
         finally:
             if coll:
