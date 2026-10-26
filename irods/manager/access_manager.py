@@ -87,10 +87,10 @@ class QueryParameterError(ValueError): pass
 class AccessManager(Manager):
 
     def get_maximum_permission_for_path(self,
-        user, 
-        coll=None, 
-        data=None, 
-        force_genquery=False, 
+        user,
+        coll=None,
+        data=None,
+        force_genquery=False,
         feedback=None,
         return_type = irods.access.return_type.INTEGER
     ):
@@ -100,7 +100,7 @@ class AccessManager(Manager):
         # Mainly for testing to assure success in guiding the query method to be 'general' or 'specific'
         def feedback_method(string):
             if isinstance(feedback,list): feedback[:0]=[string]
-            
+
         # Convert user or group to object.  Need to know if we are dealing with a rodsadmin
         if isinstance(user, (iRODSUser, iRODSGroup)):
             pass
