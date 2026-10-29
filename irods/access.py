@@ -21,10 +21,6 @@ _permissions = (
     "null",
 )
 
-class return_type(enum.Enum):
-    INTEGER = 1
-    STRING = 2
-
 class _Access_LookupMeta(type):
     @staticmethod
     def _codes():

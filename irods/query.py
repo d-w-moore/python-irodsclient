@@ -292,6 +292,11 @@ class SpecificQuery:
         self._columns = columns
         self._args = args or []
 
+    def reset_for_new_query(self, args=None):
+        self._continue_index = 0
+        if args is not None:
+            self._args = args
+
     def register(self):
         if not self._sql:
             raise ValueError("Empty query")
@@ -368,45 +373,6 @@ class SpecificQuery:
                 yield result
 
 
-class AutoAliasedSpecificQuery(SpecificQuery):
-    # Subclasses should set this to a nonzero length string in valid SQL.
-    SQL = None
-
-    def __init__(self, sess, **kw):
-        self.__alias = None
-
-        if 'sql' not in kw:
-            kw['sql'] = getattr(self,'SQL') or 'select 1'
-
-        if kw.get('alias') is None:
-            kw['alias'] = self.__alias = str(uuid.uuid1())
-
-        super().__init__(sess,**kw)
-
-        if self.__alias:
-            self.register()
-
-    def _clone(self):
-        q = copy.copy(self)
-
-        # So that the _clone's destruction does not remove the query from the catalog:
-        q.__alias = None
-        return q
-
-    def __del__(self):
-        if self.__alias is not None:
-            SpecificQuery(self.session, alias=self.__alias).remove()
-
-    def execute(self, args=(), **kw):
-        # Support independent iterators.
-        q = self._clone()
-        if not q._args:
-            q._args = list(args)
-        results = super().execute(instance=q, **kw)
-        return results
-
-    @property
-    def auto_alias(self): return self.__alias
 
 
 # Record a copy of the original value of IRODS_QUERY_LIMIT for possible future access.

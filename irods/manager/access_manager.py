@@ -3,8 +3,7 @@
 import logging
 from os.path import basename, dirname
 
-import irods.access
-from irods.access import iRODSAccess, return_type
+from irods.access import iRODSAccess
 from irods.api_number import api_number
 from irods.collection import iRODSCollection
 from irods.column import In
@@ -21,8 +20,9 @@ from irods.models import (
     Group,
     User,
 )
-from irods.query import AutoAliasedSpecificQuery, SpecificQuery
+from irods.query import SpecificQuery
 from irods.user import iRODSUser, iRODSGroup
+
 
 logger = logging.getLogger(__name__)
 
@@ -38,68 +38,40 @@ def users_by_ids(session, ids=()):
     cond = () if not ids else ((In(User.id, list(map(int, ids))),) if len(ids) > 1 else (User.id == int(ids[0]),))
     return [iRODSUser(session.users, i) for i in session.query(User.id, User.name, User.type, User.zone).filter(*cond)]
 
-class UserAccessTypeQuery(AutoAliasedSpecificQuery):
-  SQL='''
-WITH target_user AS (
-    SELECT user_id
-    FROM r_user_main
-    WHERE user_name = ?
-      AND zone_name = ?
-),
-resolved_object AS (
-    -- The path names a collection
-    SELECT coll_id AS object_id
-    FROM r_coll_main
-    WHERE coll_name = ?
 
-    UNION
+class QueryParameterError(ValueError):
+    pass
 
-    -- The path names a data object: collection path + '/' + data name
-    SELECT d.data_id AS object_id
-    FROM r_data_main AS d
-    JOIN r_coll_main AS c ON c.coll_id = d.coll_id
-    WHERE CONCAT(c.coll_name, '/', d.data_name) = ?
-),
-grants AS (
-    -- Direct grants
-    SELECT a.access_type_id
-    FROM r_objt_access AS a
-    JOIN target_user AS u ON u.user_id = a.user_id
-    JOIN resolved_object AS o ON o.object_id = a.object_id
-
-    UNION ALL
-
-    -- Grants to groups the user belongs to
-    SELECT a.access_type_id
-    FROM r_user_group AS ug
-    JOIN target_user AS u ON u.user_id = ug.user_id
-    JOIN r_objt_access AS a ON a.user_id = ug.group_user_id
-    JOIN resolved_object AS o ON o.object_id = a.object_id
-)
-SELECT access_type_id
-FROM grants
-ORDER BY access_type_id DESC
-LIMIT 1;
-'''
-
-class QueryParameterError(ValueError): pass
+# This is the alias where we expect to find a specific query
+alias_for_get_maximum_permission_for_path = 'get_maximum_permission_for_path'
 
 class AccessManager(Manager):
-
     def get_maximum_permission_for_path(self,
-        user,
-        coll=None,
-        data=None,
-        force_genquery=False,
-        feedback=None,
-        return_type = irods.access.return_type.INTEGER
+        user : [iRODSUser|iRODSGroup],
+        coll : [str|iRODSCollection|None]=None,
+        data : [str|iRODSDataObject|None]=None,
+        specific_query : [SpecificQuery|str|None]='',
+        return_type : type[int]|type[str]=int,
     ):
-        ses = self.sess
-        specific_query = None
+        """
+        Return the highest permission the named user/group has with respect to the
+        given data object or collection.  In calculating this result, all ACLs and
+        group memberships are factored in.
 
-        # Mainly for testing to assure success in guiding the query method to be 'general' or 'specific'
-        def feedback_method(string):
-            if isinstance(feedback,list): feedback[:0]=[string]
+        Only one of 'data' or 'coll' may be specified.
+
+        Args:
+            user: an iRODSUser or iRODSGroup object for whom the permission is to be calculated.
+            coll: an iRODS logical path or iRODSCollection.
+            data: an iRODS logical path or iRODSDataObject.
+            specific_query (default ""): a SpecificQuery object or an alias specifying 
+                the specific query used for the calculation.  The default value of "" will be
+                interpreted to mean the designated specific query preconfigured for this express
+                purpose.  If the server does not cache a query under that alias, or if None is
+                given as a value, then the calculation will be done via a general query.
+            return_type: the type expected for the return value, i.e. str or int.  Defaults to int.
+        """
+        ses = self.sess
 
         # Convert user or group to object.  Need to know if we are dealing with a rodsadmin
         if isinstance(user, (iRODSUser, iRODSGroup)):
@@ -108,36 +80,31 @@ class AccessManager(Manager):
             msg = "'user' argument should be of type iRODSUser or iRODSGroup."
             raise QueryParameterError(msg)
 
-        denullify = lambda s: s if s else "x"
+        _specific_query = None
 
-        if not force_genquery:
-            specific_query_args = [
-                user.name,
-                getattr(user,'zone',ses.zone),
-                denullify(coll.path if isinstance(coll, iRODSCollection) else coll),
-                denullify(data.path if isinstance(data, iRODSDataObject) else data),
-            ]
+        if specific_query == '':
+            specific_query = alias_for_get_maximum_permission_for_path
 
-            # Find out if the query is already registered.
-            try:
-                specific_query = SpecificQuery(ses, alias='findQueryByAlias', args=('getMaximumPermissionForPath',))
-                specific_query.execute()
-            except CAT_NO_ROWS_FOUND:
-                specific_query = None
-            else:
-                specific_query = SpecificQuery(ses, alias='getUserAccessType', args=specific_query_args)
-
-            # If there is no canned query available, and we are a rodsadmin, then install our own:
-            if not specific_query and ses.users.get(ses.username).type == 'rodsadmin':
-                specific_query = UserAccessTypeQuery(ses, args=specific_query_args)
+        if isinstance(specific_query, SpecificQuery):
+            _specific_query = specific_query
+        elif isinstance(specific_query, str):
+            _specific_query = SpecificQuery(ses, alias=specific_query)
 
         # Dispatch to the available/chosen query method.
-        if specific_query:
-            feedback_method('specific')
-            max_permission = self._get_maximum_permission_for_path_via_SpecificQuery(specific_query)
+        if _specific_query is not None:
+            def denullify(s):
+                return s if s else "x"
+            _specific_query.reset_for_new_query(
+                args=[
+                    user.name,
+                    getattr(user,'zone',ses.zone),
+                    denullify(coll.path if isinstance(coll, iRODSCollection) else coll),
+                    denullify(data.path if isinstance(data, iRODSDataObject) else data),
+                ]
+            )
+            max_permission = self._get_maximum_permission_for_path_via_SpecificQuery(_specific_query)
             res = [max_permission]
         else:
-            feedback_method('general')
             res = None
             groups = {g[Group.id] for g in ses.query(Group, User).filter(Group.id != user.id, User.id == user.id)}
             groups |= {user.id}
@@ -181,7 +148,7 @@ class AccessManager(Manager):
                 raise QueryParameterError(msg)
 
         retval_transform = (
-            (lambda _: iRODSAccess.strings[_]) if return_type == irods.access.return_type.STRING else (lambda _:_)
+            (lambda _: iRODSAccess.strings[_]) if return_type is str else (lambda _:_)
         )
         res = res[0] if res else None
         return retval_transform(res) if isinstance(res, int) else None

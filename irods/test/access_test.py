@@ -1,7 +1,8 @@
 #! /usr/bin/env python
-
+ 
 import os
 import sys
+import textwrap
 import unittest
 
 import irods.access
@@ -15,6 +16,50 @@ from irods.session import iRODSSession
 from irods.test import helpers
 from irods.user import iRODSUser
 
+from irods.manager.access_manager import alias_for_get_maximum_permission_for_path
+
+SQL = textwrap.dedent('''
+    WITH target_user AS (
+        SELECT user_id
+        FROM r_user_main
+        WHERE user_name = ?
+          AND zone_name = ?
+    ),
+    resolved_object AS (
+        -- The path names a collection
+        SELECT coll_id AS object_id
+        FROM r_coll_main
+        WHERE coll_name = ?
+
+        UNION
+
+        -- The path names a data object: collection path + '/' + data name
+        SELECT d.data_id AS object_id
+        FROM r_data_main AS d
+        JOIN r_coll_main AS c ON c.coll_id = d.coll_id
+        WHERE CONCAT(c.coll_name, '/', d.data_name) = ?
+    ),
+    grants AS (
+        -- Direct grants
+        SELECT a.access_type_id
+        FROM r_objt_access AS a
+        JOIN target_user AS u ON u.user_id = a.user_id
+        JOIN resolved_object AS o ON o.object_id = a.object_id
+
+        UNION ALL
+
+        -- Grants to groups the user belongs to
+        SELECT a.access_type_id
+        FROM r_user_group AS ug
+        JOIN target_user AS u ON u.user_id = ug.user_id
+        JOIN r_objt_access AS a ON a.user_id = ug.group_user_id
+        JOIN resolved_object AS o ON o.object_id = a.object_id
+    )
+    SELECT access_type_id
+    FROM grants
+    ORDER BY access_type_id DESC
+    LIMIT 1;'''
+)
 
 class TestAccess(unittest.TestCase):
     def setUp(self):
@@ -551,6 +596,19 @@ class TestAccess(unittest.TestCase):
                 ses.acls.set(iRODSAccess(USER_PERM, obj.path, user.name))
                 ses.acls.set(iRODSAccess(GROUP_PERM, obj.path, group.name))
 
+            options = {}
+            try:
+                SpecificQuery(ses, alias='findQueryByAlias', args=(alias_for_get_maximum_permission_for_path,)).execute()
+            except CAT_NO_ROWS_FOUND:
+                options = dict(
+                    query_alias = str(uuid.uuid1()),
+                    sql = SQL
+                )
+
+            specific_query = SpecificQuery(ses, alias=query_alias, **options)
+
+#   def test_get_maximum_permission_for_path__issue_561(self):
+
             for is_member in (False, True):
                 if is_member:
                     group.addmember(user.name,user.zone)
@@ -563,15 +621,14 @@ class TestAccess(unittest.TestCase):
                         ("data", data),
                         ("data", data.path),
                     ):
-                        for query_type in ('general', 'specific'):
-                            with self.subTest(f"{is_member=}, testing {usr} {obj} {query_type}"):
+                        for s_query in (None, specific_query):
+                            with self.subTest(f"{is_member=} testing {usr=} {obj=} {s_query=}"):
                                 force_genquery_option = {'general': True, 'specific': False}[query_type]
                                 feedback = []
                                 permission = ses.acls.get_maximum_permission_for_path(
                                     usr,
-                                    feedback=feedback,
-                                    force_genquery=force_genquery_option,
                                     return_type=irods.access.return_type.STRING,
+                                    specific_query=s_query,
                                     **{obj_type: obj},
                                 )
                                 self.assertEqual(permission, expected_permission)
@@ -584,6 +641,8 @@ class TestAccess(unittest.TestCase):
                 user.remove()
             if group:
                 group.remove()
+            if query_alias:
+                specific_query.remove()
 
 
 if __name__ == "__main__":
