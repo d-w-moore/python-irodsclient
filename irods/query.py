@@ -1,5 +1,4 @@
 from collections import OrderedDict
-import copy
 import uuid
 
 from irods import MAX_SQL_ROWS
@@ -320,10 +319,7 @@ class SpecificQuery:
             response = conn.recv()
         return response
 
-    def execute(self, limit=MAX_SQL_ROWS, offset=0, options=0, conditions=None, instance=None):
-        if instance is not None:
-            self = instance
-
+    def execute(self, limit=MAX_SQL_ROWS, offset=0, options=0, conditions=None):
         target = self._alias or self._sql
 
         if conditions is None:

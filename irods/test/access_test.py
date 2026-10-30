@@ -581,6 +581,7 @@ class TestAccess(unittest.TestCase):
     def test_get_maximum_permission_for_path__issue_561(self):
         user = group = coll = None
         ses = self.sess
+        options = {}
         try:
             coll = ses.collections.create('/tempZone/home/public/folder_561')
             data = ses.data_objects.create('/tempZone/home/public/folder_561/file')
@@ -596,7 +597,6 @@ class TestAccess(unittest.TestCase):
                 ses.acls.set(iRODSAccess(USER_PERM, obj.path, user.name))
                 ses.acls.set(iRODSAccess(GROUP_PERM, obj.path, group.name))
 
-            options = {}
             try:
                 SpecificQuery(ses, alias='findQueryByAlias', args=(alias_for_get_maximum_permission_for_path,)).execute()
             except CAT_NO_ROWS_FOUND:
@@ -641,7 +641,7 @@ class TestAccess(unittest.TestCase):
                 user.remove()
             if group:
                 group.remove()
-            if query_alias:
+            if options.get('query_alias'):
                 specific_query.remove()
 
 
