@@ -51,7 +51,7 @@ class AccessManager(Manager):
         coll : [str|iRODSCollection|None]=None,
         data : [str|iRODSDataObject|None]=None,
         specific_query : [SpecificQuery|str|None]='',
-        return_type : type[int]|type[str]=int,
+        return_type : type[int]|type[str]=str,
     ) -> int|str:
         """
         Return the highest permission the named user/group has with respect to the

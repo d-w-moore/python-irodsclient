@@ -627,7 +627,6 @@ class TestAccess(unittest.TestCase):
                                     logger.addHandler(handler:=StreamHandler(stream:=io.StringIO()))
                                     permission = ses.acls.get_maximum_permission_for_path(
                                         usr,
-                                        return_type=str,
                                         **query_options[query_index],
                                         **{obj_type: obj},
                                     )
