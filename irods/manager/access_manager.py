@@ -64,7 +64,7 @@ class AccessManager(Manager):
             user: an iRODSUser or iRODSGroup object for whom the permission is to be calculated.
             coll: an iRODS logical path or iRODSCollection.
             data: an iRODS logical path or iRODSDataObject.
-            specific_query (default ""): a SpecificQuery object or an alias specifying 
+            specific_query (default ""): a SpecificQuery object or an alias specifying
                 the specific query used for the calculation.  The default value of "" will be
                 interpreted to mean the designated specific query preconfigured for this express
                 purpose.  If the server does not cache a query under that alias, or if None is
@@ -89,9 +89,10 @@ class AccessManager(Manager):
             _specific_query = specific_query
         elif isinstance(specific_query, str):
             _specific_query = SpecificQuery(ses, alias=specific_query)
-
+        logger=logging.getLogger('issue_561_query_type_detection')
         # Dispatch to the available/chosen query method.
         if _specific_query is not None:
+            logger.debug('SPECIFIC')
             def denullify(s):
                 return s if s else "x"
             _specific_query.reset_for_new_query(
@@ -105,6 +106,7 @@ class AccessManager(Manager):
             max_permission = self._get_maximum_permission_for_path_via_SpecificQuery(_specific_query)
             res = [max_permission]
         else:
+            logger.debug('GENERAL')
             res = None
             groups = {g[Group.id] for g in ses.query(Group, User).filter(Group.id != user.id, User.id == user.id)}
             groups |= {user.id}

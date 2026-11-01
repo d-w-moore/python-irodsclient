@@ -1,6 +1,5 @@
 import collections
 import copy
-import enum
 import warnings
 
 from irods.collection import iRODSCollection
