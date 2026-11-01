@@ -19,7 +19,11 @@ class iRODSUser:
 
     # TODO: add issue for iRODSUser & iRODSGroup equality operators
     def __eq__(self, other_user):
-        return isinstance(other_user, iRODSUser) and (self.name, self.zone) == (other_user.name, other_user.zone)
+        # For the case of (iRODSUser_instance == iRODSGroup_instance), iRODSGroup.__eq__ is the fallback
+        # chosen by the Python interpreter when NotImplemented is returned.
+        if not isinstance(other_user, iRODSUser):
+            return NotImplemented
+        return (self.name, self.zone) == (other_user.name, other_user.zone)
 
     def __init__(self, manager, result=None):
         self.manager = manager
@@ -86,8 +90,14 @@ class iRODSGroup:
     def set_quota(self, amount, resource="total"):
         self.manager.set_quota(self.name, amount, resource=resource)
 
+    @property
+    def zone(self):
+        return self.manager.sess.zone
+
     def __eq__(self, other_group):
-        return self.name == other_group.name
+        if not isinstance(other_group, (iRODSUser,iRODSGroup)):
+            return NotImplemented
+        return (self.name, self.zone) == (other_group.name, other_group.zone)
 
     def __init__(self, manager, result=None):
         self.manager = manager
