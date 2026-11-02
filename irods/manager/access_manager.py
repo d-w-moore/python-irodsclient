@@ -2,6 +2,7 @@
 
 import logging
 from os.path import basename, dirname
+import typing
 
 from irods.access import iRODSAccess
 from irods.api_number import api_number
@@ -45,13 +46,16 @@ class QueryParameterError(ValueError):
 # This is the alias where we expect to find a specific query
 alias_for_get_maximum_permission_for_path = 'get_maximum_permission_for_path'
 
+class _iRODSPermission(typing.NamedTuple):
+    as_string: str
+    as_integer: int
+
 class AccessManager(Manager):
     def get_maximum_permission_for_path(self,
         user : [iRODSUser|iRODSGroup],
         coll : [str|iRODSCollection|None]=None,
         data : [str|iRODSDataObject|None]=None,
         specific_query : [SpecificQuery|str|None]='',
-        return_type : type[int]|type[str]=str,
     ) -> int|str:
         """
         Return the highest permission the named user/group has with respect to the
@@ -69,7 +73,11 @@ class AccessManager(Manager):
                 interpreted to mean the designated specific query preconfigured for this express
                 purpose.  If the server does not cache a query under that alias, or if None is
                 given as a value, then the calculation will be done via a general query.
-            return_type: the type expected for the return value, i.e. str or int.  Defaults to int.
+
+        Returns:
+            a named tuple representing the permission results in terms of both the symbolic
+            string (<retval>.as_string) and integer code (<retval>.as_integer).  If no ACLs
+            exist granting permission for the named user or group, then None is returned.
         """
         ses = self.sess
 
@@ -149,12 +157,8 @@ class AccessManager(Manager):
                 msg = 'Need a collection or data object'
                 raise QueryParameterError(msg)
 
-        retval_transform = (
-            (lambda _: iRODSAccess.strings[_]) if return_type is str else (lambda _:_)
-        )
         res = res[0] if res else None
-        return retval_transform(res) if isinstance(res, int) else None
-
+        return _iRODSPermission(iRODSAccess.strings[res], as_integer=res) if isinstance(res, int) else None
 
     @staticmethod
     def _get_maximum_permission_for_path_via_SpecificQuery(spec_query):
@@ -162,7 +166,7 @@ class AccessManager(Manager):
             row = next(iter(
                 spec_query.execute()
             ))
-        except StopIteration:
+        except (StopIteration, CAT_NO_ROWS_FOUND):
             row = {}
 
         highest_perm = row.get(0)

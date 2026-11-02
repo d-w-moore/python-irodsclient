@@ -629,7 +629,7 @@ class TestAccess(unittest.TestCase):
                                         usr,
                                         **query_options[query_index],
                                         **{obj_type: obj},
-                                    )
+                                    ).as_string
                                     self.assertEqual(permission, expected_permission)
                                     # Check logging output to verify which code path was taken.
                                     self.assertEqual(stream.getvalue(), query_index)
