@@ -12,8 +12,8 @@ from irods.models import Collection, DataObject, User
 from irods.path import iRODSPath
 from irods.session import iRODSSession
 from irods.test import helpers
+from irods.test.modules.test_dataaccess_column_names__issue_841 import TestDataAccessColumnNames
 from irods.user import iRODSUser
-
 
 class TestAccess(unittest.TestCase):
     def setUp(self):
