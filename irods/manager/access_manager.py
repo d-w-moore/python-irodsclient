@@ -2,7 +2,7 @@
 
 import logging
 from os.path import basename, dirname
-import typing
+from typing import Union, NamedTuple
 
 from irods.access import iRODSAccess
 from irods.api_number import api_number
@@ -46,17 +46,17 @@ class QueryParameterError(ValueError):
 # This is the alias where we expect to find a specific query
 alias_for_get_maximum_permission_for_path = 'get_maximum_permission_for_path'
 
-class _iRODSPermission(typing.NamedTuple):
+class _iRODSPermission(NamedTuple):
     as_string: str
     as_integer: int
 
 class AccessManager(Manager):
     def get_maximum_permission_for_path(self,
-        user : [iRODSUser|iRODSGroup],
-        coll : [str|iRODSCollection|None]=None,
-        data : [str|iRODSDataObject|None]=None,
-        specific_query : [SpecificQuery|str|None]='',
-    ) -> int|str:
+        user : Union[iRODSUser, iRODSGroup],
+        coll : Union[str, iRODSCollection, None]=None,
+        data : Union[str, iRODSDataObject, None]=None,
+        specific_query : Union[SpecificQuery, str, None]='',
+    ) -> _iRODSPermission:
         """
         Return the highest permission the named user/group has with respect to the
         given data object or collection.  In calculating this result, all ACLs and
