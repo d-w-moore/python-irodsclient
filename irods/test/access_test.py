@@ -578,10 +578,17 @@ class TestAccess(unittest.TestCase):
                 JOIN r_objt_access AS a ON a.user_id = ug.group_user_id
                 JOIN resolved_object AS o ON o.object_id = a.object_id
             )
-            SELECT access_type_id
-            FROM grants
-            ORDER BY access_type_id DESC
-            LIMIT 1;'''
+--          SELECT access_type_id
+--          FROM grants
+--          ORDER BY access_type_id DESC
+--          LIMIT 1;
+            SELECT g.access_type_id, tok.token_name
+            FROM grants g
+            INNER JOIN r_tokn_main tok
+            ON tok.token_id = g.access_type_id AND tok.token_namespace = 'access_type'
+            ORDER BY g.access_type_id DESC
+            LIMIT 1;
+'''
         )
         user = group = coll = None
         ses = self.sess

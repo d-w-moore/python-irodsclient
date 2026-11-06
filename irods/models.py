@@ -24,6 +24,11 @@ class Model(metaclass=ModelBase):
     pass
 
 
+class Token(Model):
+    namespace = Column(String, "COL_TOKEN_NAMESPACE", 1100)
+    id = Column(Integer, "COL_TOKEN_ID", 1101)
+    name = Column(String, "COL_TOKEN_NAME", 1102)
+
 class RuleExec(Model):
     id = Column(Integer, "RULE_EXEC_ID", 1000)
     name = Column(String, "RULE_EXEC_NAME", 1001)
