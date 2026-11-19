@@ -608,8 +608,9 @@ class TestAccess(unittest.TestCase):
                     alias='findQueryByAlias', 
                     args=(query_alias:=alias_for_get_maximum_permission_for_path,)).execute()
             except CAT_NO_ROWS_FOUND:
-                query_alias = str(uuid.uuid1()),
-                sql_arg = {'sql':SQL}
+                query_alias = str(uuid.uuid1())
+                # PostGres is truly case insensitive for table names, whereas MySQL prefers them uppercase.
+                sql_arg = {'sql':SQL.upper()}
 
             my_specific_query = SpecificQuery(ses, alias=query_alias, **sql_arg)
             if sql_arg:
