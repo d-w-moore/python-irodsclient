@@ -1,5 +1,4 @@
 from collections import OrderedDict
-import uuid
 
 from irods import MAX_SQL_ROWS
 from irods.models import Model

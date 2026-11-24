@@ -8,7 +8,6 @@ import textwrap
 import unittest
 import uuid
 
-import irods.access
 from irods.access import ACLOperation, iRODSAccess
 from irods.collection import iRODSCollection
 from irods.column import In, Like
@@ -636,6 +635,7 @@ class TestAccess(unittest.TestCase):
                         }
                         for query_index in ('SPECIFIC', 'GENERAL'):
                             with self.subTest(f"Issue 561 subTest: {is_member=} {usr=} {obj=} {query_index=}"):
+                                handler = None
                                 try:
                                     logger.addHandler(handler:=logging.StreamHandler(stream:=io.StringIO()))
                                     permission = ses.acls.get_maximum_permission_for_path(
@@ -647,7 +647,8 @@ class TestAccess(unittest.TestCase):
                                     # Check logging output to verify which code path was taken.
                                     self.assertEqual(stream.getvalue().rstrip(), query_index)
                                 finally:
-                                    logger.removeHandler(handler)
+                                    if handler:
+                                        logger.removeHandler(handler)
         finally:
             if coll:
                 # Removes test data object as well.
