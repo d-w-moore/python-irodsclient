@@ -52,10 +52,10 @@ class _iRODSPermission(typing.NamedTuple):
 
 class AccessManager(Manager):
     def get_maximum_permission_for_path(self,
-        user : [iRODSUser|iRODSGroup],
-        collection : [str|iRODSCollection|None]=None,
-        data_object : [str|iRODSDataObject|None]=None,
-        specific_query : [SpecificQuery|str|None]='',
+        user : (iRODSUser|iRODSGroup),
+        collection : (str|iRODSCollection|None)=None,
+        data_object : (str|iRODSDataObject|None)=None,
+        specific_query : (SpecificQuery|str|None)='',
     ) -> _iRODSPermission|None:
         """
         Return the highest permission the named user/group has with respect to the
