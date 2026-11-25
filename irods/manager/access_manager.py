@@ -153,7 +153,7 @@ class AccessManager(Manager):
                 elif isinstance(collection, iRODSCollection):
                     join_criteria = [
                         CollectionAccess.access_id == collection.id
-                    ]  # TODO: access_id is not an accurate name, should be coll_id
+                    ]
                 else:
                     msg = "'collection' parameter must be full logical path or collection object"
                     raise ValueError(msg)

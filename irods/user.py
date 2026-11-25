@@ -17,7 +17,6 @@ class iRODSUser:
     def set_quota(self, amount, resource="total"):
         self.manager.set_quota(self.name, amount, resource=resource)
 
-    # TODO: add issue for iRODSUser & iRODSGroup equality operators
     def __eq__(self, other_user):
         # For the case of (iRODSUser_instance == iRODSGroup_instance), iRODSGroup.__eq__ is the fallback
         # chosen by the Python interpreter when NotImplemented is returned.
