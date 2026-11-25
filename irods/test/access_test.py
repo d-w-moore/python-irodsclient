@@ -12,14 +12,13 @@ from irods.access import ACLOperation, iRODSAccess
 from irods.collection import iRODSCollection
 from irods.column import In, Like
 from irods.exception import CAT_NO_ROWS_FOUND, UserDoesNotExist
+from irods.manager.access_manager import alias_for_get_maximum_permission_for_path
 from irods.models import Collection, DataObject, User
 from irods.path import iRODSPath
 from irods.query import SpecificQuery
 from irods.session import iRODSSession
 from irods.test import helpers
 from irods.user import iRODSUser
-
-from irods.manager.access_manager import alias_for_get_maximum_permission_for_path
 
 
 class TestAccess(unittest.TestCase):
@@ -604,7 +603,7 @@ class TestAccess(unittest.TestCase):
             sql_arg = {}
             try:
                 SpecificQuery(ses,
-                    alias='findQueryByAlias', 
+                    alias='findQueryByAlias',
                     args=(query_alias:=alias_for_get_maximum_permission_for_path,)).execute()
             except CAT_NO_ROWS_FOUND:
                 query_alias = str(uuid.uuid1())

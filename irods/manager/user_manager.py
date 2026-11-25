@@ -2,26 +2,27 @@ import logging
 import os
 import warnings
 
-from irods.models import User, Group
+import irods.password_obfuscation as obf
+from irods.api_number import api_number
+from irods.exception import (
+    CAT_SQL_ERR,
+    GroupDoesNotExist,
+    MultipleResultsFound,
+    NoResultFound,
+    UserDoesNotExist,
+)
 from irods.manager import Manager
 from irods.message import (
-    UserAdminRequest,
     GeneralAdminRequest,
+    GetTempPasswordForOtherOut,
+    GetTempPasswordForOtherRequest,
+    UserAdminRequest,
     _do_GeneralAdminRequest,
     iRODSMessage,
-    GetTempPasswordForOtherRequest,
-    GetTempPasswordForOtherOut,
 )
-from irods.exception import (
-    UserDoesNotExist,
-    GroupDoesNotExist,
-    NoResultFound,
-    MultipleResultsFound,
-    CAT_SQL_ERR,
-)
-from irods.api_number import api_number
-from irods.user import iRODSUser, iRODSGroup, Bad_password_change_parameter
-import irods.password_obfuscation as obf
+from irods.models import Group, User
+from irods.user import Bad_password_change_parameter, iRODSGroup, iRODSUser
+
 from .. import MAX_PASSWORD_LENGTH
 
 logger = logging.getLogger(__name__)
