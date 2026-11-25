@@ -109,7 +109,7 @@ class AccessManager(Manager):
             query_type_logger.debug('SPECIFIC')
 
             def denullify(s):
-                return s if s else "x"
+                return s or "x"
 
             _specific_query.reset_for_new_query(
                 args=[

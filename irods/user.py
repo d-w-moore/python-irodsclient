@@ -94,7 +94,7 @@ class iRODSGroup:
         return self.manager.sess.zone
 
     def __eq__(self, other_group):
-        if not isinstance(other_group, (iRODSUser,iRODSGroup)):
+        if not isinstance(other_group, (iRODSUser, iRODSGroup)):
             return NotImplemented
         return (self.name, self.zone) == (other_group.name, other_group.zone)
 
