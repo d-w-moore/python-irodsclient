@@ -579,46 +579,45 @@ class TestAccess(unittest.TestCase):
             SELECT access_type_id
             FROM grants
             ORDER BY access_type_id DESC
-            LIMIT 1;'''
-        )
+            LIMIT 1;''')
         user = group = coll = None
         ses = self.sess
-        my_specific_query=None
+        my_specific_query = None
         query_alias = None
         try:
             coll = ses.collections.create('/tempZone/home/public/folder_561')
             data = ses.data_objects.create('/tempZone/home/public/folder_561/file')
-            user = ses.users.create('bob','rodsuser')
+            user = ses.users.create('bob', 'rodsuser')
             group = ses.groups.create('lab')
 
             # Set up test scenario with a new user and group, the group having deliberately higher permission
             # so as to be able to account for the effect of group membership in the query results.
             USER_PERM = 'modify_metadata'
             GROUP_PERM = 'modify_object'
-            test_perms = { user.name: USER_PERM, group.name: GROUP_PERM }
+            test_perms = {user.name: USER_PERM, group.name: GROUP_PERM}
             for obj in (coll, data):
                 ses.acls.set(iRODSAccess(USER_PERM, obj.path, user.name))
                 ses.acls.set(iRODSAccess(GROUP_PERM, obj.path, group.name))
 
             sql_arg = {}
             try:
-                SpecificQuery(ses,
-                    alias='findQueryByAlias',
-                    args=(query_alias:=alias_for_get_maximum_permission_for_path,)).execute()
+                SpecificQuery(
+                    ses, alias='findQueryByAlias', args=(query_alias := alias_for_get_maximum_permission_for_path,)
+                ).execute()
             except CAT_NO_ROWS_FOUND:
                 query_alias = str(uuid.uuid1())
                 # PostGres is truly case insensitive for table names, whereas MySQL prefers them uppercase.
-                sql_arg = {'sql':SQL.upper()}
+                sql_arg = {'sql': SQL.upper()}
 
             my_specific_query = SpecificQuery(ses, alias=query_alias, **sql_arg)
             if sql_arg:
                 my_specific_query.register()
 
-            logger=logging.getLogger('issue_561_query_type_detection')
+            logger = logging.getLogger('issue_561_query_type_detection')
             logger.setLevel(logging.DEBUG)
             for is_member in (False, True):
                 if is_member:
-                    group.addmember(user.name,user.zone)
+                    group.addmember(user.name, user.zone)
                 for usr in (user, group):
                     max_user = usr if usr not in group.members else group
                     expected_permission = test_perms[max_user.name]
