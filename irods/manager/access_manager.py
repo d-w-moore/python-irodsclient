@@ -43,20 +43,24 @@ def users_by_ids(session, ids=()):
 class QueryParameterError(ValueError):
     pass
 
+
 # This is the alias where we expect to find a specific query
 alias_for_get_maximum_permission_for_path = 'get_maximum_permission_for_path'
+
 
 class _iRODSPermission(typing.NamedTuple):
     as_string: str
     as_integer: int
 
+
 class AccessManager(Manager):
-    def get_maximum_permission_for_path(self,
-        user : (iRODSUser|iRODSGroup),
-        collection : (str|iRODSCollection|None)=None,
-        data_object : (str|iRODSDataObject|None)=None,
-        specific_query : (SpecificQuery|str|None)='',
-    ) -> _iRODSPermission|None:
+    def get_maximum_permission_for_path(
+        self,
+        user: (iRODSUser | iRODSGroup),
+        collection: (str | iRODSCollection | None) = None,
+        data_object: (str | iRODSDataObject | None) = None,
+        specific_query: (SpecificQuery | str | None) = '',
+    ) -> _iRODSPermission | None:
         """
         Return the highest permission the named user/group has with respect to the
         given data object or collection.  In calculating this result, all ACLs and
@@ -103,12 +107,14 @@ class AccessManager(Manager):
         # Dispatch to the available/chosen query method.
         if _specific_query is not None:
             query_type_logger.debug('SPECIFIC')
+
             def denullify(s):
                 return s if s else "x"
+
             _specific_query.reset_for_new_query(
                 args=[
                     user.name,
-                    getattr(user,'zone',ses.zone),
+                    getattr(user, 'zone', ses.zone),
                     denullify(collection.path if isinstance(collection, iRODSCollection) else collection),
                     denullify(data_object.path if isinstance(data_object, iRODSDataObject) else data_object),
                 ]
@@ -127,15 +133,17 @@ class AccessManager(Manager):
                     dataN = irods_basename(data_object)
                     join_criteria = [DataObject.name == dataN, Collection.name == collN]
                 elif isinstance(data_object, iRODSDataObject):
-                    join_criteria = [ DataAccess.data_id == data_object.id]
+                    join_criteria = [DataAccess.data_id == data_object.id]
                 else:
-                    msg="'data_object' parameter must be full logical path or data object"
+                    msg = "'data_object' parameter must be full logical path or data object"
                     raise ValueError(msg)
 
-                q = ses.query(DataAccess.type).filter(
-                    In(DataAccess.user_id, groups),
-                    *join_criteria
-                ).order_by(DataAccess.type,order='desc')
+                q = (
+                    ses
+                    .query(DataAccess.type)
+                    .filter(In(DataAccess.user_id, groups), *join_criteria)
+                    .order_by(DataAccess.type, order='desc')
+                )
 
                 res = [_[DataAccess.type] for _ in q]
 
@@ -143,15 +151,19 @@ class AccessManager(Manager):
                 if isinstance(collection, str):
                     join_criteria = [Collection.name == collection]
                 elif isinstance(collection, iRODSCollection):
-                    join_criteria = [CollectionAccess.access_id == collection.id] # TODO: access_id is not an accurate name, should be coll_id
+                    join_criteria = [
+                        CollectionAccess.access_id == collection.id
+                    ]  # TODO: access_id is not an accurate name, should be coll_id
                 else:
-                    msg="'collection' parameter must be full logical path or collection object"
+                    msg = "'collection' parameter must be full logical path or collection object"
                     raise ValueError(msg)
 
-                q=ses.query(CollectionAccess).filter(
-                        In(CollectionAccess.user_id, groups),
-                        *join_criteria
-                    ).order_by(CollectionAccess.type,order='desc')
+                q = (
+                    ses
+                    .query(CollectionAccess)
+                    .filter(In(CollectionAccess.user_id, groups), *join_criteria)
+                    .order_by(CollectionAccess.type, order='desc')
+                )
 
                 res = [_[CollectionAccess.type] for _ in q]
 
@@ -165,9 +177,7 @@ class AccessManager(Manager):
     @staticmethod
     def _get_maximum_permission_for_path_via_SpecificQuery(spec_query):
         try:
-            row = next(iter(
-                spec_query.execute()
-            ))
+            row = next(iter(spec_query.execute()))
         except (StopIteration, CAT_NO_ROWS_FOUND):
             row = {}
 

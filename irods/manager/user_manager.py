@@ -283,7 +283,7 @@ def get__group_create__user_type__default(session):
 
 class GroupManager(UserManager):
     def get(self, name, user_zone=""):
-        if user_zone not in ("", local_zone:=self.sess.zone):
+        if user_zone not in ("", local_zone := self.sess.zone):
             msg = 'Specified user_zone must be local, since remote groups are not listed locally.'
             raise GroupDoesNotExist(msg)
 
